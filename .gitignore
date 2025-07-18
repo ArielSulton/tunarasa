@@ -137,14 +137,18 @@ temp/
 *.tmp
 
 # Documentation
-/just_docs/prompt/
-/just_docs/release/
+/just_docs/*
 CLAUDE.md
 
 # Database files (if any local)
+/frontend/drizzle/meta
 *.db
 *.sqlite
 *.sqlite3
+
+# Model and RAG Docs
+/backend/document
+/frontend/public/models
 
 # Backup files
 *.bak

@@ -1,103 +1,251 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useCallback } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import GestureRecognition from '@/components/gesture/gesture-recognition'
+import { Hand, MessageCircle, Send, User, Bot } from 'lucide-react'
+
+interface ChatMessage {
+  id: string
+  type: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+  confidence?: number
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [currentWord, setCurrentWord] = useState<string>('')
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [inputMessage, setInputMessage] = useState<string>('')
+  const [isProcessing, setIsProcessing] = useState(false)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  // Handle letter detection from gesture recognition
+  const handleLetterDetected = useCallback((letter: string, confidence: number) => {
+    console.log(`Detected letter: ${letter} (${Math.round(confidence * 100)}% confidence)`)
+  }, [])
+
+  // Handle word formation from gesture recognition
+  const handleWordFormed = useCallback((word: string) => {
+    setCurrentWord(word)
+    console.log(`Word formed: ${word}`)
+  }, [])
+
+  // Send message to chat (either gesture-formed word or typed message)
+  const sendMessage = useCallback(async (content: string) => {
+    if (!content.trim()) return
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: content.trim(),
+      timestamp: new Date(),
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setIsProcessing(true)
+
+    try {
+      // TODO: Integrate with backend Q&A API
+      // For now, simulate AI response
+      setTimeout(() => {
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `I understand you're asking about "${content}". This is a placeholder response from the AI system. The actual integration with the backend Q&A service will provide intelligent responses based on the document knowledge base.`,
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+        setIsProcessing(false)
+      }, 1000)
+    } catch (error) {
+      console.error('Error sending message:', error)
+      setIsProcessing(false)
+    }
+  }, [])
+
+  // Send gesture-formed word as question
+  const sendGestureWord = useCallback(() => {
+    if (currentWord.trim()) {
+      sendMessage(currentWord)
+      setCurrentWord('')
+    }
+  }, [currentWord, sendMessage])
+
+  // Send typed message
+  const sendTypedMessage = useCallback(() => {
+    if (inputMessage.trim()) {
+      sendMessage(inputMessage)
+      setInputMessage('')
+    }
+  }, [inputMessage, sendMessage])
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* Header */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <Hand className="h-8 w-8 text-blue-600" />
+              Tunarasa - A-Z Sign Language Recognition
+            </CardTitle>
+            <p className="text-gray-600">
+              Real-time hand gesture recognition for A-Z sign language with AI-powered Q&A assistance
+            </p>
+          </CardHeader>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {/* Gesture Recognition Panel */}
+          <div className="space-y-4">
+            <GestureRecognition
+              onLetterDetected={handleLetterDetected}
+              onWordFormed={handleWordFormed}
+              showAlternatives={true}
+              enableWordFormation={true}
+              maxWordLength={50}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+
+            {/* Gesture Word Actions */}
+            {currentWord && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Current Word</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="px-4 py-2 font-mono text-xl">
+                      {currentWord}
+                    </Badge>
+                    <span className="text-sm text-gray-500">{currentWord.length} letters</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button onClick={sendGestureWord} className="flex items-center gap-2">
+                      <Send className="h-4 w-4" />
+                      Ask Question
+                    </Button>
+                    <Button variant="outline" onClick={() => setCurrentWord('')}>
+                      Clear
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Chat Panel */}
+          <Card className="flex h-[600px] flex-col">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                Q&A Chat
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="flex flex-1 flex-col p-0">
+              {/* Messages */}
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-4">
+                  {messages.length === 0 ? (
+                    <div className="py-8 text-center text-gray-500">
+                      <MessageCircle className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                      <p>Start a conversation by signing letters or typing a question</p>
+                    </div>
+                  ) : (
+                    messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`flex max-w-[80%] gap-2 ${
+                            message.type === 'user' ? 'flex-row-reverse' : 'flex-row'
+                          }`}
+                        >
+                          <div className="flex-shrink-0">
+                            {message.type === 'user' ? (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white">
+                                <User className="h-4 w-4" />
+                              </div>
+                            ) : (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-600 text-white">
+                                <Bot className="h-4 w-4" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div
+                            className={`rounded-lg px-4 py-2 ${
+                              message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+                            }`}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                            <p className="mt-1 text-xs opacity-70">{message.timestamp.toLocaleTimeString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {isProcessing && (
+                    <div className="flex justify-start gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-600 text-white">
+                        <Bot className="h-4 w-4" />
+                      </div>
+                      <div className="rounded-lg bg-gray-200 px-4 py-2 text-gray-800">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400"></div>
+                          <div
+                            className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
+                            style={{ animationDelay: '0.1s' }}
+                          ></div>
+                          <div
+                            className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
+                            style={{ animationDelay: '0.2s' }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              <Separator />
+
+              {/* Input */}
+              <div className="p-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Type your question here..."
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendTypedMessage()}
+                  />
+                  <Button onClick={sendTypedMessage} disabled={!inputMessage.trim() || isProcessing}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Footer */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-sm text-gray-500">
+              <p>Tunarasa - Empowering communication through sign language recognition</p>
+              <p>Built with Next.js, MediaPipe, TensorFlow.js, and FastAPI</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  );
+  )
 }

@@ -35,10 +35,10 @@ export const healthCheck = async () => {
     await db.execute(sql`SELECT 1`)
     return { status: 'healthy', timestamp: new Date().toISOString() }
   } catch (error) {
-    return { 
-      status: 'unhealthy', 
+    return {
+      status: 'unhealthy',
       error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString(),
     }
   }
 }

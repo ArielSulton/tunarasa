@@ -3,7 +3,7 @@
 **Tunarasa** is a comprehensive accessibility platform designed to help hearing-impaired users access public services through advanced sign language gesture recognition and AI-powered question answering. The system combines computer vision, large language models, and retrieval-augmented generation to provide real-time, accurate assistance.
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
-![Version](https://img.shields.io/badge/version-v0.2.0-green.svg)
+![Version](https://img.shields.io/badge/version-v0.4.0-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-99.9%25-blue.svg)
 ![WCAG](https://img.shields.io/badge/WCAG-2.1%20AA-green.svg)
 

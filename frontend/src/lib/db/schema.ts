@@ -1,76 +1,95 @@
 import { pgTable, text, timestamp, integer, boolean, varchar, serial, index } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
-import { sql } from 'drizzle-orm'
 
 // Notes Table (sesuai ERD)
-export const notes = pgTable('notes', {
-  noteId: serial('note_id').primaryKey(),
-  conversationId: integer('conversation_id').notNull(),
-  noteContent: text('note_content').notNull(),
-  urlAccess: varchar('url_access', { length: 255 }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => [
-  index('notes_conversation_id_idx').on(table.conversationId),
-  index('notes_created_at_idx').on(table.createdAt),
-]).enableRLS()
+export const notes = pgTable(
+  'notes',
+  {
+    noteId: serial('note_id').primaryKey(),
+    conversationId: integer('conversation_id').notNull(),
+    noteContent: text('note_content').notNull(),
+    urlAccess: varchar('url_access', { length: 255 }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('notes_conversation_id_idx').on(table.conversationId),
+    index('notes_created_at_idx').on(table.createdAt),
+  ],
+)
 
 // Messages Table (sesuai ERD)
-export const messages = pgTable('messages', {
-  messageId: serial('message_id').primaryKey(),
-  conversationId: integer('conversation_id').notNull(),
-  messageContent: text('message_content').notNull(),
-  isUser: boolean('is_user').notNull().default(false),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => [
-  index('messages_conversation_id_idx').on(table.conversationId),
-  index('messages_is_user_idx').on(table.isUser),
-  index('messages_created_at_idx').on(table.createdAt),
-]).enableRLS()
+export const messages = pgTable(
+  'messages',
+  {
+    messageId: serial('message_id').primaryKey(),
+    conversationId: integer('conversation_id').notNull(),
+    messageContent: text('message_content').notNull(),
+    isUser: boolean('is_user').notNull().default(false),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('messages_conversation_id_idx').on(table.conversationId),
+    index('messages_is_user_idx').on(table.isUser),
+    index('messages_created_at_idx').on(table.createdAt),
+  ],
+)
 
 // Conversations Table (sesuai ERD)
-export const conversations = pgTable('conversations', {
-  conversationId: serial('conversation_id').primaryKey(),
-  isActive: boolean('is_active').notNull().default(true),
-  userId: integer('user_id').notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => [
-  index('conversations_user_id_idx').on(table.userId),
-  index('conversations_is_active_idx').on(table.isActive),
-  index('conversations_created_at_idx').on(table.createdAt),
-]).enableRLS()
+export const conversations = pgTable(
+  'conversations',
+  {
+    conversationId: serial('conversation_id').primaryKey(),
+    isActive: boolean('is_active').notNull().default(true),
+    userId: integer('user_id').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('conversations_user_id_idx').on(table.userId),
+    index('conversations_is_active_idx').on(table.isActive),
+    index('conversations_created_at_idx').on(table.createdAt),
+  ],
+)
 
 // Users Table (sesuai ERD)
-export const users = pgTable('users', {
-  userId: serial('user_id').primaryKey(),
-  clerkUserId: integer('clerk_user_id').unique(),
-  fullName: varchar('full_name', { length: 255 }),
-  roleId: integer('role_id').notNull(),
-  genderId: integer('gender_id').notNull(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => [
-  index('users_clerk_user_id_idx').on(table.clerkUserId),
-  index('users_role_id_idx').on(table.roleId),
-  index('users_gender_id_idx').on(table.genderId),
-  index('users_created_at_idx').on(table.createdAt),
-]).enableRLS()
+export const users = pgTable(
+  'users',
+  {
+    userId: serial('user_id').primaryKey(),
+    clerkUserId: integer('clerk_user_id').unique(),
+    fullName: varchar('full_name', { length: 255 }),
+    roleId: integer('role_id').notNull(),
+    genderId: integer('gender_id').notNull(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('users_clerk_user_id_idx').on(table.clerkUserId),
+    index('users_role_id_idx').on(table.roleId),
+    index('users_gender_id_idx').on(table.genderId),
+    index('users_created_at_idx').on(table.createdAt),
+  ],
+)
 
 // Genders Table (sesuai ERD)
-export const genders = pgTable('genders', {
-  genderId: serial('gender_id').primaryKey(),
-  genderName: varchar('gender_name', { length: 50 }).notNull(),
-}, (table) => [
-  index('genders_gender_name_idx').on(table.genderName),
-]).enableRLS()
+export const genders = pgTable(
+  'genders',
+  {
+    genderId: serial('gender_id').primaryKey(),
+    genderName: varchar('gender_name', { length: 50 }).notNull(),
+  },
+  (table) => [index('genders_gender_name_idx').on(table.genderName)],
+)
 
 // Roles Table (sesuai ERD)
-export const roles = pgTable('roles', {
-  roleId: serial('role_id').primaryKey(),
-  roleName: varchar('role_name', { length: 50 }).notNull(),
-}, (table) => [
-  index('roles_role_name_idx').on(table.roleName),
-]).enableRLS()
+export const roles = pgTable(
+  'roles',
+  {
+    roleId: serial('role_id').primaryKey(),
+    roleName: varchar('role_name', { length: 50 }).notNull(),
+  },
+  (table) => [index('roles_role_name_idx').on(table.roleName)],
+)
 
 // Table Relations
 export const userRelations = relations(users, ({ one, many }) => ({

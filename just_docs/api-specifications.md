@@ -21,7 +21,7 @@ Content-Type: application/json
 ```
 
 ### Roles
-- `user`: Basic gesture recognition and Q&A access
+- `user`: Basic A-Z gesture recognition and Q&A access
 - `admin`: Validation, monitoring, and analytics access
 - `super_admin`: Full system access including user management
 
@@ -30,7 +30,7 @@ Content-Type: application/json
 ### 1. Gesture Recognition Service
 
 #### POST /api/v1/gesture/recognize
-Process hand gesture landmarks into text question.
+Process A-Z hand gesture landmarks into text question.
 
 **Request:**
 ```json
@@ -60,7 +60,7 @@ Process hand gesture landmarks into text question.
 ```
 
 #### POST /api/v1/gesture/process-sequence
-Process multiple gesture sequences for complex questions.
+Process multiple A-Z gesture sequences for complex questions.
 
 **Request:**
 ```json

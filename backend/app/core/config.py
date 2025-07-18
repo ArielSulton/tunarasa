@@ -36,6 +36,18 @@ class Settings(BaseSettings):
     PINECONE_API_KEY: Optional[str] = None
     PINECONE_ENVIRONMENT: str = "us-west1-gcp"
     PINECONE_INDEX_NAME: str = "tunarasa-documents"
+    OPENAI_API_KEY: Optional[str] = None
+    
+    # LLM Configuration
+    LLM_MODEL: str = "llama3-8b-8192"
+    LLM_TEMPERATURE: float = 0.7
+    LLM_MAX_TOKENS: int = 1024
+    
+    # RAG Configuration
+    RAG_CHUNK_SIZE: int = 1000
+    RAG_CHUNK_OVERLAP: int = 200
+    RAG_RETRIEVAL_K: int = 3
+    RAG_SIMILARITY_THRESHOLD: float = 0.7
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379"

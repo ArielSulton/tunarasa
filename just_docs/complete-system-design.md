@@ -41,8 +41,8 @@ Session → Performance Monitoring → FastAPI Backend → Vector DB → Metrics
 ### Database Layer
 - **Primary Database**: Supabase PostgreSQL with Row Level Security
 - **ORM**: Drizzle ORM for type-safe database operations
-- **Monitoring Database**: TimescaleDB for metrics storage
-- **Event Storage**: ClickHouse for user interaction logging
+- **Schema**: 6 core tables - users, conversations, messages, notes, roles, genders
+- **Additional Storage**: Pinecone vector database for RAG document embeddings
 
 ### Infrastructure Layer
 - **Containerization**: Docker with multi-stage builds
@@ -103,20 +103,58 @@ Session → Performance Monitoring → FastAPI Backend → Vector DB → Metrics
 
 ## 3. Database Design
 
+### Core Database Schema (ERD)
+```
+┌─────────────┐    ┌─────────────┐     ┌─────────────┐
+│    roles    │    │   genders   │     │    users    │
+├─────────────┤    ├─────────────┤     ├─────────────┤
+│ role_id (PK)│    │gender_id(PK)│     │ user_id (PK)│
+│ role_name   │    │gender_name  │     │clerk_user_id│
+└─────────────┘    └─────────────┘     │ full_name   │
+       │                   │           │ role_id (FK)│
+       │                   │           │gender_id(FK)│
+       │                   │           │ created_at  │
+       │                   │           │ updated_at  │
+       │                   │           └─────────────┘
+       │                   │                   │
+       └───────────────────┼───────────────────┘
+                           │
+                   ┌─────────────┐
+                   │conversations│
+                   ├─────────────┤
+                   │conv_id (PK) │
+                   │ is_active   │
+                   │ user_id (FK)│
+                   │ created_at  │
+                   │ updated_at  │
+                   └─────────────┘
+                           │
+           ┌───────────────┼───────────────┐
+           │               │               │
+   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+   │  messages   │ │    notes    │ │  [future]   │
+   ├─────────────┤ ├─────────────┤ ├─────────────┤
+   │message_id(PK) │note_id (PK) │ │rag_docs     │
+   │conv_id (FK) │ │conv_id (FK) │ │metrics      │
+   │message_content│note_content │ │sessions     │
+   │   is_user   │ │url_access   │ │             │
+   │ created_at  │ │created_at   │ │             │
+   └─────────────┘ └─────────────┘ └─────────────┘
+```
+
 ### Core Tables
-- **admins**: Admin authentication and role management
-- **user_sessions**: Anonymous user session tracking
-- **qna_logs**: Complete conversation history with metrics
-- **performance_metrics**: System performance and quality data
-- **documents**: RAG knowledge base management
-- **email_logs**: Email communication tracking
-- **system_configs**: Dynamic configuration management
+- **users**: User registration with Clerk authentication integration
+- **conversations**: Chat sessions between users and AI system  
+- **messages**: Individual messages within conversations (user/AI)
+- **notes**: Generated notes with QR codes for accessibility
+- **roles**: User role definitions (user, admin, moderator)
+- **genders**: Gender reference table for user profiles
 
 ### Key Relationships
-- QnA logs link to user sessions for analytics
-- Admin validations track to specific QnA entries
-- Performance metrics aggregate across sessions and responses
-- Document management with versioning and approval workflows
+- Users have many conversations (1:N)
+- Conversations contain many messages and notes (1:N each)
+- Users reference roles and genders (N:1 each)
+- Notes include url_access for QR code functionality
 
 ## 4. User Flows
 
