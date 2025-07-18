@@ -1,14 +1,15 @@
 # Tunarasa API Specifications
 
 ## Overview
-RESTful API design for Tunarasa platform with FastAPI backend and Next.js frontend integration.
+RESTful API design for Tunarasa platform with FastAPI backend located in `backend/` directory and Next.js frontend integration from `frontend/` directory.
 
 ## Base Configuration
-- **Base URL**: `https://api.tunarasa.com/v1`
+- **Development URL**: `http://localhost:8000/api/v1`
+- **Production URL**: `https://api.tunarasa.com/v1`
 - **Authentication**: Clerk JWT tokens + Role-based access control
 - **Rate Limiting**: 100 requests/minute for users, 1000 requests/minute for admins
 - **Content-Type**: `application/json`
-- **CORS**: Configured for frontend domains
+- **CORS**: Configured for frontend domains (localhost:3000 in dev)
 
 ## Authentication & Authorization
 

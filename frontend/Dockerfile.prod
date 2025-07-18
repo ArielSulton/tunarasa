@@ -1,0 +1,121 @@
+FROM oven/bun:latest AS base
+
+# Step 1. Install dependencies only when needed
+FROM base AS deps
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and bun.lock
+COPY package.json bun.lock ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Step 2. Rebuild the source code only when needed
+FROM base AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Next.js collects completely anonymous telemetry data about general usage. Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line to disable telemetry at build time
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Next.js Standalone Mode
+ENV NEXT_PRIVATE_STANDALONE=true
+
+# Copy all files
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Environment variables must be present at build time
+# https://github.com/vercel/next.js/discussions/14030
+# Inject secrets securely (BuildKit only!) & Build the application
+
+    # Next.js and FastAPI
+RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
+    --mount=type=secret,id=SITE_NAME,env=SITE_NAME \
+    --mount=type=secret,id=NEXT_PUBLIC_APP_URL,env=NEXT_PUBLIC_APP_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_BACKEND_URL,env=NEXT_PUBLIC_BACKEND_URL \
+
+    # Supabase Configuration
+    --mount=type=secret,id=SUPABASE_URL,env=SUPABASE_URL \
+    --mount=type=secret,id=SUPABASE_ANON_KEY,env=SUPABASE_ANON_KEY \
+    --mount=type=secret,id=SUPABASE_SERVICE_ROLE_KEY,env=SUPABASE_SERVICE_ROLE_KEY \
+
+    # Authentication
+    --mount=type=secret,id=SECRET_KEY,env=SECRET_KEY \
+
+    # Clerk Authentication
+    --mount=type=secret,id=CLERK_SECRET_KEY,env=CLERK_SECRET_KEY \
+    --mount=type=secret,id=CLERK_PUBLISHABLE_KEY,env=CLERK_PUBLISHABLE_KEY \
+
+    # AI Services
+    --mount=type=secret,id=GROQ_API_KEY,env=GROQ_API_KEY \
+    --mount=type=secret,id=PINECONE_API_KEY,env=PINECONE_API_KEY \
+    --mount=type=secret,id=PINECONE_ENVIRONMENT,env=PINECONE_ENVIRONMENT \
+    --mount=type=secret,id=PINECONE_INDEX_NAME,env=PINECONE_INDEX_NAME \
+
+    # Email Service (Resend)
+    --mount=type=secret,id=RESEND_API_KEY,env=RESEND_API_KEY \
+
+    # Redis (Local development uses Docker)
+    --mount=type=secret,id=REDIS_URL,env=REDIS_URL \
+
+    # CORS Configuration
+    --mount=type=secret,id=CORS_ORIGINS,env=CORS_ORIGINS \
+
+    # Production Environment Variables (for compose.prod.yaml)
+    --mount=type=secret,id=GRAFANA_ADMIN_USER,env=GRAFANA_ADMIN_USER \
+    --mount=type=secret,id=GRAFANA_ADMIN_PASSWORD,env=GRAFANA_ADMIN_PASSWORD \
+    --mount=type=secret,id=GRAFANA_DOMAIN,env=GRAFANA_DOMAIN \
+    --mount=type=secret,id=ALERTMANAGER_DOMAIN,env=ALERTMANAGER_DOMAIN \
+
+# Build the application
+RUN bun run build
+
+# Step 3. Production image, copy all the files and run next
+FROM base AS runner
+
+# Set working directory
+WORKDIR /app
+
+# Create a non-root user
+# RUN addgroup --system --gid 1001 bunjs
+# RUN adduser --system --uid 1001 nextjs
+
+# Group 'bun' is already installed in the base image 'oven/bun:latest'
+RUN adduser --system --uid 1001 nextjs --ingroup bun
+
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    curl \
+    git \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy necessary files
+COPY --from=builder --chown=nextjs:bun /app/public ./public
+COPY --from=builder --chown=nextjs:bun /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:bun /app/.next/static ./.next/static
+
+# Switch to non-root user
+USER nextjs
+
+# Next.js collects completely anonymous telemetry data about general usage. Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line to disable telemetry at build time
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Next.js Standalone Mode
+ENV NEXT_PRIVATE_STANDALONE=true
+
+# ENV hostname 0.0.0.0 & port 3000 'only for testing'
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Start the application
+CMD ["bun", "run", "server.js"]

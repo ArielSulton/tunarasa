@@ -1,63 +1,146 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# ===== DOCKER BUILD CONTEXT OPTIMIZATION =====
+# This file optimizes Docker build context by excluding unnecessary files
 
-# testing
-/coverage
+# ===== FRONTEND SPECIFIC (when building from frontend/) =====
+# Dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.*
+frontend/.yarn/*
+!frontend/.yarn/patches
+!frontend/.yarn/plugins
+!frontend/.yarn/releases
+!frontend/.yarn/versions
 
-# next.js
-/.next/
-/out/
+# Next.js build outputs
+frontend/.next/
+frontend/out/
+frontend/build/
 
-# git
-/.git
+# Testing
+frontend/coverage/
+
+# TypeScript
+frontend/*.tsbuildinfo
+
+# ===== BACKEND SPECIFIC (when building from backend/) =====
+# Python cache and bytecode
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/*.so
+
+# Python build artifacts
+backend/build/
+backend/dist/
+backend/*.egg-info/
+backend/.eggs/
+
+# Testing and coverage
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/.tox/
+
+# Virtual environments (shouldn't be in context anyway)
+backend/venv/
+backend/env/
+backend/.env/
+
+# Uploads and temp files
+backend/uploads/
+backend/temp/
+backend/logs/
+
+# ===== SHARED/ROOT LEVEL =====
+# Git and version control
+.git/
 .gitignore
+.gitattributes
 
-# docker
+# Docker files (don't copy into containers)
 compose.dev.yaml
 compose.prod.yaml
-Dockerfile.dev
-Dockerfile.prod
+**/Dockerfile*
+.dockerignore
 
-# code editor
+# Environment files (use secrets/env vars instead)
+.env*
+!.env.example
+
+# Code editors and IDE
 .cursorignore
 .cursorrules
 .cursor/
 .vscode/
 .claude/
+.idea/
+*.swp
+*.swo
+
+# Documentation and project files
 CLAUDE.md
+README.md
+/just_docs/
+**/LICENSE
+**/CHANGELOG*
 
-# production
-/build
-
-# misc
+# OS generated files
 .DS_Store
-*.pem
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
 
-# debug
+# Logs and runtime data
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+pids/
+*.pid
 
-# env files
-.env*
+# SSL certificates and keys
+*.pem
+*.key
+*.crt
 
-# vercel
-.vercel
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
 
-# drizzle
-/drizzle
+# Monitoring configuration (not needed in containers)
+monitoring/
 
-# typescript
-*.tsbuildinfo
+# Testing and coverage
+coverage/
+.nyc_output/
 
-# other
-/docs
-README.md
+# Build artifacts
+build/
+dist/
+
+# Package manager lock files (copy separately if needed)
+# Comment out if you want to include them
+# package-lock.json
+# yarn.lock
+# bun.lock
+
+# Cloud deployment configs
+.vercel/
+.netlify/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar

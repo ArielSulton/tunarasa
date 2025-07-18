@@ -1,0 +1,26 @@
+FROM oven/bun:latest
+
+# Set working directory
+WORKDIR /app
+
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    curl \
+    git \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy all files
+COPY . .
+
+# Install dependencies
+RUN bun install
+
+# Next.js collects completely anonymous telemetry data about general usage. Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line to disable telemetry at run time
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Start the application
+CMD ["bun", "run", "dev"]

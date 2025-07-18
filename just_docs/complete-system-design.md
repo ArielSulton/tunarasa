@@ -208,23 +208,42 @@ Session → Performance Monitoring → FastAPI Backend → Vector DB → Metrics
 
 ### Development Environment
 ```yaml
+# Project Structure
+tunarasa/
+├── frontend/          # Next.js Application
+│   ├── src/          # React components and pages
+│   ├── public/       # Static assets
+│   ├── package.json  # Frontend dependencies
+│   └── Dockerfile    # Frontend container
+├── backend/          # FastAPI Application
+│   ├── app/         # Python application code
+│   ├── requirements.txt  # Backend dependencies
+│   └── Dockerfile   # Backend container
+├── docs/            # System documentation
+├── monitoring/      # Prometheus & Grafana configs
+└── docker-compose.yml  # Development orchestration
+
 services:
   frontend:
     build: ./frontend
     ports: ["3000:3000"]
     environment:
       - NODE_ENV=development
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
   
   backend:
     build: ./backend
     ports: ["8000:8000"]
     environment:
       - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://tunarasa:tunarasa123@database:5432/tunarasa
   
   database:
-    image: postgres:15
+    image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=tunarasa_dev
+      - POSTGRES_DB=tunarasa
+      - POSTGRES_USER=tunarasa
+      - POSTGRES_PASSWORD=tunarasa123
   
   redis:
     image: redis:7-alpine

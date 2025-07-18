@@ -1,7 +1,25 @@
 # Frontend Component Architecture - Accessibility-First Design
 
 ## Overview
-Next.js 15 + React 19 component architecture optimized for hearing-impaired users with WCAG 2.1 AA compliance.
+Next.js 15 + React 19 component architecture located in `frontend/` directory, optimized for hearing-impaired users with WCAG 2.1 AA compliance.
+
+## Project Structure
+```
+frontend/
+├── src/
+│   ├── app/              # Next.js App Router pages
+│   ├── components/       # React components
+│   │   ├── ui/          # Shadcn UI components
+│   │   ├── layout/      # Layout components
+│   │   ├── gesture/     # Gesture recognition components
+│   │   ├── chat/        # Chat interface components
+│   │   └── admin/       # Admin dashboard components
+│   ├── hooks/           # Custom React hooks
+│   └── lib/            # Utility functions and configurations
+├── public/             # Static assets
+├── package.json        # Dependencies and scripts
+└── Dockerfile         # Container configuration
+```
 
 ## Core Principles
 - **Accessibility First**: Every component designed with screen readers and assistive technology

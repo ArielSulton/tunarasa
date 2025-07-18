@@ -1,0 +1,381 @@
+services:
+  # Frontend Service (Next.js)
+  frontend:
+    container_name: tunarasa-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      secrets:
+        # Next.js and FastAPI
+        - NODE_ENV
+        - SITE_NAME
+        - NEXT_PUBLIC_APP_URL
+        - NEXT_PUBLIC_BACKEND_URL
+
+        # Supabase Configuration
+        - SUPABASE_URL
+        - SUPABASE_ANON_KEY
+        - SUPABASE_SERVICE_ROLE_KEY
+
+        # Authentication
+        - SECRET_KEY
+
+        # Clerk Authentication
+        - CLERK_SECRET_KEY
+        - CLERK_PUBLISHABLE_KEY
+
+        # AI Services
+        - GROQ_API_KEY
+        - PINECONE_API_KEY
+        - PINECONE_ENVIRONMENT
+        - PINECONE_INDEX_NAME
+
+        # Email Service (Resend)
+        - RESEND_API_KEY
+
+        # Redis (Local development uses Docker)
+        - REDIS_URL
+
+        # CORS Configuration
+        - CORS_ORIGINS
+
+        # Production Environment Variables (for compose.prod.yaml)
+        - GRAFANA_ADMIN_USER
+        - GRAFANA_ADMIN_PASSWORD
+        - GRAFANA_DOMAIN
+        - ALERTMANAGER_DOMAIN
+    env_file:
+      - .env
+    environment:
+      # Next.js and FastAPI
+      - NODE_ENV=production
+      - SITE_NAME=${SITE_NAME}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+
+      # Supabase Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+
+      # Authentication
+      - SECRET_KEY=${SECRET_KEY}
+
+      # Clerk Authentication
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+
+      # AI Services
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+
+      # Email Service (Resend)
+      - RESEND_API_KEY=${RESEND_API_KEY}
+
+      # Redis (Local development uses Docker)
+      - REDIS_URL=${REDIS_URL}
+
+      # CORS Configuration
+      - CORS_ORIGINS=${CORS_ORIGINS}
+
+      # Production Environment Variables (for compose.prod.yaml)
+      - GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
+      - ALERTMANAGER_DOMAIN=${ALERTMANAGER_DOMAIN}
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "${NEXT_PUBLIC_APP_URL}/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Backend Service (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      # Next.js and FastAPI
+      - NODE_ENV=production
+      - SITE_NAME=${SITE_NAME}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+
+      # Supabase Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+
+      # Authentication
+      - SECRET_KEY=${SECRET_KEY}
+
+      # Clerk Authentication
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+
+      # AI Services
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+
+      # Email Service (Resend)
+      - RESEND_API_KEY=${RESEND_API_KEY}
+
+      # Redis (Local development uses Docker)
+      - REDIS_URL=${REDIS_URL}
+
+      # CORS Configuration
+      - CORS_ORIGINS=${CORS_ORIGINS}
+
+      # Production Environment Variables (for compose.prod.yaml)
+      - GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
+      - ALERTMANAGER_DOMAIN=${ALERTMANAGER_DOMAIN}
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    volumes:
+      - uploads_data:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "${NEXT_PUBLIC_BACKEND_URL}/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # Redis Service (Caching & Sessions)
+  redis:
+    container_name: tunarasa-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - redis_data_prod:/data
+      - ./monitoring/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - tunarasa-net
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Nginx (Reverse Proxy & Load Balancer)
+  nginx:
+    container_name: tunarasa-nginx
+    image: nginx:alpine
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    ports:
+      # - "443:443" # production
+      - "80:80"     # testing
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Prometheus (Metrics Collection)
+  prometheus:
+    container_name: tunarasa-prometheus
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    volumes:
+      - ./monitoring/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data_prod:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # Grafana (Monitoring Dashboard)
+  grafana:
+    container_name: tunarasa-grafana
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_DOMAIN=${GRAFANA_DOMAIN}
+      - GF_SERVER_ROOT_URL=https://${GRAFANA_DOMAIN}
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    depends_on:
+      - prometheus
+    ports:
+      - "3030:3000"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    volumes:
+      - grafana_data_prod:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+
+  # AlertManager (Alert Management)
+  alertmanager:
+    container_name: tunarasa-alertmanager
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=https://${ALERTMANAGER_DOMAIN}'
+    restart: unless-stopped
+
+volumes:
+  redis_data_prod:
+    driver: local
+  prometheus_data_prod:
+    driver: local
+  grafana_data_prod:
+    driver: local
+  alertmanager_data:
+    driver: local
+  uploads_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  tunarasa-net:
+    driver: bridge
+
+secrets:
+  # Next.js and FastAPI
+  NODE_ENV:
+    environment: NODE_ENV
+  SITE_NAME:
+    environment: SITE_NAME
+  NEXT_PUBLIC_APP_URL:
+    environment: NEXT_PUBLIC_APP_URL
+  NEXT_PUBLIC_BACKEND_URL:
+    environment: NEXT_PUBLIC_BACKEND_URL
+
+  # Supabase Configuration
+  SUPABASE_URL:
+    environment: SUPABASE_URL
+  SUPABASE_ANON_KEY:
+    environment: SUPABASE_ANON_KEY
+  SUPABASE_SERVICE_ROLE_KEY:
+    environment: SUPABASE_SERVICE_ROLE_KEY
+
+  # Authentication
+  SECRET_KEY:
+    environment: SECRET_KEY
+
+  # Clerk Authentication
+  CLERK_SECRET_KEY:
+    environment: CLERK_SECRET_KEY
+  CLERK_PUBLISHABLE_KEY:
+    environment: CLERK_PUBLISHABLE_KEY
+
+  # AI Services
+  GROQ_API_KEY:
+    environment: GROQ_API_KEY
+  PINECONE_API_KEY:
+    environment: PINECONE_API_KEY
+  PINECONE_ENVIRONMENT:
+    environment: PINECONE_ENVIRONMENT
+  PINECONE_INDEX_NAME:
+    environment: PINECONE_INDEX_NAME
+
+  # Email Service (Resend)
+  RESEND_API_KEY:
+    environment: RESEND_API_KEY
+
+  # Redis (Local development uses Docker)
+  REDIS_URL:
+    environment: REDIS_URL
+
+  # CORS Configuration
+  CORS_ORIGINS:
+    environment: CORS_ORIGINS
+
+  # Production Environment Variables (for compose.prod.yaml)
+  GRAFANA_ADMIN_USER:
+    environment: GRAFANA_ADMIN_USER
+  GRAFANA_ADMIN_PASSWORD:
+    environment: GRAFANA_ADMIN_PASSWORD
+  GRAFANA_DOMAIN:
+    environment: GRAFANA_DOMAIN
+  ALERTMANAGER_DOMAIN:
+    environment: ALERTMANAGER_DOMAIN

@@ -1,0 +1,235 @@
+services:
+  # Frontend Service (Next.js)
+  frontend:
+    container_name: tunarasa-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      # Next.js and FastAPI
+      - NODE_ENV=development
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+      - BACKEND_URL=http://backend:8000
+      - NEXT_TELEMETRY_DISABLED=1
+
+      # Supabase Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+
+      # Authentication
+      - SECRET_KEY=${SECRET_KEY}
+
+      # Clerk Authentication
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+
+      # AI Services
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+
+      # Email Service (Resend)
+      - RESEND_API_KEY=${RESEND_API_KEY}
+
+      # Redis (Local development uses Docker)
+      - REDIS_URL=${REDIS_URL}
+
+      # CORS Configuration
+      - CORS_ORIGINS=${CORS_ORIGINS}
+
+      # Production Environment Variables (for compose.prod.yaml)
+      - GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
+      - ALERTMANAGER_DOMAIN=${ALERTMANAGER_DOMAIN}
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    healthcheck:
+      test: ["CMD", "curl", "-f", "${NEXT_PUBLIC_APP_URL}/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # Backend Service (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      # Next.js and FastAPI
+      - NODE_ENV=production
+      - SITE_NAME=${SITE_NAME}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+
+      # Supabase Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+
+      # Authentication
+      - SECRET_KEY=${SECRET_KEY}
+
+      # Clerk Authentication
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+
+      # AI Services
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+
+      # Email Service (Resend)
+      - RESEND_API_KEY=${RESEND_API_KEY}
+
+      # Redis (Local development uses Docker)
+      - REDIS_URL=${REDIS_URL}
+
+      # CORS Configuration
+      - CORS_ORIGINS=${CORS_ORIGINS}
+
+      # Production Environment Variables (for compose.prod.yaml)
+      - GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
+      - ALERTMANAGER_DOMAIN=${ALERTMANAGER_DOMAIN}
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    volumes:
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "${NEXT_PUBLIC_BACKEND_URL}/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+  
+  # Redis Service (Caching & Sessions)
+  redis:
+    container_name: tunarasa-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - tunarasa-net
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Prometheus (Metrics Collection)
+  prometheus:
+    container_name: tunarasa-prometheus
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data_dev:/prometheus
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+
+  # Grafana (Monitoring Dashboard)
+  grafana:
+    container_name: tunarasa-grafana
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    depends_on:
+      - prometheus
+    ports:
+      - "3030:3000"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      - tunarasa-net
+    volumes:
+      - grafana_data_dev:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+
+  # Mailhog (Email Testing)
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - tunarasa-net
+    restart: unless-stopped
+
+volumes:
+  redis_data_dev:
+    driver: local
+  prometheus_data_dev:
+    driver: local
+  grafana_data_dev:
+    driver: local
+
+networks:
+  tunarasa-net:
+    driver: bridge

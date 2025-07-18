@@ -1,6 +1,6 @@
 {
   "name": "tunarasa",
-  "version": "v0.1.0",
+  "version": "v0.2.0",
   "private": true,
   "scripts": {
     "dev": "bun --bun next dev --turbopack",
