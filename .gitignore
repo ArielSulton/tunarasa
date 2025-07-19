@@ -112,10 +112,12 @@ pids/
 *.pid.lock
 
 # Code editors
-.vscode/
-.cursor/
 .cursorignore
 .cursorrules
+.codeiumignore
+.windsurf/
+.cursor/
+.vscode/
 .claude/
 .idea/
 *.swp
@@ -137,7 +139,7 @@ temp/
 *.tmp
 
 # Documentation
-/just_docs/*
+/readme/*/
 CLAUDE.md
 
 # Database files (if any local)

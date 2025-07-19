@@ -3,10 +3,10 @@ import postgres from 'postgres'
 import * as schema from './schema'
 
 // Database connection configuration
-const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL || ''
+const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_URL || ''
 
 if (!connectionString) {
-  throw new Error('DATABASE_URL or SUPABASE_DATABASE_URL is not defined')
+  throw new Error('DATABASE_URL or SUPABASE_URL is not defined')
 }
 
 // Create PostgreSQL client

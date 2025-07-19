@@ -1,7 +1,9 @@
 /**
  * Admin API Client
- * Handles all administrative API calls to the backend
+ * Handles all administrative API calls to the backend with Clerk authentication
  */
+
+import { getAuthHeaders } from '@/lib/auth/utils'
 
 export interface AdminDashboardStats {
   total_sessions: number
@@ -59,10 +61,14 @@ class AdminApiClient {
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {
+      // Get authentication headers
+      const authHeaders = await getAuthHeaders()
+
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
           ...options.headers,
         },
       })
@@ -92,14 +98,14 @@ class AdminApiClient {
    * Get dashboard statistics
    */
   async getDashboardStats(): Promise<ApiResponse<AdminDashboardStats>> {
-    return this.request<AdminDashboardStats>('/api/v1/admin/dashboard')
+    return this.request<AdminDashboardStats>('/api/v1/admin/dashboard/stats')
   }
 
   /**
    * Get active sessions
    */
   async getSessions(): Promise<ApiResponse<{ sessions: AdminSession[] }>> {
-    return this.request<{ sessions: AdminSession[] }>('/api/v1/admin/sessions')
+    return this.request<{ sessions: AdminSession[] }>('/api/v1/admin/users')
   }
 
   /**
@@ -113,14 +119,14 @@ class AdminApiClient {
    * Get system metrics
    */
   async getSystemMetrics(): Promise<ApiResponse<SystemMetrics>> {
-    return this.request<SystemMetrics>('/api/v1/admin/metrics')
+    return this.request<SystemMetrics>('/api/v1/admin/dashboard/metrics')
   }
 
   /**
    * Get health status
    */
   async getHealthStatus(): Promise<ApiResponse<{ status: string; services: Record<string, unknown> }>> {
-    return this.request<{ status: string; services: Record<string, unknown> }>('/api/v1/health')
+    return this.request<{ status: string; services: Record<string, unknown> }>('/api/v1/admin/system/health')
   }
 
   /**

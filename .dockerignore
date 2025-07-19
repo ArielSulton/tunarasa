@@ -71,6 +71,8 @@ compose.prod.yaml
 # Code editors and IDE
 .cursorignore
 .cursorrules
+.codeiumignore
+.windsurf/
 .cursor/
 .vscode/
 .claude/
@@ -81,7 +83,7 @@ compose.prod.yaml
 # Documentation and project files
 CLAUDE.md
 README.md
-/just_docs/
+/readme/
 **/LICENSE
 **/CHANGELOG*
 

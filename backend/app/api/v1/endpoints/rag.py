@@ -1,16 +1,20 @@
 """
-RAG (Retrieval-Augmented Generation) endpoints for document processing
+RAG (Retrieval-Augmented Generation) endpoints for document processing with Pinecone integration
 """
 
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import json
+import tempfile
+import os
 
-from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form, Depends
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
+from app.services.document_manager import get_document_manager, DocumentManager
+from app.services.pinecone_service import get_pinecone_service, DocumentType, ProcessingStatus
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -18,11 +22,15 @@ router = APIRouter()
 
 class DocumentUploadResponse(BaseModel):
     """Document upload response"""
+    success: bool
     document_id: str
     filename: str
     file_size: int
     processing_status: str
     upload_timestamp: datetime
+    message: str
+    chunk_count: Optional[int] = None
+    processing_time: Optional[float] = None
 
 
 class DocumentProcessingStatus(BaseModel):
@@ -34,340 +42,211 @@ class DocumentProcessingStatus(BaseModel):
     chunks_processed: int
     total_chunks: int
     error_message: Optional[str] = None
+    processing_time: Optional[float] = None
 
 
 class DocumentSearchRequest(BaseModel):
-    """Document search request"""
-    query: str = Field(min_length=1, max_length=200)
+    """Enhanced document search request"""
+    query: str = Field(min_length=1, max_length=500)
     limit: int = Field(default=5, ge=1, le=20)
     similarity_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    language: str = Field(default="id")
+    document_types: Optional[List[str]] = None
+    topics: Optional[List[str]] = None
 
 
 class DocumentSearchResponse(BaseModel):
-    """Document search response"""
+    """Enhanced document search response"""
+    success: bool
     results: List[Dict[str, Any]]
     total_results: int
     processing_time: float
+    query: str
+    message: str
 
 
 class DocumentInfo(BaseModel):
-    """Document information"""
+    """Enhanced document information"""
     document_id: str
     filename: str
     file_size: int
     upload_date: datetime
     processing_status: str
     chunk_count: int
+    document_type: str
+    language: str
+    version: int
+    title: Optional[str] = None
+    author: Optional[str] = None
+    topics: List[str] = []
     metadata: Dict[str, Any]
 
 
-class RAGService:
-    """RAG service for document processing and retrieval"""
-    
-    def __init__(self):
-        self.redis_client = None
-        self.document_store = {}
-        
-        # Connect to Redis for document caching
-        try:
-            import redis
-            self.redis_client = redis.from_url(settings.REDIS_URL)
-            self.redis_client.ping()
-            logger.info("Connected to Redis for RAG operations")
-        except Exception as e:
-            logger.warning(f"Redis connection failed for RAG: {e}")
-    
-    async def upload_document(self, file: UploadFile, description: Optional[str] = None) -> DocumentUploadResponse:
-        """Upload and process document for RAG"""
-        
-        try:
-            # Validate file
-            if not file.filename:
-                raise ValueError("No filename provided")
-            
-            if file.size > settings.MAX_FILE_SIZE:
-                raise ValueError(f"File size exceeds maximum limit of {settings.MAX_FILE_SIZE} bytes")
-            
-            # Check file type
-            allowed_types = ['.pdf', '.txt', '.docx', '.md']
-            if not any(file.filename.lower().endswith(ext) for ext in allowed_types):
-                raise ValueError(f"Unsupported file type. Allowed types: {', '.join(allowed_types)}")
-            
-            # Generate document ID
-            document_id = f"doc_{int(datetime.utcnow().timestamp())}_{file.filename.replace(' ', '_')}"
-            
-            # Read file content
-            content = await file.read()
-            
-            # Store document metadata
-            document_info = {
-                "document_id": document_id,
-                "filename": file.filename,
-                "file_size": len(content),
-                "upload_timestamp": datetime.utcnow().isoformat(),
-                "processing_status": "processing",
-                "description": description,
-                "content_type": file.content_type
-            }
-            
-            # Cache document info
-            if self.redis_client:
-                try:
-                    await self.redis_client.setex(
-                        f"document:{document_id}",
-                        86400,  # 24 hours
-                        json.dumps(document_info, default=str)
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to cache document info: {e}")
-            
-            # Store in memory for immediate access
-            self.document_store[document_id] = document_info
-            
-            # Start background processing (simplified for competition)
-            await self._process_document_async(document_id, content, file.filename)
-            
-            return DocumentUploadResponse(
-                document_id=document_id,
-                filename=file.filename,
-                file_size=len(content),
-                processing_status="processing",
-                upload_timestamp=datetime.utcnow()
-            )
-            
-        except Exception as e:
-            logger.error(f"Document upload failed: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Document upload failed: {str(e)}"
-            )
-    
-    async def _process_document_async(self, document_id: str, content: bytes, filename: str):
-        """Process document asynchronously"""
-        
-        try:
-            # Save file temporarily for processing
-            import tempfile
-            import os
-            
-            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as tmp_file:
-                tmp_file.write(content)
-                temp_path = tmp_file.name
-            
-            try:
-                # Import AI service
-                from app.services.ai_service import get_ai_service
-                ai_service = get_ai_service()
-                
-                # Add document to vector store
-                success = await ai_service.add_document_to_vectorstore(temp_path, document_id)
-                
-                if success:
-                    # Update document status
-                    if document_id in self.document_store:
-                        self.document_store[document_id]["processing_status"] = "completed"
-                        self.document_store[document_id]["chunks_processed"] = 10
-                        self.document_store[document_id]["total_chunks"] = 10
-                    
-                    logger.info(f"Document {document_id} processed and added to vector store")
-                else:
-                    raise Exception("Failed to add document to vector store")
-                
-            finally:
-                # Clean up temporary file
-                os.unlink(temp_path)
-            
-            # Update in Redis
-            if self.redis_client:
-                try:
-                    await self.redis_client.setex(
-                        f"document:{document_id}",
-                        86400,
-                        json.dumps(self.document_store[document_id], default=str)
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to update document status: {e}")
-            
-            logger.info(f"Document {document_id} processed successfully")
-            
-        except Exception as e:
-            logger.error(f"Document processing failed for {document_id}: {e}")
-            
-            # Mark as failed
-            if document_id in self.document_store:
-                self.document_store[document_id]["processing_status"] = "failed"
-                self.document_store[document_id]["error_message"] = str(e)
-    
-    async def get_processing_status(self, document_id: str) -> DocumentProcessingStatus:
-        """Get document processing status"""
-        
-        try:
-            # Get from Redis first
-            if self.redis_client:
-                try:
-                    cached_data = await self.redis_client.get(f"document:{document_id}")
-                    if cached_data:
-                        data = json.loads(cached_data)
-                        return DocumentProcessingStatus(
-                            document_id=document_id,
-                            filename=data.get("filename", ""),
-                            status=data.get("processing_status", "unknown"),
-                            progress=1.0 if data.get("processing_status") == "completed" else 0.5,
-                            chunks_processed=data.get("chunks_processed", 0),
-                            total_chunks=data.get("total_chunks", 0),
-                            error_message=data.get("error_message")
-                        )
-                except Exception as e:
-                    logger.error(f"Failed to get document status from Redis: {e}")
-            
-            # Fallback to memory store
-            if document_id in self.document_store:
-                data = self.document_store[document_id]
-                return DocumentProcessingStatus(
-                    document_id=document_id,
-                    filename=data.get("filename", ""),
-                    status=data.get("processing_status", "unknown"),
-                    progress=1.0 if data.get("processing_status") == "completed" else 0.5,
-                    chunks_processed=data.get("chunks_processed", 0),
-                    total_chunks=data.get("total_chunks", 0),
-                    error_message=data.get("error_message")
-                )
-            
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Document not found"
-            )
-            
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to get processing status: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to retrieve processing status"
-            )
-    
-    async def search_documents(self, request: DocumentSearchRequest) -> DocumentSearchResponse:
-        """Search documents using vector similarity"""
-        
-        start_time = datetime.utcnow()
-        
-        try:
-            # Simplified search for competition
-            # In production, this would use Pinecone for vector similarity search
-            
-            # Mock search results
-            results = [
-                {
-                    "document_id": "doc_sample_1",
-                    "filename": "sample_document.pdf",
-                    "chunk_text": f"This is a sample chunk that matches your query: {request.query}",
-                    "similarity_score": 0.85,
-                    "page_number": 1,
-                    "metadata": {"section": "introduction"}
-                },
-                {
-                    "document_id": "doc_sample_2",
-                    "filename": "another_document.pdf",
-                    "chunk_text": f"Another relevant chunk related to: {request.query}",
-                    "similarity_score": 0.78,
-                    "page_number": 3,
-                    "metadata": {"section": "methodology"}
-                }
-            ]
-            
-            # Filter by similarity threshold
-            filtered_results = [
-                result for result in results
-                if result["similarity_score"] >= request.similarity_threshold
-            ]
-            
-            # Limit results
-            limited_results = filtered_results[:request.limit]
-            
-            processing_time = (datetime.utcnow() - start_time).total_seconds()
-            
-            return DocumentSearchResponse(
-                results=limited_results,
-                total_results=len(limited_results),
-                processing_time=processing_time
-            )
-            
-        except Exception as e:
-            logger.error(f"Document search failed: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Document search failed: {str(e)}"
-            )
-    
-    async def list_documents(self) -> List[DocumentInfo]:
-        """List all uploaded documents"""
-        
-        try:
-            documents = []
-            
-            # Get from memory store
-            for doc_id, doc_data in self.document_store.items():
-                document_info = DocumentInfo(
-                    document_id=doc_id,
-                    filename=doc_data.get("filename", ""),
-                    file_size=doc_data.get("file_size", 0),
-                    upload_date=datetime.fromisoformat(doc_data.get("upload_timestamp", datetime.utcnow().isoformat())),
-                    processing_status=doc_data.get("processing_status", "unknown"),
-                    chunk_count=doc_data.get("total_chunks", 0),
-                    metadata={
-                        "description": doc_data.get("description", ""),
-                        "content_type": doc_data.get("content_type", "")
-                    }
-                )
-                documents.append(document_info)
-            
-            return documents
-            
-        except Exception as e:
-            logger.error(f"Failed to list documents: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to retrieve document list"
-            )
+class DocumentListResponse(BaseModel):
+    """Document list response"""
+    success: bool
+    documents: List[DocumentInfo]
+    total: int
+    limit: int
+    offset: int
+    message: str
 
 
-# Initialize RAG service
-rag_service = RAGService()
+class QuestionAnswerRequest(BaseModel):
+    """Question answering with RAG request"""
+    question: str = Field(min_length=1, max_length=500)
+    session_id: str = Field(min_length=1)
+    language: str = Field(default="id")
+    max_sources: int = Field(default=3, ge=1, le=10)
+    similarity_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+
+
+class QuestionAnswerResponse(BaseModel):
+    """Question answering with RAG response"""
+    success: bool
+    question: str
+    answer: str
+    confidence: float
+    sources: List[Dict[str, Any]]
+    session_id: str
+    processing_time: float
+    follow_up_suggestions: List[str] = []
+    message: str
+
+
+class KnowledgeBaseStatsResponse(BaseModel):
+    """Knowledge base statistics response"""
+    success: bool
+    stats: Dict[str, Any]
+    message: str
+
+
+# Dependency injection
+async def get_document_manager_dep() -> DocumentManager:
+    """Dependency to get document manager"""
+    return get_document_manager()
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
-    description: Optional[str] = Form(None)
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    author: Optional[str] = Form(None),
+    topics: Optional[str] = Form(None),  # Comma-separated string
+    language: str = Form("id"),
+    doc_manager: DocumentManager = Depends(get_document_manager_dep)
 ):
     """
-    Upload document for RAG processing
+    Upload document for RAG processing with Pinecone integration
     """
     try:
-        result = await rag_service.upload_document(file, description)
-        logger.info(f"Document uploaded: {result.document_id}")
-        return result
+        # Validate file
+        if not file.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No filename provided"
+            )
         
+        if file.size and file.size > settings.MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File size exceeds maximum limit of {settings.MAX_FILE_SIZE} bytes"
+            )
+        
+        # Check file type
+        allowed_extensions = ['.pdf', '.txt', '.docx', '.md', '.json']
+        if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"
+            )
+        
+        # Read file content and save temporarily
+        content = await file.read()
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+            tmp_file.write(content)
+            temp_path = tmp_file.name
+        
+        try:
+            # Parse topics
+            topic_list = None
+            if topics:
+                topic_list = [topic.strip() for topic in topics.split(",") if topic.strip()]
+            
+            # Add document using document manager
+            result = await doc_manager.add_document(
+                file_path=temp_path,
+                title=title,
+                description=description,
+                author=author,
+                topics=topic_list,
+                language=language
+            )
+            
+            if result["success"]:
+                metadata = result["metadata"]
+                return DocumentUploadResponse(
+                    success=True,
+                    document_id=result["document_id"],
+                    filename=file.filename,
+                    file_size=len(content),
+                    processing_status=metadata["processing_status"],
+                    upload_timestamp=datetime.fromisoformat(metadata["upload_timestamp"]),
+                    message=result["message"],
+                    chunk_count=metadata.get("chunk_count"),
+                    processing_time=metadata.get("processing_time")
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=result["message"]
+                )
+                
+        finally:
+            # Clean up temporary file
+            os.unlink(temp_path)
+            
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Document upload endpoint failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Document upload failed"
+            detail=f"Document upload failed: {str(e)}"
         )
 
 
 @router.get("/status/{document_id}", response_model=DocumentProcessingStatus)
-async def get_document_status(document_id: str):
+async def get_document_status(
+    document_id: str,
+    doc_manager: DocumentManager = Depends(get_document_manager_dep)
+):
     """
     Get document processing status
     """
     try:
-        status = await rag_service.get_processing_status(document_id)
-        return status
+        result = await doc_manager.get_document_info(document_id)
         
+        if result["success"]:
+            doc_data = result["document"]
+            return DocumentProcessingStatus(
+                document_id=document_id,
+                filename=doc_data["filename"],
+                status=doc_data["processing_status"],
+                progress=1.0 if doc_data["processing_status"] == "completed" else 0.5,
+                chunks_processed=doc_data.get("chunk_count", 0),
+                total_chunks=doc_data.get("chunk_count", 0),
+                error_message=doc_data.get("error_message"),
+                processing_time=doc_data.get("processing_time")
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+            
     except HTTPException:
         raise
     except Exception as e:
@@ -379,34 +258,99 @@ async def get_document_status(document_id: str):
 
 
 @router.post("/search", response_model=DocumentSearchResponse)
-async def search_documents(request: DocumentSearchRequest):
+async def search_documents(
+    request: DocumentSearchRequest,
+    doc_manager: DocumentManager = Depends(get_document_manager_dep)
+):
     """
-    Search documents using vector similarity
+    Search documents using Pinecone vector similarity
     """
     try:
-        results = await rag_service.search_documents(request)
-        logger.info(f"Document search completed: {results.total_results} results")
-        return results
+        result = await doc_manager.search_documents(
+            query=request.query,
+            language=request.language,
+            max_results=request.limit,
+            similarity_threshold=request.similarity_threshold,
+            document_types=request.document_types,
+            topics=request.topics
+        )
         
-    except HTTPException:
-        raise
+        return DocumentSearchResponse(
+            success=result["success"],
+            results=result["results"] if result["success"] else [],
+            total_results=result.get("total_results", 0),
+            processing_time=0.0,  # Will be calculated by document manager
+            query=request.query,
+            message=result["message"]
+        )
+        
     except Exception as e:
         logger.error(f"Document search endpoint failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Document search failed"
+        return DocumentSearchResponse(
+            success=False,
+            results=[],
+            total_results=0,
+            processing_time=0.0,
+            query=request.query,
+            message=f"Search failed: {str(e)}"
         )
 
 
-@router.get("/documents", response_model=List[DocumentInfo])
-async def list_documents():
+@router.get("/documents", response_model=DocumentListResponse)
+async def list_documents(
+    limit: int = 50,
+    offset: int = 0,
+    status_filter: Optional[str] = None,
+    doc_manager: DocumentManager = Depends(get_document_manager_dep)
+):
     """
-    List all uploaded documents
+    List all uploaded documents with pagination
     """
     try:
-        documents = await rag_service.list_documents()
-        return documents
+        result = await doc_manager.list_documents(
+            limit=limit,
+            offset=offset,
+            status=status_filter
+        )
         
+        if result["success"]:
+            formatted_docs = []
+            for doc_data in result["documents"]:
+                doc_info = DocumentInfo(
+                    document_id=doc_data["document_id"],
+                    filename=doc_data["filename"],
+                    file_size=doc_data.get("file_size", 0),
+                    upload_date=datetime.fromisoformat(doc_data["upload_timestamp"]),
+                    processing_status=doc_data["processing_status"],
+                    chunk_count=doc_data.get("chunk_count", 0),
+                    document_type=doc_data.get("document_type", "unknown"),
+                    language=doc_data.get("language", "id"),
+                    version=doc_data.get("version", 1),
+                    title=doc_data.get("title"),
+                    author=doc_data.get("author"),
+                    topics=doc_data.get("topics", []),
+                    metadata={
+                        "description": doc_data.get("description"),
+                        "processing_time": doc_data.get("processing_time"),
+                        "error_message": doc_data.get("error_message")
+                    }
+                )
+                formatted_docs.append(doc_info)
+            
+            return DocumentListResponse(
+                success=True,
+                documents=formatted_docs,
+                total=result["total"],
+                limit=limit,
+                offset=offset,
+                message=result["message"]
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result["message"]
+            )
+            
     except HTTPException:
         raise
     except Exception as e:
@@ -414,4 +358,102 @@ async def list_documents():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve document list"
+        )
+
+
+@router.post("/ask", response_model=QuestionAnswerResponse)
+async def ask_question_with_rag(
+    request: QuestionAnswerRequest,
+    doc_manager: DocumentManager = Depends(get_document_manager_dep)
+):
+    """
+    Ask a question and get an answer using RAG with Pinecone
+    """
+    try:
+        result = await doc_manager.search_with_qa(
+            question=request.question,
+            session_id=request.session_id,
+            language=request.language,
+            max_docs=request.max_sources,
+            similarity_threshold=request.similarity_threshold
+        )
+        
+        return QuestionAnswerResponse(
+            success=result["success"],
+            question=request.question,
+            answer=result.get("answer", ""),
+            confidence=result.get("confidence", 0.0),
+            sources=result.get("sources", []),
+            session_id=request.session_id,
+            processing_time=result.get("processing_time", 0.0),
+            follow_up_suggestions=result.get("follow_up_suggestions", []),
+            message=result["message"]
+        )
+        
+    except Exception as e:
+        logger.error(f"Question answering endpoint failed: {e}")
+        return QuestionAnswerResponse(
+            success=False,
+            question=request.question,
+            answer="",
+            confidence=0.0,
+            sources=[],
+            session_id=request.session_id,
+            processing_time=0.0,
+            follow_up_suggestions=[],
+            message=f"Question answering failed: {str(e)}"
+        )
+
+
+@router.get("/stats", response_model=KnowledgeBaseStatsResponse)
+async def get_knowledge_base_stats(
+    doc_manager: DocumentManager = Depends(get_document_manager_dep)
+):
+    """
+    Get knowledge base statistics
+    """
+    try:
+        result = await doc_manager.get_knowledge_base_stats()
+        
+        return KnowledgeBaseStatsResponse(
+            success=result["success"],
+            stats=result.get("stats", {}),
+            message=result["message"]
+        )
+        
+    except Exception as e:
+        logger.error(f"Knowledge base stats endpoint failed: {e}")
+        return KnowledgeBaseStatsResponse(
+            success=False,
+            stats={},
+            message=f"Failed to get knowledge base stats: {str(e)}"
+        )
+
+
+@router.delete("/documents/{document_id}")
+async def delete_document(
+    document_id: str,
+    doc_manager: DocumentManager = Depends(get_document_manager_dep)
+):
+    """
+    Delete a document from the knowledge base
+    """
+    try:
+        result = await doc_manager.delete_document(document_id)
+        
+        if result["success"]:
+            return {"success": True, "message": result["message"]}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=result["message"]
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Document deletion endpoint failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Document deletion failed: {str(e)}"
         )

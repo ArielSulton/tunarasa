@@ -6,11 +6,13 @@ CREATE TABLE "conversations" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "conversations" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "genders" (
 	"gender_id" serial PRIMARY KEY NOT NULL,
 	"gender_name" varchar(50) NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "genders" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "messages" (
 	"message_id" serial PRIMARY KEY NOT NULL,
 	"conversation_id" integer NOT NULL,
@@ -19,6 +21,7 @@ CREATE TABLE "messages" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "messages" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "notes" (
 	"note_id" serial PRIMARY KEY NOT NULL,
 	"conversation_id" integer NOT NULL,
@@ -27,11 +30,13 @@ CREATE TABLE "notes" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "notes" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "roles" (
 	"role_id" serial PRIMARY KEY NOT NULL,
 	"role_name" varchar(50) NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "roles" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "users" (
 	"user_id" serial PRIMARY KEY NOT NULL,
 	"clerk_user_id" integer,
@@ -43,6 +48,7 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_clerk_user_id_unique" UNIQUE("clerk_user_id")
 );
 --> statement-breakpoint
+ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE INDEX "conversations_user_id_idx" ON "conversations" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "conversations_is_active_idx" ON "conversations" USING btree ("is_active");--> statement-breakpoint
 CREATE INDEX "conversations_created_at_idx" ON "conversations" USING btree ("created_at");--> statement-breakpoint

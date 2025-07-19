@@ -33,43 +33,81 @@ COPY . .
 # https://github.com/vercel/next.js/discussions/14030
 # Inject secrets securely (BuildKit only!) & Build the application
 
-    # Next.js and FastAPI
+    # Environment Configuration
 RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
+    --mount=type=secret,id=ENVIRONMENT,env=ENVIRONMENT \
+    --mount=type=secret,id=DEBUG,env=DEBUG \
     --mount=type=secret,id=SITE_NAME,env=SITE_NAME \
+
+    # Frontend Configuration (Next.js)
     --mount=type=secret,id=NEXT_PUBLIC_APP_URL,env=NEXT_PUBLIC_APP_URL \
     --mount=type=secret,id=NEXT_PUBLIC_BACKEND_URL,env=NEXT_PUBLIC_BACKEND_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_API_URL,env=NEXT_PUBLIC_API_URL \
+    --mount=type=secret,id=BACKEND_URL,env=BACKEND_URL \
+    --mount=type=secret,id=NEXT_TELEMETRY_DISABLED,env=NEXT_TELEMETRY_DISABLED \
+    --mount=type=secret,id=NEXT_PRIVATE_STANDALONE,env=NEXT_PRIVATE_STANDALONE \
 
-    # Supabase Configuration
+    # Database Configuration
+    --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
     --mount=type=secret,id=SUPABASE_URL,env=SUPABASE_URL \
     --mount=type=secret,id=SUPABASE_ANON_KEY,env=SUPABASE_ANON_KEY \
     --mount=type=secret,id=SUPABASE_SERVICE_ROLE_KEY,env=SUPABASE_SERVICE_ROLE_KEY \
+    --mount=type=secret,id=DB_POOL_SIZE,env=DB_POOL_SIZE \
+    --mount=type=secret,id=DB_MAX_OVERFLOW,env=DB_MAX_OVERFLOW \
+    --mount=type=secret,id=DB_POOL_TIMEOUT,env=DB_POOL_TIMEOUT \
 
-    # Authentication
+    # Authentication & Security
     --mount=type=secret,id=SECRET_KEY,env=SECRET_KEY \
-
-    # Clerk Authentication
+    --mount=type=secret,id=ACCESS_TOKEN_EXPIRE_MINUTES,env=ACCESS_TOKEN_EXPIRE_MINUTES \
     --mount=type=secret,id=CLERK_SECRET_KEY,env=CLERK_SECRET_KEY \
     --mount=type=secret,id=CLERK_PUBLISHABLE_KEY,env=CLERK_PUBLISHABLE_KEY \
 
-    # AI Services
+    # AI Services Configuration
     --mount=type=secret,id=GROQ_API_KEY,env=GROQ_API_KEY \
+    --mount=type=secret,id=LLM_MODEL,env=LLM_MODEL \
+    --mount=type=secret,id=LLM_TEMPERATURE,env=LLM_TEMPERATURE \
+    --mount=type=secret,id=LLM_MAX_TOKENS,env=LLM_MAX_TOKENS \
+    --mount=type=secret,id=OPENAI_API_KEY,env=OPENAI_API_KEY \
     --mount=type=secret,id=PINECONE_API_KEY,env=PINECONE_API_KEY \
     --mount=type=secret,id=PINECONE_ENVIRONMENT,env=PINECONE_ENVIRONMENT \
     --mount=type=secret,id=PINECONE_INDEX_NAME,env=PINECONE_INDEX_NAME \
 
-    # Email Service (Resend)
-    --mount=type=secret,id=RESEND_API_KEY,env=RESEND_API_KEY \
+    # RAG System Configuration
+    --mount=type=secret,id=RAG_CHUNK_SIZE,env=RAG_CHUNK_SIZE \
+    --mount=type=secret,id=RAG_CHUNK_OVERLAP,env=RAG_CHUNK_OVERLAP \
+    --mount=type=secret,id=RAG_RETRIEVAL_K,env=RAG_RETRIEVAL_K \
+    --mount=type=secret,id=RAG_SIMILARITY_THRESHOLD,env=RAG_SIMILARITY_THRESHOLD \
 
-    # Redis (Local development uses Docker)
+    # External Services - Email Configuration
+    --mount=type=secret,id=EMAIL_BACKEND,env=EMAIL_BACKEND \
+    --mount=type=secret,id=SMTP_HOST,env=SMTP_HOST \
+    --mount=type=secret,id=SMTP_PORT,env=SMTP_PORT \
+    --mount=type=secret,id=SMTP_USERNAME,env=SMTP_USERNAME \
+    --mount=type=secret,id=SMTP_PASSWORD,env=SMTP_PASSWORD \
+    --mount=type=secret,id=SMTP_USE_TLS,env=SMTP_USE_TLS \
+    --mount=type=secret,id=SMTP_USE_SSL,env=SMTP_USE_SSL \
+    --mount=type=secret,id=RESEND_API_KEY,env=RESEND_API_KEY \
+    --mount=type=secret,id=FROM_EMAIL,env=FROM_EMAIL \
+    --mount=type=secret,id=FROM_NAME,env=FROM_NAME \
+    --mount=type=secret,id=ADMIN_EMAIL,env=ADMIN_EMAIL \
     --mount=type=secret,id=REDIS_URL,env=REDIS_URL \
 
-    # CORS Configuration
+    # API & Security Configuration
     --mount=type=secret,id=CORS_ORIGINS,env=CORS_ORIGINS \
+    --mount=type=secret,id=ALLOWED_HOSTS,env=ALLOWED_HOSTS \
+    --mount=type=secret,id=RATE_LIMIT_REQUESTS,env=RATE_LIMIT_REQUESTS \
+    --mount=type=secret,id=RATE_LIMIT_WINDOW,env=RATE_LIMIT_WINDOW \
+    --mount=type=secret,id=MAX_FILE_SIZE,env=MAX_FILE_SIZE \
+    --mount=type=secret,id=UPLOAD_DIR,env=UPLOAD_DIR \
+    --mount=type=secret,id=API_V1_STR,env=API_V1_STR \
+    --mount=type=secret,id=PROJECT_NAME,env=PROJECT_NAME \
 
-    # Production Environment Variables (for compose.prod.yaml)
+    # Monitoring & Observability
+    --mount=type=secret,id=PROMETHEUS_PORT,env=PROMETHEUS_PORT \
     --mount=type=secret,id=GRAFANA_ADMIN_USER,env=GRAFANA_ADMIN_USER \
     --mount=type=secret,id=GRAFANA_ADMIN_PASSWORD,env=GRAFANA_ADMIN_PASSWORD \
     --mount=type=secret,id=GRAFANA_DOMAIN,env=GRAFANA_DOMAIN \
+    --mount=type=secret,id=GRAFANA_URL,env=GRAFANA_URL \
     --mount=type=secret,id=ALERTMANAGER_DOMAIN,env=ALERTMANAGER_DOMAIN \
 
 # Build the application

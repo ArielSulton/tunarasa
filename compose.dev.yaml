@@ -8,44 +8,81 @@ services:
     env_file:
       - .env
     environment:
-      # Next.js and FastAPI
+      # Environment Configuration
       - NODE_ENV=development
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DEBUG=${DEBUG}
+      - SITE_NAME=${SITE_NAME}
+
+      # Frontend Configuration (Next.js)
       - NEXT_PUBLIC_APP_URL=http://localhost:3000
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - BACKEND_URL=http://backend:8000
       - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PRIVATE_STANDALONE=${NEXT_PRIVATE_STANDALONE}
 
-      # Supabase Configuration
+      # Database Configuration
+      - DATABASE_URL=${DATABASE_URL}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DB_POOL_SIZE=${DB_POOL_SIZE}
+      - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
+      - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT}
 
-      # Authentication
+      # Authentication & Security
       - SECRET_KEY=${SECRET_KEY}
-
-      # Clerk Authentication
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
 
-      # AI Services
+      # AI Services Configuration
       - GROQ_API_KEY=${GROQ_API_KEY}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PINECONE_API_KEY=${PINECONE_API_KEY}
       - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
 
-      # Email Service (Resend)
-      - RESEND_API_KEY=${RESEND_API_KEY}
+      # RAG System Configuration
+      - RAG_CHUNK_SIZE=${RAG_CHUNK_SIZE}
+      - RAG_CHUNK_OVERLAP=${RAG_CHUNK_OVERLAP}
+      - RAG_RETRIEVAL_K=${RAG_RETRIEVAL_K}
+      - RAG_SIMILARITY_THRESHOLD=${RAG_SIMILARITY_THRESHOLD}
 
-      # Redis (Local development uses Docker)
+      # External Services - Email Configuration (Development: MailHog)
+      - EMAIL_BACKEND=${EMAIL_BACKEND}
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_USE_TLS=${SMTP_USE_TLS}
+      - SMTP_USE_SSL=${SMTP_USE_SSL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - FROM_NAME=${FROM_NAME}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
       - REDIS_URL=${REDIS_URL}
 
-      # CORS Configuration
+      # API & Security Configuration
       - CORS_ORIGINS=${CORS_ORIGINS}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS}
+      - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+      - UPLOAD_DIR=${UPLOAD_DIR}
+      - API_V1_STR=${API_V1_STR}
+      - PROJECT_NAME=${PROJECT_NAME}
 
-      # Production Environment Variables (for compose.prod.yaml)
+      # Monitoring & Observability
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
       - GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
+      - GRAFANA_URL=${GRAFANA_URL}
       - ALERTMANAGER_DOMAIN=${ALERTMANAGER_DOMAIN}
     depends_on:
       - backend
@@ -76,43 +113,81 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      # Next.js and FastAPI
-      - NODE_ENV=production
+      # Environment Configuration
+      - NODE_ENV=development
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DEBUG=${DEBUG}
       - SITE_NAME=${SITE_NAME}
+
+      # Frontend Configuration (Next.js)
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - BACKEND_URL=http://backend:8000
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PRIVATE_STANDALONE=${NEXT_PRIVATE_STANDALONE}
 
-      # Supabase Configuration
+      # Database Configuration
+      - DATABASE_URL=${DATABASE_URL}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DB_POOL_SIZE=${DB_POOL_SIZE}
+      - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
+      - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT}
 
-      # Authentication
+      # Authentication & Security
       - SECRET_KEY=${SECRET_KEY}
-
-      # Clerk Authentication
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
 
-      # AI Services
+      # AI Services Configuration
       - GROQ_API_KEY=${GROQ_API_KEY}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PINECONE_API_KEY=${PINECONE_API_KEY}
       - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
 
-      # Email Service (Resend)
-      - RESEND_API_KEY=${RESEND_API_KEY}
+      # RAG System Configuration
+      - RAG_CHUNK_SIZE=${RAG_CHUNK_SIZE}
+      - RAG_CHUNK_OVERLAP=${RAG_CHUNK_OVERLAP}
+      - RAG_RETRIEVAL_K=${RAG_RETRIEVAL_K}
+      - RAG_SIMILARITY_THRESHOLD=${RAG_SIMILARITY_THRESHOLD}
 
-      # Redis (Local development uses Docker)
+      # External Services - Email Configuration (Development: MailHog)
+      - EMAIL_BACKEND=${EMAIL_BACKEND}
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_USE_TLS=${SMTP_USE_TLS}
+      - SMTP_USE_SSL=${SMTP_USE_SSL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - FROM_NAME=${FROM_NAME}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
       - REDIS_URL=${REDIS_URL}
 
-      # CORS Configuration
+      # API & Security Configuration
       - CORS_ORIGINS=${CORS_ORIGINS}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS}
+      - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+      - UPLOAD_DIR=${UPLOAD_DIR}
+      - API_V1_STR=${API_V1_STR}
+      - PROJECT_NAME=${PROJECT_NAME}
 
-      # Production Environment Variables (for compose.prod.yaml)
+      # Monitoring & Observability
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
       - GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
+      - GRAFANA_URL=${GRAFANA_URL}
       - ALERTMANAGER_DOMAIN=${ALERTMANAGER_DOMAIN}
     depends_on:
       redis:

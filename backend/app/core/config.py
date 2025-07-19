@@ -58,8 +58,24 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
     
-    # Email Service (Resend)
+    # Email Service Configuration
+    EMAIL_BACKEND: str = "mailhog"  # mailhog for dev, resend for prod
+    
+    # SMTP Configuration (MailHog for development)
+    SMTP_HOST: str = "mailhog"
+    SMTP_PORT: int = 1025
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_USE_TLS: bool = False
+    SMTP_USE_SSL: bool = False
+    
+    # Resend API (Production)
     RESEND_API_KEY: Optional[str] = None
+    
+    # Email Settings
+    FROM_EMAIL: str = "noreply@tunarasa.com"
+    FROM_NAME: str = "Tunarasa Admin"
+    ADMIN_EMAIL: str = "admin@tunarasa.com"
     
     # Security
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]

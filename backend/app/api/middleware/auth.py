@@ -1,15 +1,17 @@
 """
-Authentication middleware for secure API access
+Authentication middleware for secure API access with Clerk JWT validation
 """
 
 import logging
+import json
+import httpx
 from fastapi import Request, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from typing import Optional
+from typing import Optional, Dict, Any
 import jwt
-from jwt.exceptions import InvalidTokenError
+from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
 
 from app.core.config import settings
 
@@ -80,41 +82,129 @@ class AuthMiddleware(BaseHTTPMiddleware):
     
     async def _validate_admin_token(self, request: Request) -> bool:
         """
-        Validate Clerk JWT token for admin access
+        Validate Clerk JWT token for admin access with proper signature verification
         """
         try:
             # Get authorization header
             auth_header = request.headers.get("Authorization")
             if not auth_header or not auth_header.startswith("Bearer "):
+                logger.warning("Missing or invalid Authorization header")
                 return False
             
             token = auth_header.split(" ")[1]
             
             # Validate Clerk JWT token
-            # Note: In production, you would verify the token signature
-            # with Clerk's public key
             if not settings.CLERK_SECRET_KEY:
-                logger.warning("Clerk secret key not configured")
+                logger.error("Clerk secret key not configured")
                 return False
             
-            # For now, basic validation - in production use proper JWT validation
+            # Get Clerk's public keys for JWT verification
+            jwks = await self._get_clerk_jwks()
+            if not jwks:
+                logger.error("Failed to retrieve Clerk JWKS")
+                return False
+            
+            # Decode and verify the JWT
+            unverified_header = jwt.get_unverified_header(token)
+            key_id = unverified_header.get("kid")
+            
+            if not key_id or key_id not in jwks:
+                logger.warning(f"Invalid key ID in JWT: {key_id}")
+                return False
+            
+            # Get the public key for verification
+            public_key = jwks[key_id]
+            
+            # Verify and decode the JWT
             decoded = jwt.decode(
                 token,
-                settings.SECRET_KEY,
-                algorithms=["HS256"],
-                options={"verify_signature": False}  # Remove in production
+                public_key,
+                algorithms=["RS256"],
+                audience=settings.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+                options={
+                    "verify_signature": True,
+                    "verify_exp": True,
+                    "verify_aud": True,
+                    "verify_iss": True
+                }
             )
             
+            # Check if user has admin role
+            user_role = decoded.get("metadata", {}).get("role")
+            if user_role != "admin":
+                logger.warning(f"User {decoded.get('sub')} does not have admin role: {user_role}")
+                return False
+            
             # Store user info in request state
-            request.state.user = decoded
+            request.state.user = {
+                "id": decoded.get("sub"),
+                "email": decoded.get("email"),
+                "role": user_role,
+                "full_name": decoded.get("name"),
+                "clerk_user_id": decoded.get("sub")
+            }
+            
+            logger.info(f"Admin token validated for user: {decoded.get('sub')}")
             return True
             
+        except ExpiredSignatureError:
+            logger.warning("Token has expired")
+            return False
         except InvalidTokenError as e:
             logger.warning(f"Invalid admin token: {e}")
             return False
         except Exception as e:
             logger.error(f"Error validating admin token: {e}")
             return False
+    
+    async def _get_clerk_jwks(self) -> Optional[Dict[str, Any]]:
+        """
+        Fetch Clerk's JSON Web Key Set (JWKS) for JWT verification
+        """
+        try:
+            # Cache JWKS for 1 hour to avoid repeated requests
+            if hasattr(self, '_jwks_cache') and self._jwks_cache:
+                return self._jwks_cache
+            
+            # Get Clerk domain from publishable key
+            if not settings.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
+                logger.error("Clerk publishable key not configured")
+                return None
+            
+            # Extract instance ID from publishable key (format: pk_test_xxx or pk_live_xxx)
+            pub_key = settings.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+            if pub_key.startswith("pk_test_"):
+                domain_suffix = pub_key.replace("pk_test_", "")
+            elif pub_key.startswith("pk_live_"):
+                domain_suffix = pub_key.replace("pk_live_", "") 
+            else:
+                logger.error("Invalid Clerk publishable key format")
+                return None
+            
+            # Construct JWKS URL
+            jwks_url = f"https://{domain_suffix}.clerk.accounts.dev/.well-known/jwks.json"
+            
+            # Fetch JWKS
+            async with httpx.AsyncClient() as client:
+                response = await client.get(jwks_url, timeout=10.0)
+                response.raise_for_status()
+                jwks_data = response.json()
+            
+            # Convert JWKS to usable format
+            jwks = {}
+            for key in jwks_data.get("keys", []):
+                if key.get("kty") == "RSA" and key.get("use") == "sig":
+                    # Convert JWK to PEM format for PyJWT
+                    public_key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
+                    jwks[key["kid"]] = public_key
+            
+            # Cache the JWKS
+            self._jwks_cache = jwks
+            return jwks
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch Clerk JWKS: {e}")
+            return None
     
     async def _validate_user_session(self, request: Request) -> bool:
         """
