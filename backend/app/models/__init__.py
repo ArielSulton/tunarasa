@@ -1,17 +1,20 @@
 """
-Database models for Tunarasa application
+Database models for Tunarasa application (New 6-table schema)
 """
 
-from .user import User
-from .session import UserSession
-from .conversation import Conversation
-from .gesture import GestureData
-from .admin import Admin
+from .user import User, UserCreate, UserUpdate
+from .conversation import Conversation, ConversationCreate, ConversationUpdate
+from .messages import Message, MessageCreate, MessageUpdate
+from .notes import Note, NoteCreate, NoteUpdate
+from .roles import Role, RoleCreate, RoleUpdate
+from .genders import Gender, GenderCreate, GenderUpdate
 
 __all__ = [
-    "User",
-    "UserSession", 
-    "Conversation",
-    "GestureData",
-    "Admin"
+    # Core models
+    "User", "UserCreate", "UserUpdate",
+    "Conversation", "ConversationCreate", "ConversationUpdate", 
+    "Message", "MessageCreate", "MessageUpdate",
+    "Note", "NoteCreate", "NoteUpdate",
+    "Role", "RoleCreate", "RoleUpdate",
+    "Gender", "GenderCreate", "GenderUpdate"
 ]

@@ -15,6 +15,7 @@ from app.api.v1.api import api_router
 from app.api.middleware.auth import AuthMiddleware
 from app.api.middleware.rate_limit import RateLimitMiddleware
 from app.core.logging import setup_logging
+from app.core.database import db_manager
 
 # Initialize metrics
 REQUEST_COUNT = Counter('tunarasa_http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status_code'])
@@ -79,6 +80,24 @@ def create_application() -> FastAPI:
     
     # Include API router
     app.include_router(api_router, prefix="/api/v1")
+    
+    # Startup and shutdown events for database
+    @app.on_event("startup")
+    async def startup_event():
+        """Initialize database connection on startup"""
+        try:
+            await db_manager.connect()
+            await db_manager.create_tables()
+        except Exception as e:
+            print(f"Failed to initialize database: {e}")
+    
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        """Close database connections on shutdown"""
+        try:
+            await db_manager.disconnect()
+        except Exception as e:
+            print(f"Failed to close database connections: {e}")
     
     # Health check endpoint
     @app.get("/health")

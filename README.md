@@ -3,9 +3,10 @@
 **Tunarasa** is a comprehensive accessibility platform designed to help hearing-impaired users access public services through advanced sign language gesture recognition and AI-powered question answering. The system combines computer vision, large language models, and retrieval-augmented generation to provide real-time, accurate assistance.
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
-![Version](https://img.shields.io/badge/version-v0.4.0-green.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-99.9%25-blue.svg)
-![WCAG](https://img.shields.io/badge/WCAG-2.1%20AA-green.svg)
+![Version](https://img.shields.io/badge/version-v0.5.0-green.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-70%25-blue.svg)
+![Python](https://img.shields.io/badge/Python-25%25-blue.svg)
+![WCAG](https://img.shields.io/badge/WCAG-2.1%20AA-blue.svg)
 
 ## 🌟 Key Features
 
@@ -371,19 +372,19 @@ For support and questions:
 - [x] FastAPI backend with core API endpoints
 - [x] Docker containerization and development environment
 
-### Phase 2: AI Integration (In Progress)
-- [ ] MediaPipe Hands integration for gesture recognition
-- [ ] TensorFlow.js model training for Indonesian sign language
-- [ ] LangChain + ChatGroq integration for Q&A
-- [ ] Pinecone setup with document embedding pipeline
+### Phase 2: AI Integration ✅
+- [x] MediaPipe Hands integration for gesture recognition
+- [x] TensorFlow.js model training for Indonesian sign language
+- [x] LangChain + ChatGroq integration for Q&A
+- [x] Pinecone setup with document embedding pipeline
 
-### Phase 3: Admin System (Planned)
-- [ ] Clerk authentication integration
-- [ ] Admin dashboard with validation interface
-- [ ] Email invitation system with Resend
-- [ ] Role-based access control implementation
+### Phase 3: Admin System ✅
+- [x] Clerk authentication integration
+- [x] Admin dashboard with validation interface
+- [x] Email invitation system with Resend
+- [x] Role-based access control implementation
 
-### Phase 4: Monitoring & Quality (Planned)
+### Phase 4: Monitoring & Quality (In Progress)
 - [ ] Prometheus metrics collection
 - [ ] Grafana dashboard configuration
 - [ ] DeepEval integration for LLM quality assessment

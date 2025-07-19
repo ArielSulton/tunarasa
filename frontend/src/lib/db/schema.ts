@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, integer, boolean, varchar, serial, index } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
-// Notes Table (sesuai ERD)
+// Notes Table
 export const notes = pgTable(
   'notes',
   {
@@ -15,9 +15,9 @@ export const notes = pgTable(
     index('notes_conversation_id_idx').on(table.conversationId),
     index('notes_created_at_idx').on(table.createdAt),
   ],
-)
+).enableRLS()
 
-// Messages Table (sesuai ERD)
+// Messages Table
 export const messages = pgTable(
   'messages',
   {
@@ -32,9 +32,9 @@ export const messages = pgTable(
     index('messages_is_user_idx').on(table.isUser),
     index('messages_created_at_idx').on(table.createdAt),
   ],
-)
+).enableRLS()
 
-// Conversations Table (sesuai ERD)
+// Conversations Table
 export const conversations = pgTable(
   'conversations',
   {
@@ -49,9 +49,9 @@ export const conversations = pgTable(
     index('conversations_is_active_idx').on(table.isActive),
     index('conversations_created_at_idx').on(table.createdAt),
   ],
-)
+).enableRLS()
 
-// Users Table (sesuai ERD)
+// Users Table
 export const users = pgTable(
   'users',
   {
@@ -69,9 +69,9 @@ export const users = pgTable(
     index('users_gender_id_idx').on(table.genderId),
     index('users_created_at_idx').on(table.createdAt),
   ],
-)
+).enableRLS()
 
-// Genders Table (sesuai ERD)
+// Genders Table
 export const genders = pgTable(
   'genders',
   {
@@ -79,9 +79,9 @@ export const genders = pgTable(
     genderName: varchar('gender_name', { length: 50 }).notNull(),
   },
   (table) => [index('genders_gender_name_idx').on(table.genderName)],
-)
+).enableRLS()
 
-// Roles Table (sesuai ERD)
+// Roles Table
 export const roles = pgTable(
   'roles',
   {
@@ -89,7 +89,7 @@ export const roles = pgTable(
     roleName: varchar('role_name', { length: 50 }).notNull(),
   },
   (table) => [index('roles_role_name_idx').on(table.roleName)],
-)
+).enableRLS()
 
 // Table Relations
 export const userRelations = relations(users, ({ one, many }) => ({

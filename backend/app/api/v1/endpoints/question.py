@@ -12,6 +12,9 @@ from fastapi import APIRouter, HTTPException, status, Request, Depends
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
+from app.services.qr_service import qr_service
+from app.services.evaluation_service import evaluation_service
+from app.services.metrics_service import metrics_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -33,6 +36,8 @@ class QuestionResponse(BaseModel):
     processing_time: float
     conversation_id: str
     timestamp: datetime
+    qr_code: Optional[Dict[str, str]] = None
+    evaluation: Optional[Dict[str, Any]] = None
 
 
 class ConversationHistory(BaseModel):
@@ -91,13 +96,70 @@ class QuestionProcessor:
             
             processing_time = (datetime.utcnow() - start_time).total_seconds()
             
+            # Generate QR code for response
+            qr_code_data = None
+            try:
+                summary_data = {
+                    "title": f"Q&A: {request.question[:50]}...",
+                    "question": request.question,
+                    "answer": answer,
+                    "timestamp": start_time.isoformat()
+                }
+                
+                qr_result = qr_service.generate_conversation_summary_qr(
+                    conversation_id=conversation_id,
+                    user_id=1,  # Default user ID for session-based users
+                    summary_data=summary_data
+                )
+                
+                qr_code_data = {
+                    "qr_code_base64": qr_result["qr_code_base64"],
+                    "download_url": qr_result["download_url"],
+                    "access_token": qr_result["access_token"]
+                }
+                
+                # Record QR generation metric
+                metrics_service.record_qr_generation("conversation_summary")
+                
+            except Exception as e:
+                logger.warning(f"Failed to generate QR code: {e}")
+            
+            # Evaluate response quality
+            evaluation_data = None
+            try:
+                evaluation_data = await evaluation_service.evaluate_qa_response(
+                    question=request.question,
+                    answer=answer,
+                    context=sources,
+                    conversation_id=conversation_id
+                )
+                
+                # Record evaluation metrics
+                if evaluation_data.get("metrics"):
+                    for metric_name, metric_result in evaluation_data["metrics"].items():
+                        if isinstance(metric_result, dict) and "score" in metric_result:
+                            metrics_service.record_deepeval_score(metric_name, metric_result["score"])
+                
+            except Exception as e:
+                logger.warning(f"Failed to evaluate response: {e}")
+            
+            # Record AI request metrics
+            metrics_service.record_ai_request(
+                model=settings.LLM_MODEL,
+                request_type="question_answering",
+                duration=processing_time,
+                confidence=confidence
+            )
+            
             return QuestionResponse(
                 answer=answer,
                 confidence=confidence,
                 sources=sources,
                 processing_time=processing_time,
                 conversation_id=conversation_id,
-                timestamp=start_time
+                timestamp=start_time,
+                qr_code=qr_code_data,
+                evaluation=evaluation_data
             )
             
         except Exception as e:

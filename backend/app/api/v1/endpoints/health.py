@@ -126,12 +126,17 @@ async def _check_redis() -> Dict[str, Any]:
 async def _check_database() -> Dict[str, Any]:
     """Check database connection and performance"""
     try:
-        # TODO: Implement actual database health check
-        # For now, return basic status
+        from app.core.database import db_manager
+        
+        # Use the new database manager for health check
+        health_status = await db_manager.health_check()
+        
         return {
-            "status": "healthy",
+            "status": health_status.get("status", "unknown"),
             "provider": "supabase",
-            "response_time": 0.05
+            "schema": health_status.get("schema", "unknown"),
+            "connection": health_status.get("database", "unknown"),
+            "error": health_status.get("error", None)
         }
         
     except Exception as e:

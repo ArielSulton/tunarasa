@@ -147,8 +147,8 @@ CLAUDE.md
 *.sqlite3
 
 # Model and RAG Docs
-/backend/document
-/frontend/public/models
+/backend/documents/buku-saku-pelayanan-dukcapil-8166.pdf
+/frontend/public/models/sibi_model.h5
 
 # Backup files
 *.bak

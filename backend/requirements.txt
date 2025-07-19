@@ -4,9 +4,12 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# Database (Supabase)
+# Database (PostgreSQL/Supabase + SQLAlchemy for new schema)
 supabase==2.3.0
 postgrest==0.13.0
+sqlalchemy[asyncio]==2.0.23
+asyncpg==0.29.0
+alembic==1.13.1
 
 # Authentication and Security
 python-jose[cryptography]==3.3.0
@@ -35,7 +38,8 @@ deepeval==0.20.0
 python-dotenv==1.0.0
 httpx==0.26.0
 redis==5.0.1
-celery==5.3.4
+qrcode[pil]==7.4.2
+Pillow==10.1.0
 
 # Development
 pytest==7.4.3

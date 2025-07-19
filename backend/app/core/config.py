@@ -18,10 +18,16 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Tunarasa"
     
-    # Supabase Database
+    # Database Configuration (PostgreSQL via Supabase)
+    DATABASE_URL: Optional[str] = None
     SUPABASE_URL: Optional[str] = None
     SUPABASE_ANON_KEY: Optional[str] = None
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    
+    # Database Pool Settings
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_TIMEOUT: int = 30
     
     # Authentication
     SECRET_KEY: str = "your-secret-key-here"
