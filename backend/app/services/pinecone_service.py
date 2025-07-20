@@ -29,8 +29,7 @@ import uuid
 # Core libraries
 import pinecone
 from pinecone import Pinecone, Index
-import openai
-from openai import OpenAI
+# Removed OpenAI imports - using PineconeEmbeddings instead
 
 # Document processing
 import pypdf
@@ -38,7 +37,7 @@ from pypdf import PdfReader
 import markdown
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-from langchain_openai import OpenAIEmbeddings
+from langchain_pinecone import PineconeEmbeddings
 
 # FastAPI and async
 import httpx
@@ -84,7 +83,7 @@ class DocumentMetadata:
     language: str = "id"  # Default to Indonesian
     topics: List[str] = None
     chunk_count: int = 0
-    embedding_model: str = "text-embedding-ada-002"
+    embedding_model: str = settings.EMBEDDING_MODEL
     processing_time: Optional[float] = None
     error_message: Optional[str] = None
     last_accessed: Optional[datetime] = None
@@ -423,8 +422,7 @@ class PineconeVectorService:
     def __init__(self):
         self.client: Optional[Pinecone] = None
         self.index: Optional[Index] = None
-        self.embeddings: Optional[OpenAIEmbeddings] = None
-        self.openai_client: Optional[OpenAI] = None
+        self.embeddings: Optional[PineconeEmbeddings] = None
         self.document_processor = DocumentProcessor()
         self.document_metadata_cache: Dict[str, DocumentMetadata] = {}
         
@@ -451,22 +449,20 @@ class PineconeVectorService:
             raise
     
     def _initialize_embeddings(self):
-        """Initialize OpenAI embeddings"""
+        """Initialize Pinecone embeddings with multilingual-e5-large"""
         
         try:
-            if not settings.OPENAI_API_KEY:
-                raise ValueError("OPENAI_API_KEY not found in settings")
+            if not settings.PINECONE_API_KEY:
+                raise ValueError("PINECONE_API_KEY not found in settings")
             
-            self.embeddings = OpenAIEmbeddings(
-                openai_api_key=settings.OPENAI_API_KEY,
-                model="text-embedding-ada-002",
+            self.embeddings = PineconeEmbeddings(
+                model=settings.EMBEDDING_MODEL,
+                pinecone_api_key=settings.PINECONE_API_KEY,
                 chunk_size=1000,
                 max_retries=3
             )
             
-            self.openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
-            
-            logger.info("OpenAI embeddings initialized successfully")
+            logger.info(f"Pinecone embeddings ({settings.EMBEDDING_MODEL}) initialized successfully")
             
         except Exception as e:
             logger.error(f"Failed to initialize embeddings: {e}")
@@ -488,14 +484,9 @@ class PineconeVectorService:
                 # Create index with proper configuration
                 self.client.create_index(
                     name=index_name,
-                    dimension=1536,  # OpenAI ada-002 embedding dimension
+                    dimension=1536,  # multilingual-e5-large embedding dimension
                     metric="cosine",
-                    spec={
-                        "serverless": {
-                            "cloud": "aws",
-                            "region": "us-west-2"
-                        }
-                    }
+                    spec=pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
                 )
                 
                 logger.info(f"Created Pinecone index: {index_name}")

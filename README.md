@@ -3,9 +3,9 @@
 **Tunarasa** is a comprehensive accessibility platform designed to help hearing-impaired users access public services through advanced sign language gesture recognition and AI-powered question answering. The system combines computer vision, large language models, and retrieval-augmented generation to provide real-time, accurate assistance.
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
-![Version](https://img.shields.io/badge/version-v0.6.0-green.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-70%25-blue.svg)
-![Python](https://img.shields.io/badge/Python-30%25-blue.svg)
+![Version](https://img.shields.io/badge/version-v0.7.0-green.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-50%25-blue.svg)
+![Python](https://img.shields.io/badge/Python-50%25-blue.svg)
 ![WCAG](https://img.shields.io/badge/WCAG-2.1%20AA-blue.svg)
 
 ## 🌟 Key Features
@@ -130,8 +130,6 @@ tunarasa/
 3. **Configure environment variables**
    ```bash
    # Essential configuration in .env
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_ANON_KEY=your_supabase_anon_key
    GROQ_API_KEY=your_groq_api_key
    PINECONE_API_KEY=your_pinecone_api_key
    CLERK_SECRET_KEY=your_clerk_secret_key
@@ -157,7 +155,6 @@ Services available:
 - **Backend API**: http://localhost:8000
 - **Grafana Dashboard**: http://localhost:3030 (admin/admin123)
 - **Prometheus**: http://localhost:9090
-- **Mailhog**: http://localhost:8025
 
 #### Option 2: Local Development
 

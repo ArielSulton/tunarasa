@@ -26,6 +26,8 @@ frontend/next-env.d.ts
 # ===== BACKEND (FastAPI/Python) =====
 # Python
 backend/__pycache__/
+backend/*/__pycache__/
+backend/*/*/__pycache__/
 backend/*.py[cod]
 backend/*$py.class
 backend/*.so
@@ -64,6 +66,7 @@ backend/coverage.xml
 backend/*.cover
 backend/*.py,cover
 backend/.hypothesis/
+backend/.deepeval/
 backend/.pytest_cache/
 backend/cover/
 
@@ -86,6 +89,7 @@ backend/logs/
 .env.development.local
 .env.test.local
 .env.production.local
+**/.env*
 !.env.example
 
 # OS generated files

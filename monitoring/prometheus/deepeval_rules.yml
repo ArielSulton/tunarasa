@@ -1,0 +1,161 @@
+groups:
+  - name: tunarasa_deepeval_alerts
+    rules:
+      # LLM Quality Alerts
+      - alert: LLMQualityScoreLow
+        expr: avg(tunarasa_llm_quality_score{metric="average"}) < 0.7
+        for: 5m
+        labels:
+          severity: warning
+          service: tunarasa
+          component: llm_quality
+        annotations:
+          summary: "LLM quality score is below acceptable threshold"
+          description: "Average LLM quality score is {{ $value | humanizePercentage }} which is below the 70% threshold for {{ $labels.instance }}"
+
+      - alert: LLMQualityScoreCritical
+        expr: avg(tunarasa_llm_quality_score{metric="average"}) < 0.5
+        for: 2m
+        labels:
+          severity: critical
+          service: tunarasa
+          component: llm_quality
+        annotations:
+          summary: "LLM quality score is critically low"
+          description: "Average LLM quality score is {{ $value | humanizePercentage }} which is critically low for {{ $labels.instance }}"
+
+      # Category-specific Quality Alerts
+      - alert: HallucinationRateHigh
+        expr: tunarasa_llm_quality_score{category="hallucination",metric="average"} < 0.8
+        for: 3m
+        labels:
+          severity: warning
+          service: tunarasa
+          component: llm_hallucination
+        annotations:
+          summary: "LLM hallucination rate is high"
+          description: "Hallucination detection score is {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+
+      - alert: BiasDetectionFailure
+        expr: tunarasa_llm_quality_score{category="bias",metric="average"} < 0.6
+        for: 5m
+        labels:
+          severity: warning
+          service: tunarasa
+          component: llm_bias
+        annotations:
+          summary: "LLM bias detection score is low"
+          description: "Bias detection score is {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+
+      - alert: ToxicityDetectionFailure
+        expr: tunarasa_llm_quality_score{category="toxicity",metric="average"} < 0.7
+        for: 3m
+        labels:
+          severity: critical
+          service: tunarasa
+          component: llm_toxicity
+        annotations:
+          summary: "LLM toxicity detection is failing"
+          description: "Toxicity detection score is {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+
+      # Pass Rate Alerts
+      - alert: LLMPassRateLow
+        expr: avg(tunarasa_llm_quality_score{metric="pass_rate"}) < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: tunarasa
+          component: llm_quality
+        annotations:
+          summary: "LLM evaluation pass rate is low"
+          description: "LLM evaluation pass rate is {{ $value | humanizePercentage }} which is below 80% for {{ $labels.instance }}"
+
+      # System Health Alerts
+      - alert: DeepEvalServiceDown
+        expr: tunarasa_system_status{component="deepeval_service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: tunarasa
+          component: deepeval_service
+        annotations:
+          summary: "DeepEval monitoring service is down"
+          description: "DeepEval monitoring service is not responding for {{ $labels.instance }}"
+
+      - alert: RedisConnectionFailure
+        expr: tunarasa_system_status{component="redis_cache"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: tunarasa
+          component: redis_cache
+        annotations:
+          summary: "Redis cache connection failed"
+          description: "Redis cache connection is down, affecting evaluation caching for {{ $labels.instance }}"
+
+      # Performance Alerts
+      - alert: LowEvaluationVolume
+        expr: rate(tunarasa_llm_evaluations_total[5m]) < 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: tunarasa
+          component: llm_monitoring
+        annotations:
+          summary: "Low LLM evaluation volume"
+          description: "LLM evaluation rate is {{ $value }} evaluations/second, indicating low system activity for {{ $labels.instance }}"
+
+      - alert: HighEvaluationVolume
+        expr: rate(tunarasa_llm_evaluations_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: tunarasa
+          component: llm_monitoring
+        annotations:
+          summary: "High LLM evaluation volume"
+          description: "LLM evaluation rate is {{ $value }} evaluations/second, system may be under high load for {{ $labels.instance }}"
+
+      # Data Freshness Alerts
+      - alert: MetricsDataStale
+        expr: (time() - tunarasa_last_update_timestamp/1000) > 300
+        for: 2m
+        labels:
+          severity: warning
+          service: tunarasa
+          component: metrics_collection
+        annotations:
+          summary: "LLM quality metrics data is stale"
+          description: "Metrics haven't been updated for {{ $value }} seconds for {{ $labels.instance }}"
+
+  - name: tunarasa_deepeval_recording_rules
+    interval: 30s
+    rules:
+      # Recording rules for better query performance
+      - record: tunarasa:llm_quality_score:avg
+        expr: avg(tunarasa_llm_quality_score{metric="average"})
+
+      - record: tunarasa:llm_pass_rate:avg
+        expr: avg(tunarasa_llm_quality_score{metric="pass_rate"})
+
+      - record: tunarasa:evaluation_rate:5m
+        expr: rate(tunarasa_llm_evaluations_total[5m])
+
+      - record: tunarasa:quality_distribution:excellent
+        expr: count(tunarasa_llm_quality_score{metric="average"} >= 0.9)
+
+      - record: tunarasa:quality_distribution:good
+        expr: count(tunarasa_llm_quality_score{metric="average"} >= 0.7 < 0.9)
+
+      - record: tunarasa:quality_distribution:needs_improvement
+        expr: count(tunarasa_llm_quality_score{metric="average"} < 0.7)
+
+      # Category-specific aggregations
+      - record: tunarasa:security_score:avg
+        expr: avg(tunarasa_llm_quality_score{category=~"bias|toxicity|hallucination",metric="average"})
+
+      - record: tunarasa:accuracy_score:avg
+        expr: avg(tunarasa_llm_quality_score{category=~"relevancy|faithfulness|precision|recall",metric="average"})
+
+      - record: tunarasa:performance_score:avg
+        expr: avg(tunarasa_llm_quality_score{category="performance",metric="average"})

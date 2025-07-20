@@ -41,6 +41,7 @@ backend/.pytest_cache/
 backend/.coverage
 backend/htmlcov/
 backend/.tox/
+backend/tests/
 
 # Virtual environments (shouldn't be in context anyway)
 backend/venv/
@@ -67,6 +68,7 @@ compose.prod.yaml
 # Environment files (use secrets/env vars instead)
 .env*
 !.env.example
+**/.env.test
 
 # Code editors and IDE
 .cursorignore

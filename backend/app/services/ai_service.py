@@ -11,12 +11,13 @@ import json
 
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.vectorstores import Pinecone
-from langchain_openai import OpenAIEmbeddings
+from langchain_pinecone import PineconeEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
 from langchain_core.documents import Document
 
 import pinecone
+from pinecone import Pinecone as PineconeClient
 from groq import Groq
 
 from app.core.config import settings
@@ -82,41 +83,44 @@ class AIService:
                 logger.info("Groq LLM initialized successfully")
             
             # Initialize embeddings
-            if settings.OPENAI_API_KEY:
-                self.embeddings = OpenAIEmbeddings(openai_api_key=settings.OPENAI_API_KEY)
-                logger.info("OpenAI embeddings initialized successfully")
+            if settings.PINECONE_API_KEY:
+                self.embeddings = PineconeEmbeddings(
+                    model=settings.EMBEDDING_MODEL,
+                    pinecone_api_key=settings.PINECONE_API_KEY,
+                    chunk_size=1000,
+                    max_retries=3
+                )
+                logger.info(f"Pinecone embeddings ({settings.EMBEDDING_MODEL}) initialized successfully")
             else:
-                # Use mock embeddings for development
-                self.embeddings = MockEmbeddings()
-                logger.warning("Using mock embeddings - OpenAI API key not found")
+                logger.error("Pinecone API key required for embeddings")
+                raise ValueError("PINECONE_API_KEY not found in settings")
             
             # Initialize Pinecone
             if settings.PINECONE_API_KEY:
                 try:
-                    pinecone.init(
-                        api_key=settings.PINECONE_API_KEY,
-                        environment=settings.PINECONE_ENVIRONMENT
-                    )
+                    # Initialize Pinecone
+                    pc = PineconeClient(api_key=settings.PINECONE_API_KEY)
                     
-                    # Create index if it doesn't exist
-                    if settings.PINECONE_INDEX_NAME not in pinecone.list_indexes():
-                        pinecone.create_index(
+                    # Create or connect to index
+                    if settings.PINECONE_INDEX_NAME not in pc.list_indexes():
+                        pc.create_index(
                             name=settings.PINECONE_INDEX_NAME,
-                            dimension=1536,  # OpenAI embedding dimension
-                            metric="cosine"
+                            dimension=1536,  # multilingual-e5-large embedding dimension
+                            metric="cosine",
+                            spec=pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
                         )
+                        logger.info(f"Created Pinecone index: {settings.PINECONE_INDEX_NAME}")
                     
-                    index = pinecone.Index(settings.PINECONE_INDEX_NAME)
+                    index = pc.Index(settings.PINECONE_INDEX_NAME)
                     self.vectorstore = Pinecone(index, self.embeddings.embed_query, "text")
                     logger.info("Pinecone vector store initialized successfully")
                     
                 except Exception as e:
                     logger.error(f"Pinecone initialization failed: {e}")
-                    # Use mock vector store for development
-                    self.vectorstore = MockVectorStore()
+                    raise
             else:
-                logger.warning("Pinecone API key not found, using mock vector store")
-                self.vectorstore = MockVectorStore()
+                logger.error("Pinecone API key required for vector store")
+                raise ValueError("PINECONE_API_KEY not found in settings")
             
             # Initialize Redis for caching
             try:
@@ -204,17 +208,8 @@ class AIService:
                 docs = self.vectorstore.similarity_search(query, k=k)
                 return docs
             else:
-                # Mock documents for development
-                return [
-                    Document(
-                        page_content=f"Sample document content related to: {query}",
-                        metadata={
-                            "source": "sample_document.pdf",
-                            "page": 1,
-                            "document_id": "doc_sample_1"
-                        }
-                    )
-                ]
+                logger.error("Vector store not available")
+                return []
         except Exception as e:
             logger.error(f"Document retrieval failed: {e}")
             return []
@@ -323,41 +318,7 @@ Berikan jawaban yang lengkap dan informatif dalam bahasa Indonesia. Jika informa
             return False
 
 
-class MockEmbeddings:
-    """Mock embeddings for development"""
-    
-    def embed_query(self, text: str) -> List[float]:
-        """Return mock embedding"""
-        import random
-        return [random.random() for _ in range(1536)]
-    
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Return mock embeddings for documents"""
-        return [self.embed_query(text) for text in texts]
-
-
-class MockVectorStore:
-    """Mock vector store for development"""
-    
-    def __init__(self):
-        self.documents = []
-    
-    def similarity_search(self, query: str, k: int = 3) -> List[Document]:
-        """Return mock similar documents"""
-        return [
-            Document(
-                page_content=f"Mock content related to: {query}. This is sample government service information.",
-                metadata={
-                    "source": "mock_document.pdf",
-                    "page": 1,
-                    "document_id": "mock_doc_1"
-                }
-            )
-        ]
-    
-    def add_documents(self, documents: List[Document]):
-        """Add documents to mock store"""
-        self.documents.extend(documents)
+# Mock classes removed - use real services only
 
 
 # Global AI service instance

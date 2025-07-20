@@ -24,9 +24,6 @@ services:
 
       # Database Configuration
       - DATABASE_URL=${DATABASE_URL}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - DB_POOL_SIZE=${DB_POOL_SIZE}
       - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
       - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT}
@@ -44,7 +41,6 @@ services:
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
 
       # RAG System Configuration
@@ -53,18 +49,8 @@ services:
       - RAG_RETRIEVAL_K=${RAG_RETRIEVAL_K}
       - RAG_SIMILARITY_THRESHOLD=${RAG_SIMILARITY_THRESHOLD}
 
-      # External Services - Email Configuration (Development: MailHog)
-      - EMAIL_BACKEND=${EMAIL_BACKEND}
-      - SMTP_HOST=mailhog
-      - SMTP_PORT=1025
-      - SMTP_USERNAME=${SMTP_USERNAME}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - SMTP_USE_TLS=${SMTP_USE_TLS}
-      - SMTP_USE_SSL=${SMTP_USE_SSL}
+      # Email Configuration - Frontend Only (Resend API)
       - RESEND_API_KEY=${RESEND_API_KEY}
-      - FROM_EMAIL=${FROM_EMAIL}
-      - FROM_NAME=${FROM_NAME}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
       - REDIS_URL=${REDIS_URL}
 
       # API & Security Configuration
@@ -129,9 +115,6 @@ services:
 
       # Database Configuration
       - DATABASE_URL=${DATABASE_URL}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - DB_POOL_SIZE=${DB_POOL_SIZE}
       - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
       - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT}
@@ -149,7 +132,6 @@ services:
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
 
       # RAG System Configuration
@@ -158,18 +140,8 @@ services:
       - RAG_RETRIEVAL_K=${RAG_RETRIEVAL_K}
       - RAG_SIMILARITY_THRESHOLD=${RAG_SIMILARITY_THRESHOLD}
 
-      # External Services - Email Configuration (Development: MailHog)
-      - EMAIL_BACKEND=${EMAIL_BACKEND}
-      - SMTP_HOST=mailhog
-      - SMTP_PORT=1025
-      - SMTP_USERNAME=${SMTP_USERNAME}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - SMTP_USE_TLS=${SMTP_USE_TLS}
-      - SMTP_USE_SSL=${SMTP_USE_SSL}
+      # Email Configuration - Frontend Only (Resend API)
       - RESEND_API_KEY=${RESEND_API_KEY}
-      - FROM_EMAIL=${FROM_EMAIL}
-      - FROM_NAME=${FROM_NAME}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
       - REDIS_URL=${REDIS_URL}
 
       # API & Security Configuration
@@ -287,15 +259,6 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     restart: unless-stopped
 
-  # Mailhog (Email Testing)
-  mailhog:
-    image: mailhog/mailhog:latest
-    ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
-    networks:
-      - tunarasa-net
-    restart: unless-stopped
 
 volumes:
   redis_data_dev:

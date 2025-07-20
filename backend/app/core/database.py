@@ -26,15 +26,6 @@ def get_database_url() -> str:
     if settings.DATABASE_URL:
         return settings.DATABASE_URL
     
-    if settings.SUPABASE_URL:
-        # Convert Supabase URL to async PostgreSQL URL
-        supabase_url = settings.SUPABASE_URL
-        if supabase_url.startswith("postgresql://"):
-            return supabase_url.replace("postgresql://", "postgresql+asyncpg://")
-        else:
-            logger.warning("Invalid Supabase URL format")
-    
-    # Fallback to default local PostgreSQL
     return "postgresql+asyncpg://postgres:password@localhost:5432/tunarasa"
 
 

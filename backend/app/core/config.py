@@ -11,27 +11,34 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # Environment
-    ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    NODE_ENV: str
+    ENVIRONMENT: str
+    DEBUG: bool
+    SITE_NAME: str
+    
+    # Frontend Configuration (Next.js)
+    NEXT_PUBLIC_APP_URL: Optional[str] = None
+    NEXT_PUBLIC_BACKEND_URL: Optional[str] = None
+    NEXT_PUBLIC_API_URL: Optional[str] = None
+    BACKEND_URL: Optional[str] = None
+    NEXT_TELEMETRY_DISABLED: Optional[str] = None
+    NEXT_PRIVATE_STANDALONE: Optional[str] = None
     
     # API Configuration
-    API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "Tunarasa"
+    API_V1_STR: str
+    PROJECT_NAME: str
     
     # Database Configuration (PostgreSQL via Supabase)
     DATABASE_URL: Optional[str] = None
-    SUPABASE_URL: Optional[str] = None
-    SUPABASE_ANON_KEY: Optional[str] = None
-    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
     
     # Database Pool Settings
-    DB_POOL_SIZE: int = 10
-    DB_MAX_OVERFLOW: int = 20
-    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_SIZE: int
+    DB_MAX_OVERFLOW: int
+    DB_POOL_TIMEOUT: int
     
     # Authentication
-    SECRET_KEY: str = "your-secret-key-here"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
     
     # Clerk Integration
     CLERK_SECRET_KEY: Optional[str] = None
@@ -40,58 +47,48 @@ class Settings(BaseSettings):
     # AI Services
     GROQ_API_KEY: Optional[str] = None
     PINECONE_API_KEY: Optional[str] = None
-    PINECONE_ENVIRONMENT: str = "us-west1-gcp"
-    PINECONE_INDEX_NAME: str = "tunarasa-documents"
-    OPENAI_API_KEY: Optional[str] = None
+    PINECONE_INDEX_NAME: str
     
     # LLM Configuration
-    LLM_MODEL: str = "llama3-8b-8192"
-    LLM_TEMPERATURE: float = 0.7
-    LLM_MAX_TOKENS: int = 1024
+    LLM_MODEL: str
+    LLM_TEMPERATURE: float
+    LLM_MAX_TOKENS: int
     
     # RAG Configuration
-    RAG_CHUNK_SIZE: int = 1000
-    RAG_CHUNK_OVERLAP: int = 200
-    RAG_RETRIEVAL_K: int = 3
-    RAG_SIMILARITY_THRESHOLD: float = 0.7
+    RAG_CHUNK_SIZE: int
+    RAG_CHUNK_OVERLAP: int
+    RAG_RETRIEVAL_K: int
+    RAG_SIMILARITY_THRESHOLD: float
     
     # Redis
-    REDIS_URL: str = "redis://localhost:6379"
+    REDIS_URL: str
     
-    # Email Service Configuration
-    EMAIL_BACKEND: str = "mailhog"  # mailhog for dev, resend for prod
-    
-    # SMTP Configuration (MailHog for development)
-    SMTP_HOST: str = "mailhog"
-    SMTP_PORT: int = 1025
-    SMTP_USERNAME: Optional[str] = None
-    SMTP_PASSWORD: Optional[str] = None
-    SMTP_USE_TLS: bool = False
-    SMTP_USE_SSL: bool = False
-    
-    # Resend API (Production)
-    RESEND_API_KEY: Optional[str] = None
-    
-    # Email Settings
-    FROM_EMAIL: str = "noreply@tunarasa.com"
-    FROM_NAME: str = "Tunarasa Admin"
-    ADMIN_EMAIL: str = "admin@tunarasa.com"
     
     # Security
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]
-    ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1"]
+    CORS_ORIGINS: List[str]
+    ALLOWED_HOSTS: List[str]
     
     # Rate Limiting
-    RATE_LIMIT_REQUESTS: int = 100
-    RATE_LIMIT_WINDOW: int = 60  # seconds
+    RATE_LIMIT_REQUESTS: int
+    RATE_LIMIT_WINDOW: int
     
     # Monitoring
-    PROMETHEUS_PORT: int = 9090
+    PROMETHEUS_PORT: int
+    GRAFANA_ADMIN_USER: Optional[str] = None
+    GRAFANA_ADMIN_PASSWORD: Optional[str] = None
+    GRAFANA_DOMAIN: Optional[str] = None
     GRAFANA_URL: Optional[str] = None
+    ALERTMANAGER_DOMAIN: Optional[str] = None
     
     # File Upload
-    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
-    UPLOAD_DIR: str = "/tmp/uploads"
+    MAX_FILE_SIZE: int
+    UPLOAD_DIR: str
+    
+    # Embedding Model Configuration
+    EMBEDDING_MODEL: str
+    
+    # DeepEval Configuration
+    DEEPEVAL_API_KEY: Optional[str] = None
     
     class Config:
         env_file = ".env"

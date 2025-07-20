@@ -22,9 +22,6 @@ services:
 
         # Database Configuration
         - DATABASE_URL
-        - SUPABASE_URL
-        - SUPABASE_ANON_KEY
-        - SUPABASE_SERVICE_ROLE_KEY
         - DB_POOL_SIZE
         - DB_MAX_OVERFLOW
         - DB_POOL_TIMEOUT
@@ -33,16 +30,15 @@ services:
         - SECRET_KEY
         - ACCESS_TOKEN_EXPIRE_MINUTES
         - CLERK_SECRET_KEY
-        - CLERK_PUBLISHABLE_KEY
+        - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
         # AI Services Configuration
         - GROQ_API_KEY
         - LLM_MODEL
         - LLM_TEMPERATURE
         - LLM_MAX_TOKENS
-        - OPENAI_API_KEY
         - PINECONE_API_KEY
-        - PINECONE_ENVIRONMENT
+        - EMBEDDING_MODEL
         - PINECONE_INDEX_NAME
 
         # RAG System Configuration
@@ -51,18 +47,8 @@ services:
         - RAG_RETRIEVAL_K
         - RAG_SIMILARITY_THRESHOLD
 
-        # External Services - Email Configuration
-        - EMAIL_BACKEND
-        - SMTP_HOST
-        - SMTP_PORT
-        - SMTP_USERNAME
-        - SMTP_PASSWORD
-        - SMTP_USE_TLS
-        - SMTP_USE_SSL
+        # External Services - Email Configuration (Frontend Only)
         - RESEND_API_KEY
-        - FROM_EMAIL
-        - FROM_NAME
-        - ADMIN_EMAIL
         - REDIS_URL
 
         # API & Security Configuration
@@ -101,9 +87,6 @@ services:
 
       # Database Configuration
       - DATABASE_URL=${DATABASE_URL}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - DB_POOL_SIZE=${DB_POOL_SIZE}
       - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
       - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT}
@@ -112,16 +95,15 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
-      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 
       # AI Services Configuration
       - GROQ_API_KEY=${GROQ_API_KEY}
       - LLM_MODEL=${LLM_MODEL}
       - LLM_TEMPERATURE=${LLM_TEMPERATURE}
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
 
       # RAG System Configuration
@@ -130,12 +112,8 @@ services:
       - RAG_RETRIEVAL_K=${RAG_RETRIEVAL_K}
       - RAG_SIMILARITY_THRESHOLD=${RAG_SIMILARITY_THRESHOLD}
 
-      # External Services - Email Configuration (Production: Resend API)
-      - EMAIL_BACKEND=resend
+      # External Services - Email Configuration (Frontend Only)
       - RESEND_API_KEY=${RESEND_API_KEY}
-      - FROM_EMAIL=${FROM_EMAIL}
-      - FROM_NAME=${FROM_NAME}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
       - REDIS_URL=${REDIS_URL}
 
       # API & Security Configuration
@@ -196,9 +174,6 @@ services:
 
       # Database Configuration
       - DATABASE_URL=${DATABASE_URL}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - DB_POOL_SIZE=${DB_POOL_SIZE}
       - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
       - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT}
@@ -207,16 +182,15 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
-      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 
       # AI Services Configuration
       - GROQ_API_KEY=${GROQ_API_KEY}
       - LLM_MODEL=${LLM_MODEL}
       - LLM_TEMPERATURE=${LLM_TEMPERATURE}
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
 
       # RAG System Configuration
@@ -225,12 +199,8 @@ services:
       - RAG_RETRIEVAL_K=${RAG_RETRIEVAL_K}
       - RAG_SIMILARITY_THRESHOLD=${RAG_SIMILARITY_THRESHOLD}
 
-      # External Services - Email Configuration (Production: Resend API)
-      - EMAIL_BACKEND=resend
+      # External Services - Email Configuration (Frontend Only)
       - RESEND_API_KEY=${RESEND_API_KEY}
-      - FROM_EMAIL=${FROM_EMAIL}
-      - FROM_NAME=${FROM_NAME}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
       - REDIS_URL=${REDIS_URL}
 
       # API & Security Configuration
@@ -449,12 +419,6 @@ secrets:
   # Database Configuration
   DATABASE_URL:
     environment: DATABASE_URL
-  SUPABASE_URL:
-    environment: SUPABASE_URL
-  SUPABASE_ANON_KEY:
-    environment: SUPABASE_ANON_KEY
-  SUPABASE_SERVICE_ROLE_KEY:
-    environment: SUPABASE_SERVICE_ROLE_KEY
   DB_POOL_SIZE:
     environment: DB_POOL_SIZE
   DB_MAX_OVERFLOW:
@@ -469,8 +433,8 @@ secrets:
     environment: ACCESS_TOKEN_EXPIRE_MINUTES
   CLERK_SECRET_KEY:
     environment: CLERK_SECRET_KEY
-  CLERK_PUBLISHABLE_KEY:
-    environment: CLERK_PUBLISHABLE_KEY
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
+    environment: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
   # AI Services Configuration
   GROQ_API_KEY:
@@ -481,12 +445,10 @@ secrets:
     environment: LLM_TEMPERATURE
   LLM_MAX_TOKENS:
     environment: LLM_MAX_TOKENS
-  OPENAI_API_KEY:
-    environment: OPENAI_API_KEY
   PINECONE_API_KEY:
     environment: PINECONE_API_KEY
-  PINECONE_ENVIRONMENT:
-    environment: PINECONE_ENVIRONMENT
+  EMBEDDING_MODEL:
+    environment: EMBEDDING_MODEL
   PINECONE_INDEX_NAME:
     environment: PINECONE_INDEX_NAME
 
@@ -500,29 +462,9 @@ secrets:
   RAG_SIMILARITY_THRESHOLD:
     environment: RAG_SIMILARITY_THRESHOLD
 
-  # External Services - Email Configuration
-  EMAIL_BACKEND:
-    environment: EMAIL_BACKEND
-  SMTP_HOST:
-    environment: SMTP_HOST
-  SMTP_PORT:
-    environment: SMTP_PORT
-  SMTP_USERNAME:
-    environment: SMTP_USERNAME
-  SMTP_PASSWORD:
-    environment: SMTP_PASSWORD
-  SMTP_USE_TLS:
-    environment: SMTP_USE_TLS
-  SMTP_USE_SSL:
-    environment: SMTP_USE_SSL
+  # External Services - Email Configuration (Frontend Only)
   RESEND_API_KEY:
     environment: RESEND_API_KEY
-  FROM_EMAIL:
-    environment: FROM_EMAIL
-  FROM_NAME:
-    environment: FROM_NAME
-  ADMIN_EMAIL:
-    environment: ADMIN_EMAIL
   REDIS_URL:
     environment: REDIS_URL
 

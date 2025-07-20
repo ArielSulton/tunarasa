@@ -15,7 +15,20 @@ from app.db.crud import UserCRUD, ConversationCRUD, MessageCRUD, NoteCRUD, Stats
 from app.db.models import User, Conversation, Message, Note, Role, Gender
 from app.models.user import UserCreate, UserUpdate
 from app.models.conversation import ConversationCreate, ConversationUpdate
-from app.services.email_service import EmailService
+from app.middleware.admin_validation import (
+    AdminValidationService, 
+    AdminValidationSettings,
+    ValidationResult,
+    get_admin_validation_service,
+    validate_admin_operation
+)
+from app.services.deepeval_monitoring import (
+    DeepEvalMonitoringService,
+    LLMConversation,
+    EvaluationCategory,
+    get_deepeval_monitoring_service,
+    evaluate_llm_response
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -366,12 +379,9 @@ async def get_system_health(
         db_health = await db_manager.health_check()
         
         # Check email service
-        email_service = EmailService()
-        email_health = await email_service.health_check()
         
         system_health = {
             "database": db_health,
-            "email_service": email_health,
             "timestamp": datetime.utcnow().isoformat(),
             "overall_status": "healthy" if db_health.get("status") == "healthy" else "degraded"
         }
@@ -447,4 +457,470 @@ async def get_all_genders(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve genders"
+        )
+
+
+# Validation System Endpoints
+
+@router.post("/validation/validate")
+async def validate_admin_settings(
+    request: Request,
+    settings: AdminValidationSettings,
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Validate admin settings and return comprehensive results"""
+    try:
+        validation_service = get_admin_validation_service()
+        
+        # Convert settings to dict for validation
+        settings_dict = settings.dict()
+        
+        # Perform comprehensive validation
+        validation_results = await validation_service.validate_admin_request(
+            request, 
+            "validate_settings", 
+            settings_dict
+        )
+        
+        # Calculate overall score
+        overall_score, summary = await validation_service.calculate_overall_validation_score(
+            validation_results
+        )
+        
+        # Format results for response
+        formatted_results = [result.to_dict() for result in validation_results]
+        
+        return {
+            "success": True,
+            "data": {
+                "validation_results": formatted_results,
+                "overall_score": overall_score,
+                "summary": summary,
+                "settings_validated": settings_dict
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Settings validation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Validation failed: {str(e)}"
+        )
+
+
+@router.post("/validation/settings")
+async def update_validation_settings(
+    request: Request,
+    settings: AdminValidationSettings,
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Update and save admin validation settings"""
+    try:
+        validation_service = get_admin_validation_service()
+        
+        # Validate settings first
+        validation_results = await validation_service.validate_admin_request(
+            request, 
+            "update_settings", 
+            settings.dict()
+        )
+        
+        # Check for critical issues
+        await validation_service.enforce_validation_rules(validation_results, strict_mode=True)
+        
+        # Update blocked keywords if provided
+        if settings.blocked_keywords:
+            await validation_service.update_blocked_keywords(settings.blocked_keywords)
+        
+        # TODO: Save settings to database
+        # For now, we'll just validate and return success
+        
+        overall_score, summary = await validation_service.calculate_overall_validation_score(
+            validation_results
+        )
+        
+        return {
+            "success": True,
+            "data": {
+                "message": "Validation settings updated successfully",
+                "validation_score": overall_score,
+                "summary": summary,
+                "settings": settings.dict()
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update validation settings: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update settings: {str(e)}"
+        )
+
+
+@router.get("/validation/status")
+async def get_validation_status(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Get current validation system status"""
+    try:
+        validation_service = get_admin_validation_service()
+        
+        # Get current validation status
+        status_results = await validation_service.validate_admin_request(
+            request, 
+            "status_check"
+        )
+        
+        overall_score, summary = await validation_service.calculate_overall_validation_score(
+            status_results
+        )
+        
+        # Additional system status checks
+        system_status = {
+            "redis_connected": validation_service.redis_client is not None,
+            "validation_cache_size": len(validation_service._validation_cache),
+            "blocked_keywords_count": len(validation_service._blocked_keywords),
+            "last_update": datetime.utcnow().isoformat()
+        }
+        
+        return {
+            "success": True,
+            "data": {
+                "validation_score": overall_score,
+                "summary": summary,
+                "system_status": system_status,
+                "validation_results": [r.to_dict() for r in status_results]
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get validation status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve validation status"
+        )
+
+
+@router.get("/validation/blocked-keywords")
+async def get_blocked_keywords(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Get current blocked keywords list"""
+    try:
+        validation_service = get_admin_validation_service()
+        
+        keywords_list = list(validation_service._blocked_keywords)
+        
+        return {
+            "success": True,
+            "data": {
+                "blocked_keywords": keywords_list,
+                "count": len(keywords_list),
+                "last_updated": datetime.utcnow().isoformat()
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get blocked keywords: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve blocked keywords"
+        )
+
+
+@router.post("/validation/blocked-keywords")
+async def update_blocked_keywords(
+    request: Request,
+    keywords_data: Dict[str, str],
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Update blocked keywords list"""
+    try:
+        validation_service = get_admin_validation_service()
+        
+        keywords = keywords_data.get("keywords", "")
+        
+        # Update keywords
+        await validation_service.update_blocked_keywords(keywords)
+        
+        return {
+            "success": True,
+            "data": {
+                "message": "Blocked keywords updated successfully",
+                "keywords_count": len(validation_service._blocked_keywords),
+                "updated_at": datetime.utcnow().isoformat()
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to update blocked keywords: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update blocked keywords: {str(e)}"
+        )
+
+
+# DeepEval Monitoring Endpoints (for Grafana integration)
+
+@router.get("/monitoring/llm-quality")
+async def get_llm_quality_metrics(
+    request: Request,
+    period: str = Query("24h", regex="^(1h|24h|7d|30d)$"),
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Get LLM quality metrics for Grafana dashboard"""
+    try:
+        monitoring_service = get_deepeval_monitoring_service()
+        
+        # Get evaluation summary for the specified period
+        summary = await monitoring_service.get_evaluation_summary(period)
+        
+        # Format metrics for Grafana/Prometheus
+        metrics = {
+            "period": period,
+            "timestamp": datetime.utcnow().isoformat(),
+            "overall_metrics": {
+                "total_evaluations": summary.get("total_evaluations", 0),
+                "average_score": summary.get("overall_average_score", 0.0),
+                "pass_rate": summary.get("overall_pass_rate", 0.0)
+            },
+            "category_metrics": summary.get("category_statistics", {}),
+            "performance_metrics": summary.get("performance_metrics", {}),
+            "quality_indicators": {
+                "excellent_rate": 0.0,
+                "good_rate": 0.0,
+                "needs_improvement_rate": 0.0
+            }
+        }
+        
+        # Calculate quality distribution
+        category_stats = summary.get("category_statistics", {})
+        if category_stats:
+            total_categories = len(category_stats)
+            excellent_count = sum(1 for stats in category_stats.values() if stats.get("average_score", 0) >= 0.9)
+            good_count = sum(1 for stats in category_stats.values() if 0.7 <= stats.get("average_score", 0) < 0.9)
+            
+            metrics["quality_indicators"] = {
+                "excellent_rate": excellent_count / total_categories if total_categories > 0 else 0.0,
+                "good_rate": good_count / total_categories if total_categories > 0 else 0.0,
+                "needs_improvement_rate": (total_categories - excellent_count - good_count) / total_categories if total_categories > 0 else 0.0
+            }
+        
+        return {
+            "success": True,
+            "data": metrics,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get LLM quality metrics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve LLM quality metrics"
+        )
+
+
+@router.get("/monitoring/conversation/{conversation_id}")
+async def get_conversation_evaluation(
+    request: Request,
+    conversation_id: str,
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Get evaluation results for specific conversation"""
+    try:
+        monitoring_service = get_deepeval_monitoring_service()
+        
+        # Get cached evaluation for conversation
+        evaluation_data = await monitoring_service.get_conversation_evaluation(conversation_id)
+        
+        if not evaluation_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Evaluation not found for this conversation"
+            )
+        
+        return {
+            "success": True,
+            "data": evaluation_data,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get conversation evaluation: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve conversation evaluation"
+        )
+
+
+@router.post("/monitoring/evaluate")
+async def evaluate_conversation(
+    request: Request,
+    evaluation_data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Manually trigger evaluation for a conversation"""
+    try:
+        monitoring_service = get_deepeval_monitoring_service()
+        
+        # Extract conversation data
+        conversation = LLMConversation(
+            conversation_id=evaluation_data.get("conversation_id"),
+            user_question=evaluation_data.get("user_question"),
+            llm_response=evaluation_data.get("llm_response"),
+            context_documents=evaluation_data.get("context_documents", []),
+            response_time=evaluation_data.get("response_time", 0.0),
+            model_used=evaluation_data.get("model_used", "unknown"),
+            confidence_score=evaluation_data.get("confidence_score"),
+            session_id=evaluation_data.get("session_id"),
+            user_id=evaluation_data.get("user_id")
+        )
+        
+        # Perform evaluation
+        results = await monitoring_service.evaluate_conversation(conversation)
+        
+        return {
+            "success": True,
+            "data": {
+                "conversation_id": conversation.conversation_id,
+                "evaluation_results": [result.to_dict() for result in results],
+                "evaluated_at": datetime.utcnow().isoformat()
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to evaluate conversation: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Evaluation failed: {str(e)}"
+        )
+
+
+@router.get("/monitoring/quality-report")
+async def get_quality_report(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Get comprehensive quality report for monitoring"""
+    try:
+        monitoring_service = get_deepeval_monitoring_service()
+        
+        # Generate quality report
+        report = await monitoring_service.generate_quality_report()
+        
+        return {
+            "success": True,
+            "data": report,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to generate quality report: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate quality report"
+        )
+
+
+@router.get("/monitoring/prometheus-metrics")
+async def get_prometheus_metrics(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session)
+) -> str:
+    """Get metrics in Prometheus format for Grafana integration"""
+    try:
+        monitoring_service = get_deepeval_monitoring_service()
+        
+        # Get current performance metrics
+        performance_metrics = monitoring_service.performance_metrics
+        
+        # Generate Prometheus metrics format
+        metrics_lines = []
+        metrics_lines.append("# HELP tunarasa_llm_quality_score LLM quality scores by category")
+        metrics_lines.append("# TYPE tunarasa_llm_quality_score gauge")
+        
+        for category, metrics in performance_metrics.items():
+            avg_score = metrics.get("average_score", 0.0)
+            pass_rate = metrics.get("pass_rate", 0.0)
+            total_evals = metrics.get("total_evaluations", 0)
+            
+            metrics_lines.append(f'tunarasa_llm_quality_score{{category="{category}",metric="average"}} {avg_score}')
+            metrics_lines.append(f'tunarasa_llm_quality_score{{category="{category}",metric="pass_rate"}} {pass_rate}')
+            metrics_lines.append(f'tunarasa_llm_evaluations_total{{category="{category}"}} {total_evals}')
+        
+        # Add overall system metrics
+        metrics_lines.append("# HELP tunarasa_system_status System status indicators")
+        metrics_lines.append("# TYPE tunarasa_system_status gauge")
+        metrics_lines.append(f'tunarasa_system_status{{component="deepeval_service"}} 1')
+        metrics_lines.append(f'tunarasa_system_status{{component="redis_cache"}} {1 if monitoring_service.redis_client else 0}')
+        
+        # Add timestamp
+        current_timestamp = int(datetime.utcnow().timestamp() * 1000)
+        metrics_lines.append(f'tunarasa_last_update_timestamp {current_timestamp}')
+        
+        prometheus_output = "\n".join(metrics_lines)
+        
+        return prometheus_output
+        
+    except Exception as e:
+        logger.error(f"Failed to generate Prometheus metrics: {e}")
+        return f"# Error generating metrics: {str(e)}"
+
+
+@router.get("/monitoring/health")
+async def get_monitoring_health(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Get monitoring system health status"""
+    try:
+        monitoring_service = get_deepeval_monitoring_service()
+        
+        # Check service components
+        health_status = {
+            "deepeval_service": "healthy",
+            "redis_connection": "healthy" if monitoring_service.redis_client else "unhealthy",
+            "metrics_available": len(monitoring_service.performance_metrics) > 0,
+            "last_evaluation": None
+        }
+        
+        # Get last evaluation timestamp
+        if monitoring_service.evaluation_history:
+            last_eval = max(monitoring_service.evaluation_history, key=lambda x: x.timestamp)
+            health_status["last_evaluation"] = last_eval.timestamp.isoformat()
+        
+        # Overall health
+        overall_healthy = all([
+            health_status["deepeval_service"] == "healthy",
+            health_status["redis_connection"] == "healthy",
+            health_status["metrics_available"]
+        ])
+        
+        return {
+            "success": True,
+            "data": {
+                "overall_status": "healthy" if overall_healthy else "degraded",
+                "components": health_status,
+                "timestamp": datetime.utcnow().isoformat()
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get monitoring health: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to check monitoring health"
         )

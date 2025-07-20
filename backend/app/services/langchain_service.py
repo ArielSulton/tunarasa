@@ -25,13 +25,14 @@ from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.callbacks.base import BaseCallbackHandler
 
 from langchain_community.vectorstores import Pinecone
-from langchain_openai import OpenAIEmbeddings
+from langchain_pinecone import PineconeEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 
 import pinecone
+from pinecone import Pinecone as PineconeClient
 import redis
 from groq import Groq
 
@@ -183,53 +184,51 @@ class EnhancedLangChainService:
     def _initialize_embeddings(self):
         """Initialize embeddings service"""
         try:
-            if settings.OPENAI_API_KEY:
-                self.embeddings = OpenAIEmbeddings(
-                    openai_api_key=settings.OPENAI_API_KEY,
-                    model="text-embedding-ada-002"
+            if settings.PINECONE_API_KEY:
+                self.embeddings = PineconeEmbeddings(
+                    model=settings.EMBEDDING_MODEL,
+                    pinecone_api_key=settings.PINECONE_API_KEY,
+                    chunk_size=1000,
+                    max_retries=3
                 )
-                logger.info("OpenAI embeddings initialized successfully")
+                logger.info(f"Pinecone embeddings ({settings.EMBEDDING_MODEL}) initialized successfully")
             else:
-                # Use mock embeddings for development
-                self.embeddings = MockEmbeddings()
-                logger.warning("Using mock embeddings - OpenAI API key not found")
+                logger.error("Pinecone API key required for embeddings")
+                raise ValueError("PINECONE_API_KEY not found in settings")
                 
         except Exception as e:
             logger.error(f"Failed to initialize embeddings: {e}")
-            self.embeddings = MockEmbeddings()
+            raise
     
     def _initialize_vectorstore(self):
         """Initialize Pinecone vector store"""
         try:
             if settings.PINECONE_API_KEY and self.embeddings:
                 # Initialize Pinecone
-                pinecone.init(
-                    api_key=settings.PINECONE_API_KEY,
-                    environment=settings.PINECONE_ENVIRONMENT
-                )
+                pc = PineconeClient(api_key=settings.PINECONE_API_KEY)
                 
                 # Create or connect to index
-                if settings.PINECONE_INDEX_NAME not in pinecone.list_indexes():
-                    pinecone.create_index(
+                if settings.PINECONE_INDEX_NAME not in pc.list_indexes():
+                    pc.create_index(
                         name=settings.PINECONE_INDEX_NAME,
-                        dimension=1536,  # OpenAI embedding dimension
-                        metric="cosine"
+                        dimension=1536,  # multilingual-e5-large embedding dimension
+                        metric="cosine",
+                        spec=pinecone.ServerlessSpec(cloud="aws", region="us-east-1"),
                     )
                     logger.info(f"Created Pinecone index: {settings.PINECONE_INDEX_NAME}")
                 
-                index = pinecone.Index(settings.PINECONE_INDEX_NAME)
+                index = pc.Index(settings.PINECONE_INDEX_NAME)
                 self.vectorstore = Pinecone(index, self.embeddings.embed_query, "text")
                 
                 logger.info("Pinecone vector store initialized successfully")
                 
             else:
-                # Use mock vector store for development
-                self.vectorstore = MockVectorStore()
-                logger.warning("Using mock vector store - Pinecone API key not found")
+                logger.error("Pinecone API key required for vector store")
+                raise ValueError("PINECONE_API_KEY not found in settings")
                 
         except Exception as e:
             logger.error(f"Failed to initialize vector store: {e}")
-            self.vectorstore = MockVectorStore()
+            raise
     
     def _initialize_retriever(self):
         """Initialize enhanced retriever with compression"""
@@ -257,12 +256,12 @@ class EnhancedLangChainService:
                 logger.info("Enhanced retriever initialized with compression")
                 
             else:
-                self.retriever = MockRetriever()
-                logger.warning("Using mock retriever")
+                logger.error("Vector store and LLM required for retriever")
+                raise ValueError("Vector store and LLM not available")
                 
         except Exception as e:
             logger.error(f"Failed to initialize retriever: {e}")
-            self.retriever = MockRetriever()
+            raise
     
     def _initialize_redis(self):
         """Initialize Redis for conversation caching"""
@@ -470,18 +469,8 @@ class EnhancedLangChainService:
                 return filtered_docs
                 
             else:
-                # Mock documents for development
-                return [
-                    Document(
-                        page_content=f"Sample government service information related to: {question}",
-                        metadata={
-                            "source": "sample_document.pdf",
-                            "page": 1,
-                            "document_id": "sample_1",
-                            "relevance_score": 0.85
-                        }
-                    )
-                ]
+                logger.error("Retriever not available")
+                return []
                 
         except Exception as e:
             logger.error(f"Document retrieval failed: {e}")
@@ -1008,77 +997,7 @@ class EnhancedLangChainService:
             return False
 
 
-# Mock classes for development
-class MockEmbeddings:
-    """Mock embeddings for development"""
-    
-    def embed_query(self, text: str) -> List[float]:
-        """Return mock embedding"""
-        import random
-        return [random.random() for _ in range(1536)]
-    
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Return mock embeddings for documents"""
-        return [self.embed_query(text) for text in texts]
-
-
-class MockVectorStore:
-    """Mock vector store for development"""
-    
-    def __init__(self):
-        self.documents = []
-    
-    def as_retriever(self, **kwargs):
-        """Return mock retriever"""
-        return MockRetriever()
-    
-    def similarity_search(self, query: str, k: int = 3) -> List[Document]:
-        """Return mock similar documents"""
-        return [
-            Document(
-                page_content=f"Mock government service content related to: {query}. This includes detailed information about procedures, requirements, and processes.",
-                metadata={
-                    "source": "mock_government_doc.pdf",
-                    "page": 1,
-                    "document_id": "mock_doc_1",
-                    "relevance_score": 0.85,
-                    "topics": ["government", "services", "procedures"]
-                }
-            )
-        ]
-    
-    def add_documents(self, documents: List[Document]):
-        """Add documents to mock store"""
-        self.documents.extend(documents)
-
-
-class MockRetriever:
-    """Mock retriever for development"""
-    
-    def get_relevant_documents(self, query: str) -> List[Document]:
-        """Return mock relevant documents"""
-        return [
-            Document(
-                page_content=f"Comprehensive information about Indonesian government services related to: {query}. This includes step-by-step procedures, required documents, fees, and processing times.",
-                metadata={
-                    "source": "government_services_guide.pdf",
-                    "page": 1,
-                    "document_id": "guide_1",
-                    "relevance_score": 0.9,
-                    "topics": ["procedures", "requirements", "services"]
-                }
-            ),
-            Document(
-                page_content=f"Additional context and regulations for: {query}. Legal framework, exceptions, and special cases are covered in detail.",
-                metadata={
-                    "source": "regulations_handbook.pdf",
-                    "page": 15,
-                    "document_id": "reg_1",
-                    "relevance_score": 0.8,
-                    "topics": ["regulations", "legal", "framework"]
-                }
-            )
-        ]
+# Mock classes removed - use real services only
 
 
 # Global service instance
