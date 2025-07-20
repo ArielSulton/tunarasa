@@ -163,9 +163,9 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
   // Get status color
   const getStatusColor = () => {
     if (error) return 'destructive'
-    if (isRunning) return 'success'
+    if (isRunning) return 'default'
     if (isInitialized) return 'secondary'
-    return 'default'
+    return 'outline'
   }
 
   // Get confidence color

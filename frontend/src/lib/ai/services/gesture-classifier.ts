@@ -226,8 +226,10 @@ export class GestureClassifier {
   } {
     return {
       isLoaded: this.isLoaded,
-      inputShape: this.model?.inputs[0]?.shape || null,
-      outputShape: this.model?.outputs[0]?.shape || null,
+      inputShape: this.model?.inputs[0]?.shape ? Array.from(this.model.inputs[0].shape.map((dim) => dim || 0)) : null,
+      outputShape: this.model?.outputs[0]?.shape
+        ? Array.from(this.model.outputs[0].shape.map((dim) => dim || 0))
+        : null,
       config: { ...this.config },
     }
   }

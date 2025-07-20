@@ -52,6 +52,146 @@ export interface ApiResponse<T> {
   error?: string
 }
 
+export interface LLMEvaluationSummary {
+  period_hours: number
+  total_qa_analyzed: number
+  overall_quality_score: number
+  recommendations: LLMRecommendation[]
+  key_metrics: {
+    avg_response_time: number
+    avg_confidence: number
+    quality_distribution: {
+      excellent: number
+      good: number
+      needs_improvement: number
+    }
+  }
+  generated_at: string
+}
+
+export interface LLMRecommendation {
+  type: string
+  title: string
+  description: string
+  priority: string
+  confidence: number
+  evidence: string[]
+  suggested_actions: string[]
+  expected_improvement: number
+  category_affected: string
+  examples: Array<Record<string, unknown>>
+  implementation_effort: string
+}
+
+export interface LLMQualityReport {
+  report_generated_at: string
+  overall_quality_score: number
+  overall_pass_rate: number
+  category_quality_scores: Record<string, QualityScore>
+  recommendations: LLMRecommendation[]
+  total_categories_evaluated: number
+}
+
+export interface QualityScore {
+  average_score: number
+  pass_rate: number
+  quality_level: string
+  total_evaluations: number
+}
+
+export interface LLMAnalysisResult {
+  success: boolean
+  total_analyzed: number
+  recommendations: LLMRecommendation[]
+  summary: {
+    high_priority: number
+    medium_priority: number
+    low_priority: number
+  }
+}
+
+export interface RecommendationDetails {
+  recommendation: LLMRecommendation
+  related_metrics: Record<string, unknown>
+  implementation_guide: {
+    steps: string[]
+    effort: string
+    expected_impact: number
+  }
+}
+
+export interface ConversationMessage {
+  message_id: string
+  content: string
+  is_from_user: boolean
+  timestamp: string
+  confidence?: number
+  response_time?: number
+  gesture_input?: string
+}
+
+export interface ConversationItem {
+  conversation_id: string
+  user_id: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  message_count: number
+  last_message?: string
+  avg_confidence?: number
+  total_response_time?: number
+  user_info?: {
+    user_id: string
+    full_name: string
+    role: string
+  }
+}
+
+export interface ConversationListResponse {
+  conversations: ConversationItem[]
+  total: number
+  page: number
+  limit: number
+  total_pages: number
+}
+
+export interface ConversationDetails {
+  conversation_id: string
+  user_info?: {
+    user_id: string
+    full_name: string
+    role: string
+  }
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  messages: ConversationMessage[]
+  notes: Array<{
+    note_id: string
+    content: string
+    created_at: string
+    admin_user_id: string
+  }>
+  stats: {
+    total_messages: number
+    avg_confidence: number
+    total_response_time: number
+    avg_response_time: number
+  }
+}
+
+export interface ConversationEvaluation {
+  conversation_id: string
+  evaluation_results: {
+    overall_score: number
+    category_scores: Record<string, number>
+    recommendations: string[]
+    evaluation_details: Record<string, unknown>
+  }
+  evaluated_at: string
+  status: string
+}
+
 class AdminApiClient {
   private baseUrl: string
 
@@ -106,13 +246,6 @@ class AdminApiClient {
    */
   async getSessions(): Promise<ApiResponse<{ sessions: AdminSession[] }>> {
     return this.request<{ sessions: AdminSession[] }>('/api/v1/admin/users')
-  }
-
-  /**
-   * Get gesture analytics
-   */
-  async getGestureAnalytics(): Promise<ApiResponse<{ gesture_analytics: GestureAnalytics[] }>> {
-    return this.request<{ gesture_analytics: GestureAnalytics[] }>('/api/v1/admin/analytics')
   }
 
   /**
@@ -254,6 +387,101 @@ class AdminApiClient {
       error_rate: number
       timestamp: string
     }>('/api/v1/admin/realtime')
+  }
+
+  /**
+   * Get LLM evaluation summary with recommendations
+   */
+  async getLLMEvaluationSummary(params: { period: string }): Promise<ApiResponse<LLMEvaluationSummary>> {
+    const queryParams = new URLSearchParams(params)
+    return this.request<LLMEvaluationSummary>(`/api/v1/admin/llm/evaluation-summary?${queryParams.toString()}`)
+  }
+
+  /**
+   * Get LLM quality report
+   */
+  async getLLMQualityReport(): Promise<ApiResponse<LLMQualityReport>> {
+    return this.request<LLMQualityReport>('/api/v1/admin/llm/quality-report')
+  }
+
+  /**
+   * Analyze batch of Q&A data for recommendations
+   */
+  async analyzeLLMBatch(qaData: {
+    questions: string[]
+    answers: string[]
+    contexts?: string[]
+    confidences?: number[]
+    response_times?: number[]
+    session_ids?: string[]
+  }): Promise<ApiResponse<LLMAnalysisResult>> {
+    return this.request<LLMAnalysisResult>('/api/v1/admin/llm/analyze-batch', {
+      method: 'POST',
+      body: JSON.stringify(qaData),
+    })
+  }
+
+  /**
+   * Get detailed recommendation information
+   */
+  async getRecommendationDetails(recommendationId: string): Promise<ApiResponse<RecommendationDetails>> {
+    return this.request<RecommendationDetails>(`/api/v1/admin/llm/recommendations/${recommendationId}`)
+  }
+
+  /**
+   * Get gesture analytics with optional parameters
+   */
+  async getGestureAnalytics(params?: {
+    timeframe?: string
+    format?: string
+  }): Promise<ApiResponse<{ gesture_analytics?: GestureAnalytics[]; timeseries?: Array<Record<string, unknown>> }>> {
+    if (params) {
+      const queryParams = new URLSearchParams()
+      if (params.timeframe) queryParams.append('timeframe', params.timeframe)
+      if (params.format) queryParams.append('format', params.format)
+      return this.request<{ gesture_analytics?: GestureAnalytics[]; timeseries?: Array<Record<string, unknown>> }>(
+        `/api/v1/admin/analytics?${queryParams.toString()}`,
+      )
+    }
+    return this.request<{ gesture_analytics?: GestureAnalytics[]; timeseries?: Array<Record<string, unknown>> }>(
+      '/api/v1/admin/analytics',
+    )
+  }
+
+  /**
+   * Get all conversations with pagination and filters
+   */
+  async getConversations(params?: {
+    page?: number
+    limit?: number
+    search?: string
+    status?: string
+    date_from?: string
+    date_to?: string
+  }): Promise<ApiResponse<ConversationListResponse>> {
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.limit) queryParams.append('limit', params.limit.toString())
+    if (params?.search) queryParams.append('search', params.search)
+    if (params?.status) queryParams.append('status', params.status)
+    if (params?.date_from) queryParams.append('date_from', params.date_from)
+    if (params?.date_to) queryParams.append('date_to', params.date_to)
+
+    return this.request<ConversationListResponse>(`/api/v1/admin/conversations?${queryParams.toString()}`)
+  }
+
+  /**
+   * Get conversation details with messages
+   */
+  async getConversationDetails(conversationId: string): Promise<ApiResponse<ConversationDetails>> {
+    return this.request<ConversationDetails>(`/api/v1/admin/conversations/${conversationId}`)
+  }
+
+  /**
+   * Get conversation evaluation results
+   */
+  async getConversationEvaluation(conversationId: string): Promise<ApiResponse<ConversationEvaluation>> {
+    return this.request<ConversationEvaluation>(`/api/v1/admin/monitoring/conversation/${conversationId}`)
   }
 }
 

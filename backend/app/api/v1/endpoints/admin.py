@@ -29,6 +29,11 @@ from app.services.deepeval_monitoring import (
     get_deepeval_monitoring_service,
     evaluate_llm_response
 )
+from app.services.llm_recommendation_service import (
+    get_llm_recommendation_service,
+    QAExample,
+    analyze_and_recommend
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -923,4 +928,188 @@ async def get_monitoring_health(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to check monitoring health"
+        )
+
+
+# LLM Recommendation Endpoints
+
+@router.get("/llm/evaluation-summary")
+async def get_llm_evaluation_summary(
+    request: Request,
+    period: str = Query("24h", description="Time period (1h, 24h, 7d, 30d)"),
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Get LLM evaluation summary with recommendations"""
+    try:
+        # Parse period to hours
+        period_map = {"1h": 1, "24h": 24, "7d": 168, "30d": 720}
+        hours = period_map.get(period, 24)
+        
+        recommendation_service = get_llm_recommendation_service()
+        summary = await recommendation_service.get_recommendations_summary(hours)
+        
+        return {
+            "success": True,
+            "data": summary,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get LLM evaluation summary: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get evaluation summary: {str(e)}"
+        )
+
+
+@router.get("/llm/quality-report")
+async def get_llm_quality_report(
+    request: Request,
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Get comprehensive LLM quality report with recommendations"""
+    try:
+        recommendation_service = get_llm_recommendation_service()
+        
+        # Generate quality report based on recent data
+        summary = await recommendation_service.get_recommendations_summary(24)
+        
+        # Extract quality report from summary
+        quality_report = {
+            "report_generated_at": summary.get("generated_at"),
+            "overall_quality_score": summary.get("overall_quality_score", 0.0),
+            "overall_pass_rate": summary.get("key_metrics", {}).get("quality_distribution", {}).get("excellent", 0) / max(summary.get("total_qa_analyzed", 1), 1),
+            "category_quality_scores": {},
+            "recommendations": summary.get("recommendations", []),
+            "total_categories_evaluated": len(summary.get("recommendations", []))
+        }
+        
+        # Add category scores based on recommendations
+        for rec in summary.get("recommendations", []):
+            category = rec.get("category_affected", "unknown")
+            if category not in quality_report["category_quality_scores"]:
+                quality_report["category_quality_scores"][category] = {
+                    "average_score": rec.get("confidence", 0.5),
+                    "pass_rate": 1.0 - rec.get("confidence", 0.5),  # Invert confidence for pass rate
+                    "quality_level": "Good" if rec.get("confidence", 0.5) > 0.7 else "Needs Improvement",
+                    "total_evaluations": summary.get("total_qa_analyzed", 0)
+                }
+        
+        return {
+            "success": True,
+            "data": quality_report,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get LLM quality report: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get quality report: {str(e)}"
+        )
+
+
+@router.post("/llm/analyze-batch")
+async def analyze_llm_batch(
+    request: Request,
+    qa_data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Analyze batch of Q&A data and provide recommendations"""
+    try:
+        # Extract data from request
+        questions = qa_data.get("questions", [])
+        answers = qa_data.get("answers", [])
+        contexts = qa_data.get("contexts", [])
+        confidences = qa_data.get("confidences", [])
+        response_times = qa_data.get("response_times", [])
+        session_ids = qa_data.get("session_ids", [])
+        
+        if not questions or not answers:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Questions and answers are required"
+            )
+        
+        if len(questions) != len(answers):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Number of questions and answers must match"
+            )
+        
+        # Analyze and get recommendations
+        result = await analyze_and_recommend(
+            questions=questions,
+            answers=answers,
+            contexts=contexts,
+            confidences=confidences,
+            response_times=response_times,
+            session_ids=session_ids
+        )
+        
+        return {
+            "success": True,
+            "data": result,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to analyze LLM batch: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to analyze batch: {str(e)}"
+        )
+
+
+@router.get("/llm/recommendations/{recommendation_id}")
+async def get_recommendation_details(
+    request: Request,
+    recommendation_id: str,
+    db: AsyncSession = Depends(get_db_session)
+) -> Dict[str, Any]:
+    """Get detailed information about a specific recommendation"""
+    try:
+        recommendation_service = get_llm_recommendation_service()
+        
+        # For now, return cached recommendations
+        # In a full implementation, this would fetch by ID from database
+        summary = await recommendation_service.get_recommendations_summary(24)
+        recommendations = summary.get("recommendations", [])
+        
+        # Find recommendation by type (using type as ID for now)
+        recommendation = None
+        for rec in recommendations:
+            if rec.get("type") == recommendation_id:
+                recommendation = rec
+                break
+        
+        if not recommendation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Recommendation not found"
+            )
+        
+        return {
+            "success": True,
+            "data": {
+                "recommendation": recommendation,
+                "related_metrics": summary.get("key_metrics", {}),
+                "implementation_guide": {
+                    "steps": recommendation.get("suggested_actions", []),
+                    "effort": recommendation.get("implementation_effort", "medium"),
+                    "expected_impact": recommendation.get("expected_improvement", 0.0)
+                }
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get recommendation details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get recommendation details: {str(e)}"
         )

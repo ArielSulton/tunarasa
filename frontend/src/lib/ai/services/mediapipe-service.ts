@@ -23,10 +23,9 @@ export interface GestureDetectionResult {
 
 export interface MediaPipeConfig {
   maxNumHands: number
-  modelComplexity: number
+  modelComplexity: 0 | 1
   minDetectionConfidence: number
   minTrackingConfidence: number
-  staticImageMode: boolean
 }
 
 export class MediaPipeService {
@@ -45,7 +44,6 @@ export class MediaPipeService {
     modelComplexity: 1,
     minDetectionConfidence: 0.7,
     minTrackingConfidence: 0.7,
-    staticImageMode: false,
   }
 
   constructor(config?: Partial<MediaPipeConfig>) {
@@ -77,10 +75,9 @@ export class MediaPipeService {
       // Configure MediaPipe Hands
       this.hands.setOptions({
         maxNumHands: this.config.maxNumHands,
-        modelComplexity: this.config.modelComplexity,
+        modelComplexity: this.config.modelComplexity as 0 | 1,
         minDetectionConfidence: this.config.minDetectionConfidence,
         minTrackingConfidence: this.config.minTrackingConfidence,
-        staticImageMode: this.config.staticImageMode,
       })
 
       // Set up results callback
@@ -225,10 +222,9 @@ export class MediaPipeService {
     if (this.hands) {
       this.hands.setOptions({
         maxNumHands: this.config.maxNumHands,
-        modelComplexity: this.config.modelComplexity,
+        modelComplexity: this.config.modelComplexity as 0 | 1,
         minDetectionConfidence: this.config.minDetectionConfidence,
         minTrackingConfidence: this.config.minTrackingConfidence,
-        staticImageMode: this.config.staticImageMode,
       })
     }
   }

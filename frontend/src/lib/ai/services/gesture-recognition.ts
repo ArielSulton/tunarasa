@@ -19,7 +19,7 @@ export interface GestureRecognitionResult {
 export interface GestureRecognitionConfig {
   mediaPipeConfig?: {
     maxNumHands?: number
-    modelComplexity?: number
+    modelComplexity?: 0 | 1
     minDetectionConfidence?: number
     minTrackingConfidence?: number
   }
@@ -55,7 +55,7 @@ export class GestureRecognitionService {
   private config: Required<GestureRecognitionConfig> = {
     mediaPipeConfig: {
       maxNumHands: 1,
-      modelComplexity: 1,
+      modelComplexity: 1 as 0 | 1,
       minDetectionConfidence: 0.7,
       minTrackingConfidence: 0.7,
     },
@@ -190,7 +190,7 @@ export class GestureRecognitionService {
 
     // Apply debouncing
     const now = Date.now()
-    if (now - this.lastProcessingTime < this.config.processingOptions.debounceTime) {
+    if (now - this.lastProcessingTime < (this.config.processingOptions?.debounceTime || 100)) {
       return
     }
     this.lastProcessingTime = now
@@ -232,7 +232,7 @@ export class GestureRecognitionService {
     this.smoothingBuffer.push(result)
 
     // Maintain window size
-    if (this.smoothingBuffer.length > this.config.processingOptions.smoothingWindow) {
+    if (this.smoothingBuffer.length > (this.config.processingOptions?.smoothingWindow || 5)) {
       this.smoothingBuffer.shift()
     }
 

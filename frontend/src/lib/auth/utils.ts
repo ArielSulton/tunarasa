@@ -3,6 +3,15 @@
  */
 
 import { auth } from '@clerk/nextjs/server'
+
+// Type for Clerk session claims with metadata
+interface ClerkSessionClaims {
+  metadata?: {
+    role?: string
+  }
+  email?: string
+  name?: string
+}
 import { redirect } from 'next/navigation'
 
 /**
@@ -37,7 +46,7 @@ export async function isAuthenticated(): Promise<boolean> {
 export async function isAdmin(): Promise<boolean> {
   try {
     const { sessionClaims } = await auth()
-    const userRole = sessionClaims?.metadata?.role
+    const userRole = (sessionClaims as ClerkSessionClaims)?.metadata?.role
     return userRole === 'admin'
   } catch (error) {
     console.error('Error checking admin status:', error)
@@ -58,7 +67,7 @@ export async function getCurrentUser() {
 
     return {
       id: userId,
-      role: sessionClaims?.metadata?.role || 'user',
+      role: (sessionClaims as ClerkSessionClaims)?.metadata?.role || 'user',
       email: sessionClaims?.email,
       name: sessionClaims?.name,
     }

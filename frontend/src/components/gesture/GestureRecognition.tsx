@@ -243,7 +243,9 @@ export function GestureRecognition({
                   </div>
                   <div>
                     <span className="text-muted-foreground">Language: </span>
-                    <span className="font-medium">{statistics.language?.toUpperCase()}</span>
+                    <span className="font-medium">
+                      {typeof statistics.language === 'string' ? statistics.language.toUpperCase() : 'N/A'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Model: </span>
@@ -251,7 +253,10 @@ export function GestureRecognition({
                   </div>
                   <div>
                     <span className="text-muted-foreground">Sequence: </span>
-                    <span className="font-medium">{statistics.currentSequenceLength} letters</span>
+                    <span className="font-medium">
+                      {typeof statistics.currentSequenceLength === 'number' ? statistics.currentSequenceLength : 0}{' '}
+                      letters
+                    </span>
                   </div>
                 </div>
               </CardContent>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { adminApiClient, AdminSession, GestureAnalytics } from '@/lib/api/admin-client'
+import { adminApiClient, AdminSession, GestureAnalytics as ApiGestureAnalytics } from '@/lib/api/admin-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,7 @@ import {
   Search,
   Globe,
   Cpu,
-  Memory,
+  MemoryStick,
   HardDrive,
   Wifi,
   Monitor,
@@ -40,6 +40,7 @@ import {
   Tablet,
   Laptop,
 } from 'lucide-react'
+import { QALogsViewer } from '@/components/admin/QALogsViewer'
 
 interface DashboardStats {
   totalSessions: number
@@ -65,7 +66,7 @@ interface SessionData {
   status: 'active' | 'idle' | 'ended'
 }
 
-interface GestureAnalytics {
+interface LocalGestureAnalytics {
   letter: string
   count: number
   accuracy: number
@@ -95,7 +96,7 @@ export default function AdminDashboard() {
   })
 
   const [sessions, setSessions] = useState<SessionData[]>([])
-  const [gestureAnalytics, setGestureAnalytics] = useState<GestureAnalytics[]>([])
+  const [gestureAnalytics, setGestureAnalytics] = useState<LocalGestureAnalytics[]>([])
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics>({
     cpu: 0,
     memory: 0,
@@ -138,18 +139,8 @@ export default function AdminDashboard() {
             uptime: statsData.uptime || 0,
           })
         } else {
-          // Fallback to mock data if API fails
-          console.warn('Failed to fetch dashboard stats:', statsResponse.error)
-          setStats({
-            totalSessions: 2847,
-            totalConversations: 12456,
-            totalGestures: 45782,
-            activeSessions: 23,
-            averageAccuracy: 87.5,
-            averageResponseTime: 1.2,
-            systemHealth: 'healthy',
-            uptime: 99.8,
-          })
+          console.error('Failed to fetch dashboard stats:', statsResponse.error)
+          // Keep current stats or show error state - no fallback to dummy data
         }
 
         // Fetch session data
@@ -172,46 +163,9 @@ export default function AdminDashboard() {
             })) || [],
           )
         } else {
-          // Fallback to mock data
-          console.warn('Failed to fetch sessions:', sessionsResponse.error)
-          setSessions([
-            {
-              id: 'sess_001',
-              userId: 'user_12345',
-              startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
-              lastActivity: new Date(Date.now() - 5 * 60 * 1000),
-              gestureCount: 156,
-              conversationCount: 8,
-              accuracy: 89.2,
-              device: 'Desktop',
-              location: 'Jakarta, ID',
-              status: 'active',
-            },
-            {
-              id: 'sess_002',
-              userId: 'user_67890',
-              startTime: new Date(Date.now() - 4 * 60 * 60 * 1000),
-              lastActivity: new Date(Date.now() - 15 * 60 * 1000),
-              gestureCount: 89,
-              conversationCount: 5,
-              accuracy: 92.1,
-              device: 'Mobile',
-              location: 'Yogyakarta, ID',
-              status: 'idle',
-            },
-            {
-              id: 'sess_003',
-              userId: 'user_11111',
-              startTime: new Date(Date.now() - 6 * 60 * 60 * 1000),
-              lastActivity: new Date(Date.now() - 30 * 60 * 1000),
-              gestureCount: 234,
-              conversationCount: 12,
-              accuracy: 85.7,
-              device: 'Tablet',
-              location: 'Bandung, ID',
-              status: 'ended',
-            },
-          ])
+          console.error('Failed to fetch sessions:', sessionsResponse.error)
+          // Keep current sessions or set to empty array - no fallback to dummy data
+          setSessions([])
         }
 
         // Fetch gesture analytics
@@ -220,7 +174,7 @@ export default function AdminDashboard() {
         if (analyticsResponse.success && analyticsResponse.data) {
           const analyticsData = analyticsResponse.data
           setGestureAnalytics(
-            analyticsData.gesture_analytics?.map((gesture: GestureAnalytics) => ({
+            analyticsData.gesture_analytics?.map((gesture: ApiGestureAnalytics) => ({
               letter: gesture.letter,
               count: gesture.count || 0,
               accuracy: gesture.accuracy || 0,
@@ -267,21 +221,10 @@ export default function AdminDashboard() {
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
-        // Use fallback mock data on error
-        setStats({
-          totalSessions: 2847,
-          totalConversations: 12456,
-          totalGestures: 45782,
-          activeSessions: 23,
-          averageAccuracy: 87.5,
-          averageResponseTime: 1.2,
-          systemHealth: 'healthy',
-          uptime: 99.8,
-        })
+        // Keep current stats or show error state - no fallback to dummy data
       }
 
       setLastUpdate(new Date())
-      setIsLoading(false)
     }
 
     fetchDashboardData()
@@ -456,10 +399,11 @@ export default function AdminDashboard() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="qa-logs">Q&A Logs</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -535,7 +479,7 @@ export default function AdminDashboard() {
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Memory className="h-4 w-4 text-green-600" />
+                        <MemoryStick className="h-4 w-4 text-green-600" />
                         <span className="text-sm">Memory</span>
                       </div>
                       <span className="text-sm font-medium">{systemMetrics.memory}%</span>
@@ -736,6 +680,11 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Q&A Logs Tab */}
+          <TabsContent value="qa-logs" className="space-y-6">
+            <QALogsViewer />
           </TabsContent>
 
           {/* System Tab */}
