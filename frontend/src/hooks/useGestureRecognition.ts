@@ -23,7 +23,7 @@ interface UseGestureRecognitionReturn {
   stopRecognition: () => void
   clearSequence: () => void
   videoRef: React.RefObject<HTMLVideoElement>
-  statistics: any
+  statistics: Record<string, unknown>
 }
 
 export function useGestureRecognition(options: UseGestureRecognitionOptions = {}): UseGestureRecognitionReturn {
@@ -39,7 +39,7 @@ export function useGestureRecognition(options: UseGestureRecognitionOptions = {}
     timestamp: '',
   })
   const [error, setError] = useState<string | null>(null)
-  const [statistics, setStatistics] = useState<any>({})
+  const [statistics, setStatistics] = useState<Record<string, unknown>>({})
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const initializationRef = useRef(false)

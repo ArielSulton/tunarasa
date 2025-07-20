@@ -1,6 +1,6 @@
 {
   "name": "tunarasa-frontend",
-  "version": "v0.6.0",
+  "version": "v0.7.0",
   "private": true,
   "scripts": {
     "dev": "bun --bun next dev --turbopack",
@@ -70,6 +70,7 @@
     "react-hook-form": "^7.60.0",
     "react-resizable-panels": "^3.0.3",
     "recharts": "2.15.4",
+    "resend": "^4.7.0",
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",

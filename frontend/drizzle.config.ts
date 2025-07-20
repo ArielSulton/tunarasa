@@ -9,7 +9,7 @@ export default defineConfig({
   out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.DATABASE_URL || process.env.SUPABASE_URL || '',
+    url: process.env.DATABASE_URL || '',
   },
 
   // Enable migrations with RLS support

@@ -49,9 +49,6 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
 
     # Database Configuration
     --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
-    --mount=type=secret,id=SUPABASE_URL,env=SUPABASE_URL \
-    --mount=type=secret,id=SUPABASE_ANON_KEY,env=SUPABASE_ANON_KEY \
-    --mount=type=secret,id=SUPABASE_SERVICE_ROLE_KEY,env=SUPABASE_SERVICE_ROLE_KEY \
     --mount=type=secret,id=DB_POOL_SIZE,env=DB_POOL_SIZE \
     --mount=type=secret,id=DB_MAX_OVERFLOW,env=DB_MAX_OVERFLOW \
     --mount=type=secret,id=DB_POOL_TIMEOUT,env=DB_POOL_TIMEOUT \
@@ -60,16 +57,15 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
     --mount=type=secret,id=SECRET_KEY,env=SECRET_KEY \
     --mount=type=secret,id=ACCESS_TOKEN_EXPIRE_MINUTES,env=ACCESS_TOKEN_EXPIRE_MINUTES \
     --mount=type=secret,id=CLERK_SECRET_KEY,env=CLERK_SECRET_KEY \
-    --mount=type=secret,id=CLERK_PUBLISHABLE_KEY,env=CLERK_PUBLISHABLE_KEY \
+    --mount=type=secret,id=NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,env=NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY \
 
     # AI Services Configuration
     --mount=type=secret,id=GROQ_API_KEY,env=GROQ_API_KEY \
     --mount=type=secret,id=LLM_MODEL,env=LLM_MODEL \
     --mount=type=secret,id=LLM_TEMPERATURE,env=LLM_TEMPERATURE \
     --mount=type=secret,id=LLM_MAX_TOKENS,env=LLM_MAX_TOKENS \
-    --mount=type=secret,id=OPENAI_API_KEY,env=OPENAI_API_KEY \
     --mount=type=secret,id=PINECONE_API_KEY,env=PINECONE_API_KEY \
-    --mount=type=secret,id=PINECONE_ENVIRONMENT,env=PINECONE_ENVIRONMENT \
+    --mount=type=secret,id=EMBEDDING_MODEL,env=EMBEDDING_MODEL \
     --mount=type=secret,id=PINECONE_INDEX_NAME,env=PINECONE_INDEX_NAME \
 
     # RAG System Configuration
@@ -79,13 +75,6 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
     --mount=type=secret,id=RAG_SIMILARITY_THRESHOLD,env=RAG_SIMILARITY_THRESHOLD \
 
     # External Services - Email Configuration
-    --mount=type=secret,id=EMAIL_BACKEND,env=EMAIL_BACKEND \
-    --mount=type=secret,id=SMTP_HOST,env=SMTP_HOST \
-    --mount=type=secret,id=SMTP_PORT,env=SMTP_PORT \
-    --mount=type=secret,id=SMTP_USERNAME,env=SMTP_USERNAME \
-    --mount=type=secret,id=SMTP_PASSWORD,env=SMTP_PASSWORD \
-    --mount=type=secret,id=SMTP_USE_TLS,env=SMTP_USE_TLS \
-    --mount=type=secret,id=SMTP_USE_SSL,env=SMTP_USE_SSL \
     --mount=type=secret,id=RESEND_API_KEY,env=RESEND_API_KEY \
     --mount=type=secret,id=FROM_EMAIL,env=FROM_EMAIL \
     --mount=type=secret,id=FROM_NAME,env=FROM_NAME \

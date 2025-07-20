@@ -4,10 +4,10 @@ import * as schema from './schema'
 import { sql } from 'drizzle-orm'
 
 // Database connection string
-const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_URL || ''
+const connectionString = process.env.DATABASE_URL || ''
 
 if (!connectionString) {
-  throw new Error('DATABASE_URL or SUPABASE_URL environment variable is required')
+  throw new Error('DATABASE_URL environment variable is required')
 }
 
 // Create a postgres connection

@@ -102,7 +102,7 @@ export class GestureRecognitionService {
         // In production, you would load a trained model
         // this.model = await tf.loadLayersModel('/models/gesture-model.json');
         console.log('Using pattern matching for gesture recognition')
-      } catch (e) {
+      } catch {
         console.log('No custom model found, using pattern matching')
       }
 
@@ -208,7 +208,7 @@ export class GestureRecognitionService {
 
     // Calculate finger tip distances from palm
     const fingerTips = [4, 8, 12, 16, 20] // Thumb, Index, Middle, Ring, Pinky
-    const palm = landmarks[0] // Wrist as palm reference
+    // const palm = landmarks[0] // Wrist as palm reference
 
     for (const tipIndex of fingerTips) {
       const tip = normalized[tipIndex]

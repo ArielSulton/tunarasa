@@ -13,7 +13,8 @@ import { Progress } from '@/components/ui/progress'
 import { AlertCircle, Camera, CameraOff, Trash2, Send, Hand } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useGestureRecognition } from '@/hooks/useGestureRecognition'
-import { GestureResult, GestureSequence } from '@/lib/gesture/gestureRecognition'
+import { GestureResult } from '@/lib/gesture/gestureRecognition'
+// import { GestureSequence } from '@/lib/gesture/gestureRecognition'
 
 interface GestureRecognitionProps {
   onSendText?: (text: string, confidence: number) => void
@@ -76,11 +77,11 @@ export function GestureRecognition({
     setLastSentText('')
   }
 
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return 'bg-green-500'
-    if (confidence >= 0.6) return 'bg-yellow-500'
-    return 'bg-red-500'
-  }
+  // const getConfidenceColor = (confidence: number) => {
+  //   if (confidence >= 0.8) return 'bg-green-500'
+  //   if (confidence >= 0.6) return 'bg-yellow-500'
+  //   return 'bg-red-500'
+  // }
 
   return (
     <div className={`space-y-4 ${className}`}>
