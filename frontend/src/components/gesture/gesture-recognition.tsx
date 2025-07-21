@@ -1,6 +1,6 @@
 /**
  * GestureRecognition Component
- * Main component for A-Z hand gesture recognition interface
+ * Main component for SIBI (Sistem Isyarat Bahasa Indonesia) gesture recognition interface
  */
 
 'use client'
@@ -14,11 +14,15 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { useGestureRecognition } from '@/hooks/use-gesture-recognition'
 import { GestureRecognitionResult } from '@/lib/ai/services/gesture-recognition'
-import { Play, Pause, AlertCircle, Loader2, Hand, Eye, EyeOff, RotateCcw } from 'lucide-react'
+import { SIBI_CONFIG } from '@/lib/ai/config/sibi-config'
+import { Play, Pause, AlertCircle, Loader2, Hand, Eye, EyeOff, RotateCcw, Send } from 'lucide-react'
 
 interface GestureRecognitionProps {
   onLetterDetected?: (letter: string, confidence: number) => void
   onWordFormed?: (word: string) => void
+  onSendText?: (text: string, confidence: number) => void
+  onGestureUpdate?: (gesture: GestureRecognitionResult) => void
+  language?: 'sibi' | 'bisindo'
   className?: string
   showAlternatives?: boolean
   enableWordFormation?: boolean
@@ -28,6 +32,9 @@ interface GestureRecognitionProps {
 export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
   onLetterDetected,
   onWordFormed,
+  onSendText,
+  onGestureUpdate,
+  language = 'sibi',
   className = '',
   showAlternatives = true,
   enableWordFormation = true,
@@ -47,21 +54,21 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
     useGestureRecognition({
       config: {
         mediaPipeConfig: {
-          maxNumHands: 1,
-          modelComplexity: 1,
-          minDetectionConfidence: 0.7,
-          minTrackingConfidence: 0.7,
+          maxNumHands: SIBI_CONFIG.MAX_NUM_HANDS,
+          modelComplexity: SIBI_CONFIG.MODEL_COMPLEXITY,
+          minDetectionConfidence: SIBI_CONFIG.MIN_DETECTION_CONFIDENCE,
+          minTrackingConfidence: SIBI_CONFIG.MIN_TRACKING_CONFIDENCE,
         },
         classifierConfig: {
-          modelPath: '/models/sibi_model.h5',
-          confidenceThreshold: 0.7,
-          maxAlternatives: 3,
-          normalizationMethod: 'wrist',
+          modelPath: SIBI_CONFIG.MODEL_PATH,
+          confidenceThreshold: SIBI_CONFIG.CONFIDENCE_THRESHOLD,
+          maxAlternatives: SIBI_CONFIG.MAX_ALTERNATIVES,
+          normalizationMethod: SIBI_CONFIG.NORMALIZATION_METHOD,
         },
         processingOptions: {
           enableSmoothing: true,
-          smoothingWindow: 5,
-          debounceTime: 500,
+          smoothingWindow: SIBI_CONFIG.SMOOTHING_WINDOW,
+          debounceTime: SIBI_CONFIG.DEBOUNCE_TIME,
           autoStart: false,
         },
       },
@@ -88,6 +95,11 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
   // Handle gesture recognition results
   function handleGestureResult(result: GestureRecognitionResult): void {
     setConfidence(result.confidence)
+
+    // Call gesture update callback
+    if (onGestureUpdate) {
+      onGestureUpdate(result)
+    }
 
     // Check for stable results
     if (lastStableResult?.letter === result.letter && result.confidence > 0.8) {
@@ -134,6 +146,15 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
     setStabilityCount(0)
   }, [])
 
+  // Send current word as text
+  const sendCurrentWord = useCallback(() => {
+    if (currentWord.trim() && onSendText) {
+      const avgConfidence = confidence || 0.8 // Use current confidence or default
+      onSendText(currentWord.trim(), avgConfidence)
+      clearWord() // Clear after sending
+    }
+  }, [currentWord, confidence, onSendText, clearWord])
+
   // Remove last letter
   const removeLastLetter = useCallback(() => {
     if (currentWord.length > 0) {
@@ -153,12 +174,17 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
       if (isRunning) {
         await stop()
       } else {
+        // Ensure initialization is complete before starting
+        if (!isInitialized) {
+          console.warn('Gesture recognition not yet initialized')
+          return
+        }
         await start()
       }
     } catch (error) {
       console.error('Failed to toggle camera:', error)
     }
-  }, [isRunning, start, stop])
+  }, [isRunning, isInitialized, start, stop])
 
   // Get status color
   const getStatusColor = () => {
@@ -181,7 +207,7 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Hand className="h-5 w-5" />
-            A-Z Gesture Recognition
+            {language.toUpperCase()} Gesture Recognition
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant={getStatusColor()}>
@@ -281,6 +307,13 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
               </>
             )}
           </Button>
+
+          {onSendText && (
+            <Button onClick={sendCurrentWord} disabled={currentWord.length === 0} className="flex items-center gap-2">
+              <Send className="h-4 w-4" />
+              Send Word
+            </Button>
+          )}
 
           <Button
             variant="outline"

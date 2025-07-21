@@ -28,7 +28,7 @@ class SummaryRequest(BaseModel):
     """Request for generating conversation summary"""
     conversation_id: int
     user_id: int
-    format_type: str = Field(default="text", regex="^(text|json|html)$")
+    format_type: str = Field(default="text", pattern="^(text|json|html)$")
     include_qr: bool = Field(default=True)
 
 

@@ -35,13 +35,6 @@ def setup_logging() -> None:
                 "class": "logging.StreamHandler",
                 "stream": "ext://sys.stdout",
             },
-            "file": {
-                "level": log_level,
-                "formatter": "detailed",
-                "class": "logging.FileHandler",
-                "filename": "/app/logs/tunarasa.log",
-                "mode": "a",
-            },
         },
         "loggers": {
             "": {
@@ -62,9 +55,7 @@ def setup_logging() -> None:
         },
     }
     
-    # Create logs directory if it doesn't exist
-    import os
-    os.makedirs("/app/logs", exist_ok=True)
+    # Skip file logging for development to avoid permission issues
     
     logging.config.dictConfig(logging_config)
     

@@ -126,18 +126,24 @@ async def _check_redis() -> Dict[str, Any]:
 async def _check_database() -> Dict[str, Any]:
     """Check database connection and performance"""
     try:
-        from app.core.database import db_manager
+        from app.core.config import test_database_connection, engine
         
-        # Use the new database manager for health check
-        health_status = await db_manager.health_check()
+        # Test connection using new SQLAlchemy setup
+        connection_success = test_database_connection()
         
-        return {
-            "status": health_status.get("status", "unknown"),
-            "provider": "supabase",
-            "schema": health_status.get("schema", "unknown"),
-            "connection": health_status.get("database", "unknown"),
-            "error": health_status.get("error", None)
-        }
+        if connection_success:
+            return {
+                "status": "healthy",
+                "provider": "supabase",
+                "schema": "postgresql+psycopg2",
+                "connection": "connected",
+                "type": "SQLAlchemy"
+            }
+        else:
+            return {
+                "status": "unhealthy",
+                "error": "Connection test failed"
+            }
         
     except Exception as e:
         logger.error(f"Database health check failed: {e}")

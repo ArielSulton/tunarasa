@@ -49,9 +49,11 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
 
     # Database Configuration
     --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
-    --mount=type=secret,id=DB_POOL_SIZE,env=DB_POOL_SIZE \
-    --mount=type=secret,id=DB_MAX_OVERFLOW,env=DB_MAX_OVERFLOW \
-    --mount=type=secret,id=DB_POOL_TIMEOUT,env=DB_POOL_TIMEOUT \
+    --mount=type=secret,id=user,env=user \
+    --mount=type=secret,id=password,env=password \
+    --mount=type=secret,id=host,env=host \
+    --mount=type=secret,id=port,env=port \
+    --mount=type=secret,id=dbname,env=dbname \
 
     # Authentication & Security
     --mount=type=secret,id=SECRET_KEY,env=SECRET_KEY \

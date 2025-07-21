@@ -80,7 +80,7 @@ async def get_dashboard_stats(
 @router.get("/dashboard/metrics")
 async def get_dashboard_metrics(
     request: Request,
-    period: str = Query("week", regex="^(day|week|month|year)$"),
+    period: str = Query("week", pattern="^(day|week|month|year)$"),
     db: AsyncSession = Depends(get_db_session)
 ) -> Dict[str, Any]:
     """Get dashboard metrics for specified time period"""
@@ -679,7 +679,7 @@ async def update_blocked_keywords(
 @router.get("/monitoring/llm-quality")
 async def get_llm_quality_metrics(
     request: Request,
-    period: str = Query("24h", regex="^(1h|24h|7d|30d)$"),
+    period: str = Query("24h", pattern="^(1h|24h|7d|30d)$"),
     db: AsyncSession = Depends(get_db_session)
 ) -> Dict[str, Any]:
     """Get LLM quality metrics for Grafana dashboard"""

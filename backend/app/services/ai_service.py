@@ -40,7 +40,7 @@ class GroqLLM:
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant for Indonesian government services. Provide clear, accurate information in Indonesian or English as requested."},
+                    {"role": "system", "content": "Anda adalah asisten layanan pemerintah Indonesia yang sangat membantu. Berikan informasi yang jelas dan akurat. WAJIB SELALU jawab dalam bahasa Indonesia yang baik dan benar."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=self.temperature,
@@ -86,9 +86,7 @@ class AIService:
             if settings.PINECONE_API_KEY:
                 self.embeddings = PineconeEmbeddings(
                     model=settings.EMBEDDING_MODEL,
-                    pinecone_api_key=settings.PINECONE_API_KEY,
-                    chunk_size=1000,
-                    max_retries=3
+                    pinecone_api_key=settings.PINECONE_API_KEY
                 )
                 logger.info(f"Pinecone embeddings ({settings.EMBEDDING_MODEL}) initialized successfully")
             else:

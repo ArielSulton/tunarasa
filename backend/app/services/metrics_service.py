@@ -7,79 +7,175 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 import time
 
-from prometheus_client import Counter, Histogram, Gauge, Info
+from prometheus_client import Counter, Histogram, Gauge, Info, CollectorRegistry, REGISTRY
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Define Prometheus metrics
-tunarasa_http_requests_total = Counter(
-    'tunarasa_http_requests_total',
-    'Total HTTP requests',
-    ['method', 'endpoint', 'status_code']
-)
+# Initialize metrics with collision handling
+try:
+    # Define Prometheus metrics
+    tunarasa_http_requests_total = Counter(
+        'tunarasa_http_requests_total',
+        'Total HTTP requests',
+        ['method', 'endpoint', 'status_code']
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"Metric already exists, retrieving existing: {e}")
+        # Get existing metric from registry
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, '_name') and collector._name == 'tunarasa_http_requests_total':
+                tunarasa_http_requests_total = collector
+                break
+    else:
+        raise
 
-tunarasa_http_request_duration_seconds = Histogram(
-    'tunarasa_http_request_duration_seconds',
-    'HTTP request duration in seconds',
-    ['method', 'endpoint']
-)
+try:
+    tunarasa_http_request_duration_seconds = Histogram(
+        'tunarasa_http_request_duration_seconds',
+        'HTTP request duration in seconds',
+        ['method', 'endpoint']
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"Duration metric already exists, retrieving existing: {e}")
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, '_name') and collector._name == 'tunarasa_http_request_duration_seconds':
+                tunarasa_http_request_duration_seconds = collector
+                break
+    else:
+        raise
 
-tunarasa_active_sessions_total = Gauge(
-    'tunarasa_active_sessions_total',
-    'Number of active user sessions'
-)
+try:
+    tunarasa_active_sessions_total = Gauge(
+        'tunarasa_active_sessions_total',
+        'Number of active user sessions'
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"Active sessions metric already exists, retrieving existing: {e}")
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, '_name') and collector._name == 'tunarasa_active_sessions_total':
+                tunarasa_active_sessions_total = collector
+                break
+    else:
+        raise
 
-tunarasa_gesture_recognitions_total = Counter(
-    'tunarasa_gesture_recognitions_total',
-    'Total gesture recognitions performed',
-    ['gesture_type', 'confidence_level']
-)
+try:
+    tunarasa_gesture_recognitions_total = Counter(
+        'tunarasa_gesture_recognitions_total',
+        'Total gesture recognitions performed',
+        ['gesture_type', 'confidence_level']
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"Gesture recognition metric already exists, retrieving existing: {e}")
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, '_name') and collector._name == 'tunarasa_gesture_recognitions_total':
+                tunarasa_gesture_recognitions_total = collector
+                break
+    else:
+        raise
 
-tunarasa_gesture_recognition_accuracy = Gauge(
-    'tunarasa_gesture_recognition_accuracy',
-    'Current gesture recognition accuracy'
-)
+try:
+    tunarasa_gesture_recognition_accuracy = Gauge(
+        'tunarasa_gesture_recognition_accuracy',
+        'Current gesture recognition accuracy'
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"Gesture accuracy metric already exists, retrieving existing: {e}")
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, '_name') and collector._name == 'tunarasa_gesture_recognition_accuracy':
+                tunarasa_gesture_recognition_accuracy = collector
+                break
+    else:
+        raise
 
-tunarasa_ai_requests_total = Counter(
-    'tunarasa_ai_requests_total',
-    'Total AI requests processed',
-    ['model', 'request_type']
-)
+try:
+    tunarasa_ai_requests_total = Counter(
+        'tunarasa_ai_requests_total',
+        'Total AI requests processed',
+        ['model', 'request_type']
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"AI requests metric already exists, retrieving existing: {e}")
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, '_name') and collector._name == 'tunarasa_ai_requests_total':
+                tunarasa_ai_requests_total = collector
+                break
+    else:
+        raise
 
-tunarasa_ai_request_errors_total = Counter(
-    'tunarasa_ai_request_errors_total',
-    'Total AI request errors',
-    ['model', 'error_type']
-)
+try:
+    tunarasa_ai_request_errors_total = Counter(
+        'tunarasa_ai_request_errors_total',
+        'Total AI request errors',
+        ['model', 'error_type']
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"AI errors metric already exists, retrieving existing: {e}")
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, '_name') and collector._name == 'tunarasa_ai_request_errors_total':
+                tunarasa_ai_request_errors_total = collector
+                break
+    else:
+        raise
 
-tunarasa_ai_response_confidence_avg = Gauge(
-    'tunarasa_ai_response_confidence_avg',
-    'Average AI response confidence'
-)
+try:
+    tunarasa_ai_response_confidence_avg = Gauge(
+        'tunarasa_ai_response_confidence_avg',
+        'Average AI response confidence'
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"AI confidence metric already exists, retrieving existing")
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, '_name') and collector._name == 'tunarasa_ai_response_confidence_avg':
+                tunarasa_ai_response_confidence_avg = collector
+                break
 
-tunarasa_ai_response_time_seconds = Histogram(
-    'tunarasa_ai_response_time_seconds',
-    'AI response time in seconds',
-    ['model', 'request_type']
-)
+try:
+    tunarasa_ai_response_time_seconds = Histogram(
+        'tunarasa_ai_response_time_seconds',
+        'AI response time in seconds',
+        ['model', 'request_type']
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"AI response time metric already exists, retrieving existing")
 
-tunarasa_qr_codes_generated_total = Counter(
-    'tunarasa_qr_codes_generated_total',
-    'Total QR codes generated',
-    ['qr_type']
-)
+try:
+    tunarasa_qr_codes_generated_total = Counter(
+        'tunarasa_qr_codes_generated_total',
+        'Total QR codes generated',
+        ['qr_type']
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"QR codes metric already exists, retrieving existing")
 
-tunarasa_database_connections_active = Gauge(
-    'tunarasa_database_connections_active',
-    'Number of active database connections'
-)
+try:
+    tunarasa_database_connections_active = Gauge(
+        'tunarasa_database_connections_active',
+        'Number of active database connections'
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"Database connections metric already exists, retrieving existing")
 
-tunarasa_deepeval_scores = Histogram(
-    'tunarasa_deepeval_scores',
-    'DeepEval quality scores',
-    ['metric_type']
-)
+try:
+    tunarasa_deepeval_scores = Histogram(
+            'tunarasa_deepeval_scores',
+        'DeepEval quality scores',
+        ['metric_type']
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(f"DeepEval scores metric already exists, retrieving existing")
 
 # Application info
 tunarasa_info = Info(

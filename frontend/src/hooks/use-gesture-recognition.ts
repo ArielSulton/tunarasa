@@ -53,9 +53,23 @@ export const useGestureRecognition = (options: UseGestureRecognitionOptions = {}
   const videoElementRef = useRef<HTMLVideoElement | null>(null)
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null)
 
-  // Initialize gesture recognition service
+  // Initialize gesture recognition service (only once on mount)
   useEffect(() => {
+    console.log('🏗️ Creating new GestureRecognitionService instance')
     gestureServiceRef.current = new GestureRecognitionService(options.config)
+
+    return () => {
+      console.log('🗑️ Disposing GestureRecognitionService instance')
+      if (gestureServiceRef.current) {
+        gestureServiceRef.current.dispose()
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only create once on mount - config changes don't recreate service
+
+  // Set up callbacks separately to avoid recreating service
+  useEffect(() => {
+    if (!gestureServiceRef.current) return
 
     // Set up callbacks
     gestureServiceRef.current.setOnResult((result) => {
@@ -80,13 +94,8 @@ export const useGestureRecognition = (options: UseGestureRecognitionOptions = {}
         options.onStatus(status)
       }
     })
-
-    return () => {
-      if (gestureServiceRef.current) {
-        gestureServiceRef.current.dispose()
-      }
-    }
-  }, [options])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.onResult, options.onError, options.onStatus]) // Only callback dependencies
 
   // Initialize the system
   const initialize = useCallback(
@@ -104,8 +113,27 @@ export const useGestureRecognition = (options: UseGestureRecognitionOptions = {}
 
         await gestureServiceRef.current.initialize(videoElement, canvasElement)
 
-        setIsInitialized(true)
-        setStatus('Initialized successfully')
+        // Small delay to ensure all async initialization is complete
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        // Check if the service actually initialized successfully
+        // (force update to clear cache)
+        console.log('🔍 Service reference check:', gestureServiceRef.current)
+        console.log('🔍 Service instance ID:', gestureServiceRef.current?.constructor.name)
+        const serviceStatus = gestureServiceRef.current.getStatus()
+        console.log('🔍 Service status check:', serviceStatus)
+
+        if (serviceStatus.isInitialized) {
+          setIsInitialized(true)
+          if (serviceStatus.classifierReady) {
+            setStatus('Gesture recognition fully operational')
+          } else {
+            setStatus('Gesture recognition ready (hand detection only)')
+          }
+        } else {
+          setIsInitialized(false)
+          setStatus('Initialization failed - gesture recognition disabled')
+        }
       } catch (error) {
         setError(error as Error)
         setIsInitialized(false)

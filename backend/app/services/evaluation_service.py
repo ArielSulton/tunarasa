@@ -30,12 +30,55 @@ class EvaluationService:
         self.evaluation_cache = {}
         
         if self.metrics_enabled:
-            # Initialize evaluation metrics
-            self.answer_relevancy = AnswerRelevancyMetric(threshold=0.7)
-            self.faithfulness = FaithfulnessMetric(threshold=0.7)
-            self.contextual_precision = ContextualPrecisionMetric(threshold=0.7)
+            try:
+                # Initialize evaluation metrics with Groq model
+                from deepeval.models import DeepEvalBaseLLM
+                
+                # Use Groq for evaluation instead of OpenAI
+                groq_model = self._get_groq_model()
+                
+                self.answer_relevancy = AnswerRelevancyMetric(threshold=0.7, model=groq_model)
+                self.faithfulness = FaithfulnessMetric(threshold=0.7, model=groq_model)
+                self.contextual_precision = ContextualPrecisionMetric(threshold=0.7, model=groq_model)
+            except Exception as e:
+                logger.warning(f"Failed to initialize DeepEval metrics with Groq: {e}")
+                self.metrics_enabled = False
         
         logger.info(f"Evaluation service initialized. Metrics enabled: {self.metrics_enabled}")
+    
+    def _get_groq_model(self):
+        """Create Groq model for DeepEval"""
+        try:
+            from deepeval.models import DeepEvalBaseLLM
+            from groq import Groq
+            
+            class GroqModel(DeepEvalBaseLLM):
+                def __init__(self, model_name="llama3-70b-8192"):
+                    self.model_name = model_name
+                    self.client = Groq(api_key=settings.GROQ_API_KEY)
+                
+                def load_model(self):
+                    return self.client
+                
+                def generate(self, prompt: str) -> str:
+                    response = self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.1,
+                        max_tokens=1000
+                    )
+                    return response.choices[0].message.content
+                
+                async def a_generate(self, prompt: str) -> str:
+                    return self.generate(prompt)
+                
+                def get_model_name(self) -> str:
+                    return self.model_name
+            
+            return GroqModel()
+        except Exception as e:
+            logger.error(f"Failed to create Groq model: {e}")
+            return None
     
     async def evaluate_qa_response(
         self,

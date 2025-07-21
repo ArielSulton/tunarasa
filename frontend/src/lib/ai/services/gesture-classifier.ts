@@ -1,10 +1,10 @@
 /**
  * TensorFlow.js Gesture Classification Service
- * Classifies hand landmarks into A-Z letters for sign language recognition
+ * Classifies hand gesture images into A-Z letters for SIBI recognition
  */
 
 import * as tf from '@tensorflow/tfjs'
-import { HandLandmark } from './mediapipe-service'
+import { SIBI_CONFIG } from '../config/sibi-config'
 
 export interface GestureClassificationResult {
   letter: string
@@ -17,21 +17,21 @@ export interface GestureClassifierConfig {
   modelPath: string
   confidenceThreshold: number
   maxAlternatives: number
-  normalizationMethod: 'wrist' | 'center' | 'none'
+  imageSize: number
 }
 
 export class GestureClassifier {
-  private model: tf.LayersModel | null = null
+  private model: tf.LayersModel | tf.GraphModel | null = null
   private isLoaded = false
   private config: GestureClassifierConfig
-  private alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+  private alphabet = SIBI_CONFIG.ALPHABET
 
   constructor(config?: Partial<GestureClassifierConfig>) {
     this.config = {
-      modelPath: '/models/sibi_model.h5',
-      confidenceThreshold: 0.7,
-      maxAlternatives: 3,
-      normalizationMethod: 'wrist',
+      modelPath: SIBI_CONFIG.MODEL_PATH,
+      confidenceThreshold: SIBI_CONFIG.CONFIDENCE_THRESHOLD,
+      maxAlternatives: SIBI_CONFIG.MAX_ALTERNATIVES,
+      imageSize: 224, // MobileNet input size
       ...config,
     }
   }
@@ -41,48 +41,136 @@ export class GestureClassifier {
    */
   async loadModel(): Promise<void> {
     try {
-      console.log('Loading gesture classification model...')
+      console.log('TensorFlow.js version:', tf.version.tfjs)
+      console.log('Available backends:', tf.engine().registryFactory)
 
-      // Load the model
-      this.model = await tf.loadLayersModel(this.config.modelPath)
+      // Set TensorFlow.js backend
+      await tf.ready()
+      console.log('TensorFlow.js ready with backend:', tf.getBackend())
 
-      // Warm up the model with dummy data
-      const dummyInput = tf.zeros([1, 42]) // 21 landmarks * 2 coordinates
-      const warmupResult = this.model.predict(dummyInput) as tf.Tensor
-      warmupResult.dispose()
-      dummyInput.dispose()
+      // Try to load the model, fallback if not available
+      try {
+        console.log('Loading TensorFlow.js model from:', this.config.modelPath)
 
-      this.isLoaded = true
-      console.log('Gesture classification model loaded successfully')
+        // For Keras v3.5.0 converted models, try with explicit HTTP handler
+        try {
+          console.log('Attempting to load with explicit HTTP handler...')
+          const httpHandler = tf.io.http(this.config.modelPath)
+          this.model = await tf.loadLayersModel(httpHandler, {
+            strict: false,
+          })
+          console.log('✅ Successfully loaded as LayersModel with HTTP handler')
+        } catch (layersError) {
+          console.warn('Failed to load with HTTP handler, trying direct path:', layersError)
+          try {
+            // Fallback: Try direct loading
+            console.log('Attempting direct LayersModel loading...')
+            this.model = await tf.loadLayersModel(this.config.modelPath, {
+              strict: false,
+              fromTFHub: false,
+            })
+            console.log('✅ Successfully loaded as LayersModel (direct)')
+          } catch (directError) {
+            console.warn('Direct loading failed, trying GraphModel:', directError)
+            try {
+              // Final fallback: Try as graph model
+              console.log('Attempting to load as GraphModel...')
+              const graphModel = await tf.loadGraphModel(this.config.modelPath)
+              this.model = graphModel
+              console.log('✅ Successfully loaded as GraphModel')
+            } catch (graphError) {
+              console.error('All loading methods failed')
+              console.error('HTTP handler error:', (layersError as Error).message)
+              console.error('Direct loading error:', (directError as Error).message)
+              console.error('GraphModel error:', (graphError as Error).message)
+              throw new Error(
+                `Model loading failed with all methods. HTTP: ${(layersError as Error).message}, Direct: ${(directError as Error).message}, Graph: ${(graphError as Error).message}`,
+              )
+            }
+          }
+        }
+
+        console.log('Model loaded successfully, warming up...')
+
+        // Check model input/output shapes
+        if (this.model.inputs && this.model.inputs[0]) {
+          console.log('Model input shape:', this.model.inputs[0].shape)
+        }
+        if (this.model.outputs && this.model.outputs[0]) {
+          console.log('Model output shape:', this.model.outputs[0].shape)
+        }
+
+        // Warm up the model with dummy data
+        const dummyInput = tf.zeros([1, 224, 224, 3]) // Image input shape
+        console.log('Running model warmup...')
+
+        let warmupResult: tf.Tensor
+        if ('predict' in this.model) {
+          // LayersModel
+          warmupResult = (this.model as tf.LayersModel).predict(dummyInput) as tf.Tensor
+        } else if ('execute' in this.model) {
+          // GraphModel
+          warmupResult = (this.model as tf.GraphModel).execute(dummyInput) as tf.Tensor
+        } else {
+          throw new Error('Model does not have predict or execute method')
+        }
+
+        console.log('Warmup prediction shape:', warmupResult.shape)
+        warmupResult.dispose()
+        dummyInput.dispose()
+
+        this.isLoaded = true
+        console.log('✅ Gesture classification model loaded and warmed up successfully')
+      } catch (modelError) {
+        console.error('❌ Failed to load model:', modelError)
+        console.error('Model path:', this.config.modelPath)
+
+        this.model = null
+        this.isLoaded = false
+        console.warn(
+          'Gesture classification model unavailable - system will continue with MediaPipe hand detection only',
+        )
+        // Don't throw error, allow system to continue without gesture classification
+      }
     } catch (error) {
-      console.error('Failed to load gesture classification model:', error)
-      throw error
+      console.error('Failed to initialize gesture classifier:', error)
+      // Don't throw error, allow system to continue without gesture recognition
+      this.model = null
+      this.isLoaded = false
     }
   }
 
   /**
-   * Classify hand landmarks into A-Z letters
+   * Classify hand gesture image into A-Z letters
    */
-  async classify(landmarks: HandLandmark[]): Promise<GestureClassificationResult> {
+  async classify(
+    imageElement: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement,
+  ): Promise<GestureClassificationResult> {
     if (!this.isLoaded || !this.model) {
-      throw new Error('Model not loaded. Call loadModel() first.')
+      throw new Error('Gesture classification model not available')
     }
 
     const startTime = performance.now()
 
     try {
-      // Normalize landmarks
-      const normalizedLandmarks = this.normalizeLandmarks(landmarks)
+      // Preprocess image
+      const preprocessedImage = this.preprocessImage(imageElement)
 
-      // Convert to tensor
-      const inputTensor = tf.tensor2d([normalizedLandmarks], [1, normalizedLandmarks.length])
-
-      // Make prediction
-      const prediction = this.model.predict(inputTensor) as tf.Tensor
+      // Make prediction (handle both LayersModel and GraphModel)
+      let prediction: tf.Tensor
+      if ('predict' in this.model) {
+        // LayersModel
+        prediction = (this.model as tf.LayersModel).predict(preprocessedImage) as tf.Tensor
+      } else if ('execute' in this.model) {
+        // GraphModel
+        prediction = (this.model as tf.GraphModel).execute(preprocessedImage) as tf.Tensor
+      } else {
+        throw new Error('Model does not have predict or execute method')
+      }
       const predictions = await prediction.data()
 
       // Clean up tensors
-      inputTensor.dispose()
+      preprocessedImage.dispose()
       prediction.dispose()
 
       // Process results
@@ -103,63 +191,25 @@ export class GestureClassifier {
   }
 
   /**
-   * Normalize hand landmarks for consistent input
+   * Preprocess image for model input
    */
-  private normalizeLandmarks(landmarks: HandLandmark[]): number[] {
-    if (landmarks.length !== 21) {
-      throw new Error('Expected 21 hand landmarks')
-    }
+  private preprocessImage(imageElement: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement): tf.Tensor4D {
+    // Convert image to tensor and resize to model input size
+    let imageTensor = tf.browser.fromPixels(imageElement)
 
-    let normalized: number[] = []
+    // Resize to model input size (224x224)
+    imageTensor = tf.image.resizeBilinear(imageTensor, [this.config.imageSize, this.config.imageSize])
 
-    switch (this.config.normalizationMethod) {
-      case 'wrist':
-        normalized = this.normalizeToWrist(landmarks)
-        break
-      case 'center':
-        normalized = this.normalizeToCenter(landmarks)
-        break
-      case 'none':
-        normalized = landmarks.flatMap((landmark) => [landmark.x, landmark.y])
-        break
-      default:
-        throw new Error(`Unknown normalization method: ${this.config.normalizationMethod}`)
-    }
+    // Normalize to [0, 1] range (if using MobileNet preprocessing)
+    imageTensor = imageTensor.div(255.0)
 
-    return normalized
-  }
+    // Add batch dimension
+    const batchedImage = imageTensor.expandDims(0) as tf.Tensor4D
 
-  /**
-   * Normalize landmarks relative to wrist position
-   */
-  private normalizeToWrist(landmarks: HandLandmark[]): number[] {
-    const wrist = landmarks[0] // Wrist is always landmark 0
-    const normalized: number[] = []
+    // Clean up intermediate tensor
+    imageTensor.dispose()
 
-    for (const landmark of landmarks) {
-      normalized.push(landmark.x - wrist.x)
-      normalized.push(landmark.y - wrist.y)
-    }
-
-    return normalized
-  }
-
-  /**
-   * Normalize landmarks relative to center point
-   */
-  private normalizeToCenter(landmarks: HandLandmark[]): number[] {
-    // Calculate center point
-    const centerX = landmarks.reduce((sum, landmark) => sum + landmark.x, 0) / landmarks.length
-    const centerY = landmarks.reduce((sum, landmark) => sum + landmark.y, 0) / landmarks.length
-
-    const normalized: number[] = []
-
-    for (const landmark of landmarks) {
-      normalized.push(landmark.x - centerX)
-      normalized.push(landmark.y - centerY)
-    }
-
-    return normalized
+    return batchedImage
   }
 
   /**
@@ -193,18 +243,20 @@ export class GestureClassifier {
   }
 
   /**
-   * Batch classify multiple gesture sequences
+   * Batch classify multiple gesture images
    */
-  async classifyBatch(landmarkSequences: HandLandmark[][]): Promise<GestureClassificationResult[]> {
+  async classifyBatch(
+    imageElements: (HTMLImageElement | HTMLVideoElement | HTMLCanvasElement)[],
+  ): Promise<GestureClassificationResult[]> {
     if (!this.isLoaded || !this.model) {
-      throw new Error('Model not loaded. Call loadModel() first.')
+      throw new Error('Gesture classification model not available')
     }
 
     const results: GestureClassificationResult[] = []
 
-    for (const landmarks of landmarkSequences) {
+    for (const imageElement of imageElements) {
       try {
-        const result = await this.classify(landmarks)
+        const result = await this.classify(imageElement)
         results.push(result)
       } catch (error) {
         console.error('Error classifying gesture in batch:', error)

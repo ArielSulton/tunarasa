@@ -7,6 +7,7 @@
 import { SignIn, SignUp, UserButton, SignInButton, SignUpButton } from '@clerk/nextjs'
 import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
 
 /**
  * Sign In component
@@ -90,8 +91,14 @@ export function AuthSignUpButton() {
  */
 export function AuthStatus() {
   const { isSignedIn, user, isLoaded } = useUser()
+  const [mounted, setMounted] = useState(false)
 
-  if (!isLoaded) {
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Prevent hydration mismatch by not rendering auth content on server
+  if (!mounted || !isLoaded) {
     return (
       <div className="flex items-center space-x-2">
         <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />

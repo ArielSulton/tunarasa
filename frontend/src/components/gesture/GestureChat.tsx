@@ -14,9 +14,9 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { MessageCircle, Hand, Keyboard, Send, Bot, User, Clock, FileText, AlertCircle, Loader2 } from 'lucide-react'
-import { GestureRecognition } from './GestureRecognition'
+import { GestureRecognition } from './gesture-recognition'
 import { gestureApi, GestureTextResponse } from '@/lib/api/gestureApi'
-import { GestureResult } from '@/lib/gesture/gestureRecognition'
+import { GestureRecognitionResult } from '@/lib/ai/services/gesture-recognition'
 
 interface Message {
   id: string
@@ -35,17 +35,17 @@ interface Message {
 
 interface GestureChatProps {
   className?: string
-  language?: 'asl' | 'bisindo'
+  language?: 'sibi' | 'bisindo'
   responseLanguage?: 'id' | 'en'
 }
 
-export function GestureChat({ className = '', language = 'asl', responseLanguage = 'id' }: GestureChatProps) {
+export function GestureChat({ className = '', language = 'sibi', responseLanguage = 'id' }: GestureChatProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputText, setInputText] = useState('')
   const [inputMode, setInputMode] = useState<'gesture' | 'keyboard'>('gesture')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [currentGesture, setCurrentGesture] = useState<GestureResult | null>(null)
+  const [currentGesture, setCurrentGesture] = useState<GestureRecognitionResult | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -141,7 +141,7 @@ export function GestureChat({ className = '', language = 'asl', responseLanguage
   )
 
   // Handle gesture updates for display
-  const handleGestureUpdate = useCallback((gesture: GestureResult) => {
+  const handleGestureUpdate = useCallback((gesture: GestureRecognitionResult) => {
     setCurrentGesture(gesture)
   }, [])
 

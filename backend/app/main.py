@@ -15,11 +15,42 @@ from app.api.v1.api import api_router
 from app.api.middleware.auth import AuthMiddleware
 from app.api.middleware.rate_limit import RateLimitMiddleware
 from app.core.logging import setup_logging
-from app.core.database import db_manager
+from app.core.config import test_database_connection
 
-# Initialize metrics
-REQUEST_COUNT = Counter('tunarasa_http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status_code'])
-REQUEST_DURATION = Histogram('tunarasa_http_request_duration_seconds', 'HTTP request duration', ['method', 'endpoint'])
+# Initialize metrics with global variables to prevent re-creation
+_metrics_initialized = False
+REQUEST_COUNT = None
+REQUEST_DURATION = None
+
+if not _metrics_initialized:
+    try:
+        # Clear any existing metrics with the same name
+        from prometheus_client import REGISTRY
+        collectors_to_remove = []
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, '_name') and collector._name in ['tunarasa_http_requests_total', 'tunarasa_http_request_duration_seconds']:
+                collectors_to_remove.append(collector)
+        
+        for collector in collectors_to_remove:
+            REGISTRY.unregister(collector)
+        
+        # Now create new metrics
+        REQUEST_COUNT = Counter('tunarasa_http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status_code'])
+        REQUEST_DURATION = Histogram('tunarasa_http_request_duration_seconds', 'HTTP request duration', ['method', 'endpoint'])
+        _metrics_initialized = True
+    except Exception as e:
+        # Fallback: create dummy metrics that don't interfere
+        print(f"Warning: Could not initialize Prometheus metrics: {e}")
+        class DummyMetric:
+            def labels(self, *args, **kwargs): return self
+            def inc(self, *args, **kwargs): pass
+            def observe(self, *args, **kwargs): pass
+            def time(self): return self
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+        
+        REQUEST_COUNT = DummyMetric()
+        REQUEST_DURATION = DummyMetric()
 
 # Setup logging
 setup_logging()
@@ -84,20 +115,16 @@ def create_application() -> FastAPI:
     # Startup and shutdown events for database
     @app.on_event("startup")
     async def startup_event():
-        """Initialize database connection on startup"""
+        """Test database connection on startup"""
         try:
-            await db_manager.connect()
-            await db_manager.create_tables()
+            test_database_connection()
         except Exception as e:
-            print(f"Failed to initialize database: {e}")
+            print(f"Database connection test failed: {e}")
     
     @app.on_event("shutdown")
     async def shutdown_event():
-        """Close database connections on shutdown"""
-        try:
-            await db_manager.disconnect()
-        except Exception as e:
-            print(f"Failed to close database connections: {e}")
+        """Application shutdown"""
+        print("Application shutdown complete")
     
     # Health check endpoint
     @app.get("/health")

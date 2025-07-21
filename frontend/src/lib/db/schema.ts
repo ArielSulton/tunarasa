@@ -1,19 +1,66 @@
 import { pgTable, text, timestamp, integer, boolean, varchar, serial, index } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
-// Notes Table
-export const notes = pgTable(
-  'notes',
+// Genders Table
+export const genders = pgTable(
+  'genders',
   {
-    noteId: serial('note_id').primaryKey(),
-    conversationId: integer('conversation_id').notNull(),
-    noteContent: text('note_content').notNull(),
-    urlAccess: varchar('url_access', { length: 255 }),
+    genderId: serial('gender_id').primaryKey(),
+    genderName: varchar('gender_name', { length: 50 }).notNull().unique(),
+  },
+  (table) => [index('genders_gender_name_idx').on(table.genderName)],
+).enableRLS()
+
+// Roles Table
+export const roles = pgTable(
+  'roles',
+  {
+    roleId: serial('role_id').primaryKey(),
+    roleName: varchar('role_name', { length: 50 }).notNull().unique(),
+  },
+  (table) => [index('roles_role_name_idx').on(table.roleName)],
+).enableRLS()
+
+// Users Table
+export const users = pgTable(
+  'users',
+  {
+    userId: serial('user_id').primaryKey(),
+    clerkUserId: varchar('clerk_user_id', { length: 255 }).notNull().unique(),
+    fullName: varchar('full_name', { length: 255 }),
+    roleId: integer('role_id')
+      .notNull()
+      .references(() => roles.roleId),
+    genderId: integer('gender_id')
+      .notNull()
+      .references(() => genders.genderId),
     createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
-    index('notes_conversation_id_idx').on(table.conversationId),
-    index('notes_created_at_idx').on(table.createdAt),
+    index('users_clerk_user_id_idx').on(table.clerkUserId),
+    index('users_role_id_idx').on(table.roleId),
+    index('users_gender_id_idx').on(table.genderId),
+    index('users_created_at_idx').on(table.createdAt),
+  ],
+).enableRLS()
+
+// Conversations Table
+export const conversations = pgTable(
+  'conversations',
+  {
+    conversationId: serial('conversation_id').primaryKey(),
+    isActive: boolean('is_active').notNull().default(true),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.userId, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('conversations_user_id_idx').on(table.userId),
+    index('conversations_is_active_idx').on(table.isActive),
+    index('conversations_created_at_idx').on(table.createdAt),
   ],
 ).enableRLS()
 
@@ -22,7 +69,9 @@ export const messages = pgTable(
   'messages',
   {
     messageId: serial('message_id').primaryKey(),
-    conversationId: integer('conversation_id').notNull(),
+    conversationId: integer('conversation_id')
+      .notNull()
+      .references(() => conversations.conversationId, { onDelete: 'cascade' }),
     messageContent: text('message_content').notNull(),
     isUser: boolean('is_user').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -34,61 +83,22 @@ export const messages = pgTable(
   ],
 ).enableRLS()
 
-// Conversations Table
-export const conversations = pgTable(
-  'conversations',
+// Notes Table
+export const notes = pgTable(
+  'notes',
   {
-    conversationId: serial('conversation_id').primaryKey(),
-    isActive: boolean('is_active').notNull().default(true),
-    userId: integer('user_id').notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  },
-  (table) => [
-    index('conversations_user_id_idx').on(table.userId),
-    index('conversations_is_active_idx').on(table.isActive),
-    index('conversations_created_at_idx').on(table.createdAt),
-  ],
-).enableRLS()
-
-// Users Table
-export const users = pgTable(
-  'users',
-  {
-    userId: serial('user_id').primaryKey(),
-    clerkUserId: integer('clerk_user_id').unique(),
-    fullName: varchar('full_name', { length: 255 }),
-    roleId: integer('role_id').notNull(),
-    genderId: integer('gender_id').notNull(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    noteId: serial('note_id').primaryKey(),
+    conversationId: integer('conversation_id')
+      .notNull()
+      .references(() => conversations.conversationId, { onDelete: 'cascade' }),
+    noteContent: text('note_content').notNull(),
+    urlAccess: varchar('url_access', { length: 255 }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [
-    index('users_clerk_user_id_idx').on(table.clerkUserId),
-    index('users_role_id_idx').on(table.roleId),
-    index('users_gender_id_idx').on(table.genderId),
-    index('users_created_at_idx').on(table.createdAt),
+    index('notes_conversation_id_idx').on(table.conversationId),
+    index('notes_created_at_idx').on(table.createdAt),
   ],
-).enableRLS()
-
-// Genders Table
-export const genders = pgTable(
-  'genders',
-  {
-    genderId: serial('gender_id').primaryKey(),
-    genderName: varchar('gender_name', { length: 50 }).notNull(),
-  },
-  (table) => [index('genders_gender_name_idx').on(table.genderName)],
-).enableRLS()
-
-// Roles Table
-export const roles = pgTable(
-  'roles',
-  {
-    roleId: serial('role_id').primaryKey(),
-    roleName: varchar('role_name', { length: 50 }).notNull(),
-  },
-  (table) => [index('roles_role_name_idx').on(table.roleName)],
 ).enableRLS()
 
 // Table Relations
@@ -145,4 +155,6 @@ export type NewMessage = typeof messages.$inferInsert
 export type Note = typeof notes.$inferSelect
 export type NewNote = typeof notes.$inferInsert
 export type Role = typeof roles.$inferSelect
+export type NewRole = typeof roles.$inferInsert
 export type Gender = typeof genders.$inferSelect
+export type NewGender = typeof genders.$inferInsert

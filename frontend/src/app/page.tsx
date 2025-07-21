@@ -50,20 +50,48 @@ export default function Home() {
     setIsProcessing(true)
 
     try {
-      // TODO: Integrate with backend Q&A API
-      // For now, simulate AI response
-      setTimeout(() => {
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: `I understand you're asking about "${content}". This is a placeholder response from the AI system. The actual integration with the backend Q&A service will provide intelligent responses based on the document knowledge base.`,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, assistantMessage])
-        setIsProcessing(false)
-      }, 1000)
+      // Call backend RAG Q&A API
+      const response = await fetch('http://localhost:8000/api/v1/rag/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: content.trim(),
+          session_id: `web-session-${Date.now()}`, // Generate unique session ID
+          language: 'id', // Indonesian language
+          max_sources: 3,
+          similarity_threshold: 0.7
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: data.answer || 'Sorry, I could not process your question at this time.',
+        timestamp: new Date(),
+        confidence: data.confidence,
+      }
+
+      setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
       console.error('Error sending message:', error)
+      
+      // Show error message to user
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: 'Sorry, I am having trouble connecting to the AI service. Please try again later.',
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
       setIsProcessing(false)
     }
   }, [])
@@ -186,7 +214,14 @@ export default function Home() {
                             }`}
                           >
                             <p className="text-sm">{message.content}</p>
-                            <p className="mt-1 text-xs opacity-70">{message.timestamp.toLocaleTimeString()}</p>
+                            <div className="mt-1 flex items-center justify-between text-xs opacity-70">
+                              <span>{message.timestamp.toLocaleTimeString()}</span>
+                              {message.confidence && (
+                                <span className="ml-2">
+                                  {Math.round(message.confidence * 100)}% confidence
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

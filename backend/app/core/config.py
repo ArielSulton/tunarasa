@@ -5,6 +5,12 @@ Application configuration settings
 from pydantic_settings import BaseSettings
 from typing import List, Optional
 import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# Load environment variables
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -28,13 +34,12 @@ class Settings(BaseSettings):
     API_V1_STR: str
     PROJECT_NAME: str
     
-    # Database Configuration (PostgreSQL via Supabase)
-    DATABASE_URL: Optional[str] = None
-    
-    # Database Pool Settings
-    DB_POOL_SIZE: int
-    DB_MAX_OVERFLOW: int
-    DB_POOL_TIMEOUT: int
+    # Supabase Database Configuration
+    user: Optional[str] = None
+    password: Optional[str] = None  
+    host: Optional[str] = None
+    port: Optional[str] = None
+    dbname: Optional[str] = None
     
     # Authentication
     SECRET_KEY: str
@@ -63,10 +68,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str
     
-    
     # Security
-    CORS_ORIGINS: List[str]
-    ALLOWED_HOSTS: List[str]
+    CORS_ORIGINS: str  # Comma-separated string, parsed manually
+    ALLOWED_HOSTS: str  # Comma-separated string, parsed manually
     
     # Rate Limiting
     RATE_LIMIT_REQUESTS: int
@@ -96,3 +100,52 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Parse comma-separated values
+def get_cors_origins() -> List[str]:
+    """Parse CORS origins from comma-separated string"""
+    return [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
+
+def get_allowed_hosts() -> List[str]:
+    """Parse allowed hosts from comma-separated string"""
+    return [host.strip() for host in settings.ALLOWED_HOSTS.split(",") if host.strip()]
+
+# Construct Supabase SQLAlchemy connection string
+def get_database_url() -> str:
+    """Construct database URL from environment variables"""
+    USER = os.getenv("user")
+    PASSWORD = os.getenv("password")
+    HOST = os.getenv("host")
+    PORT = os.getenv("port")
+    DBNAME = os.getenv("dbname")
+    
+    if not all([USER, PASSWORD, HOST, PORT, DBNAME]):
+        raise ValueError("Missing required database environment variables")
+    
+    return f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
+
+# Create SQLAlchemy engine
+engine = create_engine(get_database_url())
+
+# Create SessionLocal class
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Database dependency
+def get_db():
+    """Database session dependency"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Test database connection
+def test_database_connection():
+    """Test database connection"""
+    try:
+        with engine.connect() as connection:
+            print("✅ Database connection successful!")
+            return True
+    except Exception as e:
+        print(f"❌ Failed to connect to database: {e}")
+        return False

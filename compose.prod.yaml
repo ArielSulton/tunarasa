@@ -22,9 +22,11 @@ services:
 
         # Database Configuration
         - DATABASE_URL
-        - DB_POOL_SIZE
-        - DB_MAX_OVERFLOW
-        - DB_POOL_TIMEOUT
+        - user
+        - password
+        - host
+        - port
+        - dbname
 
         # Authentication & Security
         - SECRET_KEY
@@ -87,9 +89,11 @@ services:
 
       # Database Configuration
       - DATABASE_URL=${DATABASE_URL}
-      - DB_POOL_SIZE=${DB_POOL_SIZE}
-      - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
-      - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT}
+      - user=${user}
+      - password=${password}
+      - host=${host}
+      - port=${port}
+      - dbname=${dbname}
 
       # Authentication & Security
       - SECRET_KEY=${SECRET_KEY}
@@ -154,6 +158,7 @@ services:
 
   # Backend Service (FastAPI)
   backend:
+    container_name: tunarasa-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -174,9 +179,11 @@ services:
 
       # Database Configuration
       - DATABASE_URL=${DATABASE_URL}
-      - DB_POOL_SIZE=${DB_POOL_SIZE}
-      - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
-      - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT}
+      - user=${user}
+      - password=${password}
+      - host=${host}
+      - port=${port}
+      - dbname=${dbname}
 
       # Authentication & Security
       - SECRET_KEY=${SECRET_KEY}
@@ -389,6 +396,7 @@ volumes:
 
 networks:
   tunarasa-net:
+    name: tunarasa-net
     driver: bridge
 
 secrets:
@@ -419,12 +427,16 @@ secrets:
   # Database Configuration
   DATABASE_URL:
     environment: DATABASE_URL
-  DB_POOL_SIZE:
-    environment: DB_POOL_SIZE
-  DB_MAX_OVERFLOW:
-    environment: DB_MAX_OVERFLOW
-  DB_POOL_TIMEOUT:
-    environment: DB_POOL_TIMEOUT
+  user:
+    environment: user
+  password:
+    environment: password
+  host:
+    environment: host
+  port:
+    environment: port
+  dbname:
+    environment: dbname
 
   # Authentication & Security
   SECRET_KEY:

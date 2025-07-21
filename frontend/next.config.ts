@@ -23,7 +23,9 @@ const nextConfig: NextConfig = {
   // Experimental features
   experimental: {
     // Enable server actions
-    serverActions: true,
+    serverActions: {
+      allowedOrigins: ['localhost:3000', '127.0.0.1:3000'],
+    },
   },
 
   // Image optimization
@@ -54,6 +56,15 @@ const nextConfig: NextConfig = {
         ],
       },
     ]
+  },
+
+  // Webpack configuration
+  webpack: (config, { dev, isServer }) => {
+    // Fix source map issues in development
+    if (dev && !isServer) {
+      config.devtool = 'cheap-module-source-map'
+    }
+    return config
   },
 
   // TypeScript configuration

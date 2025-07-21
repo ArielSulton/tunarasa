@@ -17,6 +17,7 @@ frontend/out/
 frontend/build/
 
 # Testing
+frontend/test-results/
 frontend/coverage/
 
 # TypeScript
@@ -25,9 +26,7 @@ frontend/next-env.d.ts
 
 # ===== BACKEND (FastAPI/Python) =====
 # Python
-backend/__pycache__/
-backend/*/__pycache__/
-backend/*/*/__pycache__/
+backend/**/__pycache__/
 backend/*.py[cod]
 backend/*$py.class
 backend/*.so
@@ -154,7 +153,8 @@ CLAUDE.md
 
 # Model and RAG Docs
 /backend/documents/buku-saku-pelayanan-dukcapil-8166.pdf
-/frontend/public/models/sibi_model.h5
+/frontend/public/models/tfjs_model/*.bin
+/frontend/public/models/*.h5
 
 # Backup files
 *.bak

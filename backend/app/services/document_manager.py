@@ -31,10 +31,19 @@ class DocumentManager:
     """High-level document management service"""
     
     def __init__(self):
-        self.pinecone_service = get_pinecone_service()
-        self.langchain_service = get_langchain_service()
+        try:
+            self.pinecone_service = get_pinecone_service()
+        except Exception as e:
+            logger.error(f"Failed to initialize Pinecone service: {e}")
+            self.pinecone_service = None
+            
+        try:
+            self.langchain_service = get_langchain_service()
+        except Exception as e:
+            logger.error(f"Failed to initialize LangChain service: {e}")
+            self.langchain_service = None
         
-        logger.info("Document Manager initialized")
+        logger.info("Document Manager initialized (with fallback mode if needed)")
     
     async def add_document(
         self,
@@ -411,6 +420,12 @@ class DocumentManager:
         """Search for documents and generate an answer using LangChain"""
         
         try:
+            # Check if Pinecone service is available
+            if not self.pinecone_service:
+                # Use text-based fallback search in local documents
+                fallback_answer = await self._search_local_documents(question, session_id, language)
+                return fallback_answer
+            
             # First, search for relevant documents
             search_result = await self.search_documents(
                 query=question,
@@ -420,26 +435,55 @@ class DocumentManager:
             )
             
             if not search_result["success"] or not search_result["results"]:
-                return {
-                    "success": False,
-                    "message": "No relevant documents found for this question"
+                # Use local document search when vector search finds nothing
+                logger.info(f"Vector search found no results, trying local document search for: {question}")
+                fallback_answer = await self._search_local_documents(question, session_id, language)
+                return fallback_answer
+            
+            # Use LangChain service directly even without vector search
+            if self.langchain_service:
+                try:
+                    # Create a simple context without documents
+                    context = {
+                        "session_id": session_id,
+                        "question": question,
+                        "language": language,
+                        "mode": "casual"
+                    }
+                    
+                    # Use the LangChain service directly with Groq LLM
+                    if hasattr(self.langchain_service, 'llm') and self.langchain_service.llm:
+                        # Create a simple chat prompt
+                        prompt = f"Please answer this question: {question}"
+                        
+                        # Use the Groq LLM directly
+                        response = await self.langchain_service.llm.ainvoke(prompt)
+                        
+                        qa_response = {
+                            "answer": response.content if hasattr(response, 'content') else str(response),
+                            "confidence": 0.8,
+                            "processing_time": 0.5,
+                            "follow_up_suggestions": ["Can you tell me more?", "What else would you like to know?"]
+                        }
+                    else:
+                        raise Exception("LLM not available in LangChain service")
+                except Exception as llm_error:
+                    logger.error(f"LangChain service failed: {llm_error}")
+                    # Fallback to basic response
+                    qa_response = {
+                        "answer": f"I understand you're asking about '{question}'. I'm currently operating with limited capabilities, but I'm here to help with general information and assistance.",
+                        "confidence": 0.5,
+                        "processing_time": 0.1,
+                        "follow_up_suggestions": []
+                    }
+            else:
+                # No LangChain service available
+                qa_response = {
+                    "answer": f"I understand you're asking about '{question}'. The AI service is currently unavailable, but I'm here to help in any way I can.",
+                    "confidence": 0.3,
+                    "processing_time": 0.1,
+                    "follow_up_suggestions": []
                 }
-            
-            # Use the existing LangChain service for Q&A
-            from app.services.langchain_service import (
-                ConversationContext,
-                ConversationMode,
-                ResponseQuality,
-                process_question_simple
-            )
-            
-            # Process question using LangChain service
-            qa_response = await process_question_simple(
-                question=question,
-                session_id=session_id,
-                language=language,
-                conversation_mode="casual"
-            )
             
             # Combine search results with Q&A response
             return {
@@ -461,6 +505,241 @@ class DocumentManager:
                 "error": str(e),
                 "message": "Failed to process question with document search"
             }
+    
+    async def _search_local_documents(
+        self,
+        question: str,
+        session_id: str,
+        language: str = "id"
+    ) -> Dict[str, Any]:
+        """Search through local documents when Pinecone is unavailable"""
+        
+        try:
+            # Path to local document
+            document_path = Path(__file__).parent.parent.parent / "documents" / "buku-saku-dukcapil-yogya.txt"
+            
+            if not document_path.exists():
+                logger.warning(f"Local document not found: {document_path}")
+                return self._generate_no_document_response(question, session_id, language)
+            
+            # Read the document content
+            def read_file():
+                with open(document_path, 'r', encoding='utf-8') as file:
+                    return file.read()
+            
+            content = await asyncio.to_thread(read_file)
+            
+            # Perform simple text search
+            relevant_sections = self._extract_relevant_sections(content, question, language)
+            
+            # Generate answer using LangChain service if available
+            if self.langchain_service and relevant_sections:
+                try:
+                    # Create prompt with relevant sections
+                    context = "\n\n".join(relevant_sections)
+                    prompt = self._create_local_search_prompt(question, context, language)
+                    
+                    # Use the Groq LLM directly
+                    response = await self.langchain_service.llm.ainvoke(prompt)
+                    answer = response.content if hasattr(response, 'content') else str(response)
+                    
+                    return {
+                        "success": True,
+                        "question": question,
+                        "answer": answer,
+                        "confidence": 0.8,
+                        "sources": [{"title": "Buku Saku Dukcapil Yogya", "content": context[:200] + "..."}],
+                        "processing_time": 1.0,
+                        "session_id": session_id,
+                        "follow_up_suggestions": [],
+                        "message": "Answered using local document search"
+                    }
+                    
+                except Exception as llm_error:
+                    logger.error(f"LLM processing failed in local search: {llm_error}")
+                    # Fallback to simple text response
+                    pass
+            
+            # Simple fallback response with relevant sections
+            if relevant_sections:
+                answer = self._generate_simple_answer(question, relevant_sections, language)
+                return {
+                    "success": True,
+                    "question": question,
+                    "answer": answer,
+                    "confidence": 0.6,
+                    "sources": [{"title": "Buku Saku Dukcapil Yogya", "content": relevant_sections[0][:200] + "..."}],
+                    "processing_time": 0.5,
+                    "session_id": session_id,
+                    "follow_up_suggestions": [],
+                    "message": "Answered using local document search (simple mode)"
+                }
+            else:
+                return self._generate_no_match_response(question, session_id, language)
+                
+        except Exception as e:
+            logger.error(f"Local document search failed: {e}")
+            return self._generate_error_response(question, session_id, language, str(e))
+    
+    def _extract_relevant_sections(self, content: str, question: str, language: str) -> List[str]:
+        """Extract relevant sections from document content"""
+        
+        # Split content into paragraphs
+        paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
+        
+        # Create search terms from question
+        search_terms = self._extract_search_terms(question, language)
+        
+        # Score and rank paragraphs
+        scored_paragraphs = []
+        for paragraph in paragraphs:
+            score = self._calculate_relevance_score(paragraph, search_terms)
+            if score > 0:
+                scored_paragraphs.append((score, paragraph))
+        
+        # Sort by score and return top 3
+        scored_paragraphs.sort(key=lambda x: x[0], reverse=True)
+        return [para for score, para in scored_paragraphs[:3]]
+    
+    def _extract_search_terms(self, question: str, language: str) -> List[str]:
+        """Extract key terms from question for searching"""
+        
+        # Common terms to filter out
+        stop_words_id = ['yang', 'untuk', 'dari', 'dengan', 'pada', 'dalam', 'adalah', 'apa', 'bagaimana', 'kapan', 'dimana', 'mengapa', 'siapa']
+        stop_words_en = ['what', 'how', 'when', 'where', 'why', 'who', 'is', 'are', 'can', 'do', 'does', 'will', 'would', 'the', 'a', 'an']
+        
+        stop_words = stop_words_id if language == 'id' else stop_words_en
+        
+        # Extract meaningful words
+        words = question.lower().split()
+        search_terms = [word for word in words if len(word) > 2 and word not in stop_words]
+        
+        return search_terms
+    
+    def _calculate_relevance_score(self, text: str, search_terms: List[str]) -> float:
+        """Calculate relevance score of text for search terms"""
+        
+        text_lower = text.lower()
+        score = 0.0
+        
+        for term in search_terms:
+            # Exact match
+            if term in text_lower:
+                score += 2.0
+            # Partial match
+            elif any(term in word for word in text_lower.split()):
+                score += 1.0
+        
+        # Normalize by text length to favor more focused content
+        if len(text) > 0:
+            score = score / (len(text) / 100)
+        
+        return score
+    
+    def _create_local_search_prompt(self, question: str, context: str, language: str) -> str:
+        """Create prompt for LLM using local document context"""
+        
+        if language == 'id':
+            return f"""Anda adalah asisten layanan pemerintah Indonesia yang sangat membantu. WAJIB menjawab SELALU dalam bahasa Indonesia yang baik dan benar.
+
+Berdasarkan informasi dari dokumen Dukcapil berikut, jawab pertanyaan dengan akurat dan informatif:
+
+KONTEKS DOKUMEN:
+{context}
+
+PERTANYAAN: {question}
+
+INSTRUKSI:
+- WAJIB menjawab dalam bahasa Indonesia
+- Gunakan informasi dari dokumen untuk memberikan jawaban yang akurat
+- Jika informasi tidak tersedia, katakan dengan jelas
+- Berikan informasi yang berguna dan mudah dipahami
+- Gunakan bahasa yang sopan dan formal
+
+JAWABAN:"""
+        else:
+            return f"""Based on the following Dukcapil document information, answer the question accurately and informatively:
+
+DOCUMENT CONTEXT:
+{context}
+
+QUESTION: {question}
+
+ANSWER: Provide a complete answer based on the available information in the document. If specific information is not available, state this clearly and provide related information that might be helpful."""
+    
+    def _generate_simple_answer(self, question: str, sections: List[str], language: str) -> str:
+        """Generate simple answer from relevant sections"""
+        
+        if language == 'id':
+            intro = f"Berdasarkan dokumen Dukcapil, berikut informasi terkait pertanyaan Anda tentang '{question}':\n\n"
+        else:
+            intro = f"Based on the Dukcapil document, here is information related to your question about '{question}':\n\n"
+        
+        # Combine relevant sections
+        combined_info = "\n\n".join(sections[:2])  # Use top 2 sections
+        
+        return intro + combined_info
+    
+    def _generate_no_document_response(self, question: str, session_id: str, language: str) -> Dict[str, Any]:
+        """Generate response when local document is not found"""
+        
+        if language == 'id':
+            answer = "Maaf, dokumen lokal tidak tersedia saat ini. Silakan coba lagi nanti atau hubungi administrator."
+        else:
+            answer = "Sorry, local document is currently unavailable. Please try again later or contact administrator."
+        
+        return {
+            "success": True,
+            "question": question,
+            "answer": answer,
+            "confidence": 0.3,
+            "sources": [],
+            "processing_time": 0.1,
+            "session_id": session_id,
+            "follow_up_suggestions": [],
+            "message": "Local document not found"
+        }
+    
+    def _generate_no_match_response(self, question: str, session_id: str, language: str) -> Dict[str, Any]:
+        """Generate response when no relevant content is found"""
+        
+        if language == 'id':
+            answer = f"Maaf, saya tidak menemukan informasi yang relevan untuk pertanyaan '{question}' dalam dokumen yang tersedia. Silakan coba dengan kata kunci yang berbeda atau hubungi layanan Dukcapil langsung."
+        else:
+            answer = f"Sorry, I couldn't find relevant information for the question '{question}' in the available documents. Please try with different keywords or contact Dukcapil services directly."
+        
+        return {
+            "success": True,
+            "question": question,
+            "answer": answer,
+            "confidence": 0.4,
+            "sources": [],
+            "processing_time": 0.2,
+            "session_id": session_id,
+            "follow_up_suggestions": ["Coba kata kunci yang lebih spesifik", "Hubungi kantor Dukcapil terdekat"] if language == 'id' else ["Try more specific keywords", "Contact nearest Dukcapil office"],
+            "message": "No relevant content found in local document"
+        }
+    
+    def _generate_error_response(self, question: str, session_id: str, language: str, error: str) -> Dict[str, Any]:
+        """Generate error response for local document search"""
+        
+        if language == 'id':
+            answer = "Maaf, terjadi kesalahan dalam pencarian dokumen lokal. Silakan coba lagi nanti."
+        else:
+            answer = "Sorry, an error occurred during local document search. Please try again later."
+        
+        return {
+            "success": False,
+            "question": question,
+            "answer": answer,
+            "confidence": 0.0,
+            "sources": [],
+            "processing_time": 0.1,
+            "session_id": session_id,
+            "follow_up_suggestions": [],
+            "error": error,
+            "message": "Local document search error"
+        }
 
 
 # Global document manager instance

@@ -33,6 +33,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/openapi.json",
         "/api/v1/session/create",
         "/api/v1/health/check",
+        "/api/v1/rag/ask",  # Allow public access for gesture recognition Q&A
+        "/api/v1/question/ask",  # Allow public access for question answering
     }
     
     # Admin endpoints that require Clerk authentication

@@ -9,7 +9,8 @@ CREATE TABLE "conversations" (
 ALTER TABLE "conversations" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "genders" (
 	"gender_id" serial PRIMARY KEY NOT NULL,
-	"gender_name" varchar(50) NOT NULL
+	"gender_name" varchar(50) NOT NULL,
+	CONSTRAINT "genders_gender_name_unique" UNIQUE("gender_name")
 );
 --> statement-breakpoint
 ALTER TABLE "genders" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
@@ -33,22 +34,28 @@ CREATE TABLE "notes" (
 ALTER TABLE "notes" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "roles" (
 	"role_id" serial PRIMARY KEY NOT NULL,
-	"role_name" varchar(50) NOT NULL
+	"role_name" varchar(50) NOT NULL,
+	CONSTRAINT "roles_role_name_unique" UNIQUE("role_name")
 );
 --> statement-breakpoint
 ALTER TABLE "roles" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "users" (
 	"user_id" serial PRIMARY KEY NOT NULL,
-	"clerk_user_id" integer,
+	"clerk_user_id" varchar(255) NOT NULL,
 	"full_name" varchar(255),
 	"role_id" integer NOT NULL,
 	"gender_id" integer NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "users_clerk_user_id_unique" UNIQUE("clerk_user_id")
 );
 --> statement-breakpoint
 ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_user_id_users_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_id_conversations_conversation_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("conversation_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "notes" ADD CONSTRAINT "notes_conversation_id_conversations_conversation_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("conversation_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_role_id_roles_role_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("role_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_gender_id_genders_gender_id_fk" FOREIGN KEY ("gender_id") REFERENCES "public"."genders"("gender_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "conversations_user_id_idx" ON "conversations" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "conversations_is_active_idx" ON "conversations" USING btree ("is_active");--> statement-breakpoint
 CREATE INDEX "conversations_created_at_idx" ON "conversations" USING btree ("created_at");--> statement-breakpoint

@@ -26,9 +26,8 @@ from enum import Enum
 from pathlib import Path
 import uuid
 
-# Core libraries
-import pinecone
-from pinecone import Pinecone, Index
+# Core libraries  
+from pinecone import Pinecone
 # Removed OpenAI imports - using PineconeEmbeddings instead
 
 # Document processing
@@ -457,9 +456,7 @@ class PineconeVectorService:
             
             self.embeddings = PineconeEmbeddings(
                 model=settings.EMBEDDING_MODEL,
-                pinecone_api_key=settings.PINECONE_API_KEY,
-                chunk_size=1000,
-                max_retries=3
+                pinecone_api_key=settings.PINECONE_API_KEY
             )
             
             logger.info(f"Pinecone embeddings ({settings.EMBEDDING_MODEL}) initialized successfully")
@@ -481,30 +478,50 @@ class PineconeVectorService:
             existing_indexes = self.client.list_indexes().names()
             
             if index_name not in existing_indexes:
-                # Create index with proper configuration
-                self.client.create_index(
-                    name=index_name,
-                    dimension=1536,  # multilingual-e5-large embedding dimension
-                    metric="cosine",
-                    spec=pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
-                )
-                
-                logger.info(f"Created Pinecone index: {index_name}")
-                
-                # Wait for index to be ready
-                import time
-                time.sleep(10)
+                try:
+                    # Create index with proper configuration
+                    self.client.create_index(
+                        name=index_name,
+                        dimension=1536,  # multilingual-e5-large embedding dimension
+                        metric="cosine",
+                        spec=pinecone.ServerlessSpec(cloud="aws", region="us-east-1")
+                    )
+                    
+                    logger.info(f"Created Pinecone index: {index_name}")
+                    
+                    # Wait for index to be ready
+                    import time
+                    time.sleep(10)
+                except Exception as create_error:
+                    if "ALREADY_EXISTS" in str(create_error) or "already exists" in str(create_error).lower():
+                        logger.info(f"Pinecone index {index_name} already exists, continuing...")
+                    else:
+                        logger.error(f"Failed to create Pinecone index: {create_error}")
+                        raise
             
             # Connect to index
-            self.index = self.client.Index(index_name)
-            
-            # Verify index connection
-            stats = self.index.describe_index_stats()
-            logger.info(f"Connected to Pinecone index: {index_name}, vectors: {stats.total_vector_count}")
+            try:
+                self.index = self.client.Index(index_name)
+                logger.info(f"Connected to Pinecone index: {index_name}")
+                
+                # Verify index connection
+                stats = self.index.describe_index_stats()
+                logger.info(f"Index stats: {stats.total_vector_count} vectors")
+                
+            except Exception as index_error:
+                if "ALREADY_EXISTS" in str(index_error) or "already exists" in str(index_error).lower():
+                    logger.warning(f"Pinecone index access issue, retrying: {index_error}")
+                    # Retry connection
+                    self.index = self.client.Index(index_name)
+                else:
+                    logger.error(f"Failed to connect to Pinecone index: {index_error}")
+                    raise
             
         except Exception as e:
             logger.error(f"Failed to initialize Pinecone index: {e}")
-            raise
+            # Don't raise the error - allow the service to continue without Pinecone
+            self.index = None
+            self.client = None
     
     async def ingest_document(
         self,

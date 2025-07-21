@@ -187,9 +187,7 @@ class EnhancedLangChainService:
             if settings.PINECONE_API_KEY:
                 self.embeddings = PineconeEmbeddings(
                     model=settings.EMBEDDING_MODEL,
-                    pinecone_api_key=settings.PINECONE_API_KEY,
-                    chunk_size=1000,
-                    max_retries=3
+                    pinecone_api_key=settings.PINECONE_API_KEY
                 )
                 logger.info(f"Pinecone embeddings ({settings.EMBEDDING_MODEL}) initialized successfully")
             else:
@@ -198,7 +196,8 @@ class EnhancedLangChainService:
                 
         except Exception as e:
             logger.error(f"Failed to initialize embeddings: {e}")
-            raise
+            logger.warning("Continuing without embeddings - vector search disabled")
+            self.embeddings = None
     
     def _initialize_vectorstore(self):
         """Initialize Pinecone vector store"""
@@ -223,12 +222,13 @@ class EnhancedLangChainService:
                 logger.info("Pinecone vector store initialized successfully")
                 
             else:
-                logger.error("Pinecone API key required for vector store")
-                raise ValueError("PINECONE_API_KEY not found in settings")
+                logger.warning("Pinecone API key or embeddings not available for vector store")
+                self.vectorstore = None
                 
         except Exception as e:
             logger.error(f"Failed to initialize vector store: {e}")
-            raise
+            logger.warning("Continuing without vector store - document search disabled")
+            self.vectorstore = None
     
     def _initialize_retriever(self):
         """Initialize enhanced retriever with compression"""
@@ -256,12 +256,13 @@ class EnhancedLangChainService:
                 logger.info("Enhanced retriever initialized with compression")
                 
             else:
-                logger.error("Vector store and LLM required for retriever")
-                raise ValueError("Vector store and LLM not available")
+                logger.warning("Vector store not available - operating without document retrieval")
+                self.retriever = None
                 
         except Exception as e:
             logger.error(f"Failed to initialize retriever: {e}")
-            raise
+            logger.warning("Continuing without retriever - direct LLM responses only")
+            self.retriever = None
     
     def _initialize_redis(self):
         """Initialize Redis for conversation caching"""
@@ -288,45 +289,46 @@ class EnhancedLangChainService:
         
         # System prompts for different modes
         self.system_prompts = {
-            ConversationMode.CASUAL: """You are a helpful and friendly assistant for Indonesian government services. 
-            Provide clear, accurate information in a conversational and accessible way. Use simple language and be empathetic to user needs.
-            Answer in the language requested by the user (Indonesian or English).""",
+            ConversationMode.CASUAL: """Anda adalah asisten layanan pemerintah Indonesia yang ramah dan membantu. 
+            Berikan informasi yang jelas dan akurat dengan cara yang mudah dipahami. Gunakan bahasa sederhana dan tunjukkan empati terhadap kebutuhan pengguna.
+            WAJIB SELALU jawab dalam bahasa Indonesia yang baik dan benar.""",
             
-            ConversationMode.FORMAL: """You are a professional government services assistant. 
-            Provide formal, accurate, and comprehensive information about Indonesian government services. 
-            Use proper terminology and maintain a professional tone throughout the interaction.
-            Answer in the language requested by the user (Indonesian or English).""",
+            ConversationMode.FORMAL: """Anda adalah asisten layanan pemerintah profesional. 
+            Berikan informasi yang formal, akurat, dan komprehensif tentang layanan pemerintah Indonesia. 
+            Gunakan terminologi yang tepat dan pertahankan nada profesional sepanjang interaksi.
+            WAJIB SELALU jawab dalam bahasa Indonesia yang baik dan benar.""",
             
-            ConversationMode.TECHNICAL: """You are a technical expert assistant for Indonesian government services. 
-            Provide detailed, technical information with specific procedures, requirements, and regulations. 
-            Include relevant legal references and procedural details when applicable.
-            Answer in the language requested by the user (Indonesian or English).""",
+            ConversationMode.TECHNICAL: """Anda adalah asisten ahli teknis untuk layanan pemerintah Indonesia. 
+            Berikan informasi teknis yang detail dengan prosedur, persyaratan, dan regulasi yang spesifik. 
+            Sertakan referensi hukum dan detail prosedural yang relevan jika diperlukan.
+            WAJIB SELALU jawab dalam bahasa Indonesia yang baik dan benar.""",
             
-            ConversationMode.EDUCATIONAL: """You are an educational assistant helping users understand Indonesian government services. 
-            Explain concepts clearly, provide context, and offer step-by-step guidance. 
-            Include examples and analogies to help users understand complex procedures.
-            Answer in the language requested by the user (Indonesian or English)."""
+            ConversationMode.EDUCATIONAL: """Anda adalah asisten pendidikan yang membantu pengguna memahami layanan pemerintah Indonesia. 
+            Jelaskan konsep dengan jelas, berikan konteks, dan tawarkan panduan langkah demi langkah. 
+            Sertakan contoh dan analogi untuk membantu pengguna memahami prosedur yang kompleks.
+            WAJIB SELALU jawab dalam bahasa Indonesia yang baik dan benar."""
         }
         
         # Main prompt template
         self.main_prompt_template = ChatPromptTemplate.from_messages([
             SystemMessagePromptTemplate.from_template(
                 "{system_prompt}\n\n"
-                "Context from relevant documents:\n{context}\n\n"
-                "Conversation history:\n{history}\n\n"
-                "Instructions:\n"
-                "1. Use the provided context to answer the question accurately\n"
-                "2. If information is not available in the context, state this clearly\n"
-                "3. Provide {response_quality} level responses\n"
-                "4. Suggest 2-3 follow-up questions when appropriate\n"
-                "5. Mention related topics that might be helpful\n"
-                "6. Always be helpful and accurate"
+                "Konteks dari dokumen yang relevan:\n{context}\n\n"
+                "Riwayat percakapan:\n{history}\n\n"
+                "Instruksi:\n"
+                "1. Gunakan konteks yang diberikan untuk menjawab pertanyaan dengan akurat\n"
+                "2. Jika informasi tidak tersedia dalam konteks, nyatakan dengan jelas\n"
+                "3. Berikan respons dengan tingkat {response_quality}\n"
+                "4. Sarankan 2-3 pertanyaan lanjutan jika sesuai\n"
+                "5. Sebutkan topik terkait yang mungkin membantu\n"
+                "6. Selalu membantu dan akurat\n"
+                "7. WAJIB: Jawab selalu dalam bahasa Indonesia"
             ),
             HumanMessagePromptTemplate.from_template(
-                "User Question: {question}\n"
-                "Language: {language}\n"
-                "Topic Focus: {topic_focus}\n\n"
-                "Please provide a comprehensive answer."
+                "Pertanyaan Pengguna: {question}\n"
+                "Bahasa: {language}\n"
+                "Fokus Topik: {topic_focus}\n\n"
+                "Berikan jawaban yang komprehensif dalam bahasa Indonesia."
             )
         ])
     
