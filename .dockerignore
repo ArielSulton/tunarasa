@@ -89,6 +89,9 @@ README.md
 **/LICENSE
 **/CHANGELOG*
 
+# Reference
+reference/
+
 # OS generated files
 .DS_Store
 .DS_Store?

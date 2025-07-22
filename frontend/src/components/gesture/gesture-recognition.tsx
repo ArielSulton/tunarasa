@@ -53,17 +53,11 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
   const { isInitialized, isRunning, isLoading, error, status, lastResult, start, stop, initialize } =
     useGestureRecognition({
       config: {
-        mediaPipeConfig: {
+        handPoseConfig: {
           maxNumHands: SIBI_CONFIG.MAX_NUM_HANDS,
-          modelComplexity: SIBI_CONFIG.MODEL_COMPLEXITY,
-          minDetectionConfidence: SIBI_CONFIG.MIN_DETECTION_CONFIDENCE,
-          minTrackingConfidence: SIBI_CONFIG.MIN_TRACKING_CONFIDENCE,
-        },
-        classifierConfig: {
-          modelPath: SIBI_CONFIG.MODEL_PATH,
-          confidenceThreshold: SIBI_CONFIG.CONFIDENCE_THRESHOLD,
-          maxAlternatives: SIBI_CONFIG.MAX_ALTERNATIVES,
-          normalizationMethod: SIBI_CONFIG.NORMALIZATION_METHOD,
+          detectionConfidence: SIBI_CONFIG.MIN_DETECTION_CONFIDENCE,
+          scoreThreshold: SIBI_CONFIG.SCORE_THRESHOLD,
+          flipHorizontal: SIBI_CONFIG.FLIP_HORIZONTAL,
         },
         processingOptions: {
           enableSmoothing: true,
@@ -383,7 +377,6 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
         {/* System info */}
         <div className="text-muted-foreground space-y-1 text-xs">
           <div>Processing Time: {lastResult?.processingTime.toFixed(1)}ms</div>
-          <div>Handedness: {lastResult?.handedness}</div>
           <div>Stability: {stabilityCount}/3</div>
         </div>
       </CardContent>

@@ -61,7 +61,7 @@ export default function Home() {
           session_id: `web-session-${Date.now()}`, // Generate unique session ID
           language: 'id', // Indonesian language
           max_sources: 3,
-          similarity_threshold: 0.7
+          similarity_threshold: 0.7,
         }),
       })
 
@@ -82,7 +82,7 @@ export default function Home() {
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
       console.error('Error sending message:', error)
-      
+
       // Show error message to user
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -217,9 +217,7 @@ export default function Home() {
                             <div className="mt-1 flex items-center justify-between text-xs opacity-70">
                               <span>{message.timestamp.toLocaleTimeString()}</span>
                               {message.confidence && (
-                                <span className="ml-2">
-                                  {Math.round(message.confidence * 100)}% confidence
-                                </span>
+                                <span className="ml-2">{Math.round(message.confidence * 100)}% confidence</span>
                               )}
                             </div>
                           </div>

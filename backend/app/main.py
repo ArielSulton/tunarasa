@@ -10,7 +10,7 @@ from prometheus_client import generate_latest, Counter, Histogram
 import time
 import uvicorn
 
-from app.core.config import settings
+from app.core.config import settings, get_cors_origins, get_allowed_hosts
 from app.api.v1.api import api_router
 from app.api.middleware.auth import AuthMiddleware
 from app.api.middleware.rate_limit import RateLimitMiddleware
@@ -71,13 +71,13 @@ def create_application() -> FastAPI:
     if settings.ENVIRONMENT == "production":
         app.add_middleware(
             TrustedHostMiddleware, 
-            allowed_hosts=settings.ALLOWED_HOSTS
+            allowed_hosts=get_allowed_hosts()
         )
     
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.CORS_ORIGINS,
+        allow_origins=get_cors_origins(),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],

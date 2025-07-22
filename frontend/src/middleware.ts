@@ -14,6 +14,12 @@ const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/admin(.*)', '/a
 const isAdminRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)'])
 
 export default clerkMiddleware(async (auth, req) => {
+  // Skip middleware during build time to avoid Clerk evaluation
+  // Only run middleware when Clerk is properly configured
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return
+  }
+
   // Protect admin and dashboard routes
   if (isProtectedRoute(req)) {
     await auth.protect()

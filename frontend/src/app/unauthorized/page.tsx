@@ -3,9 +3,14 @@
  * Shown when users try to access admin-only areas without proper permissions
  */
 
+'use client'
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { AuthStatus } from '@/components/auth/auth-components'
+import { BuildSafeAuthStatus } from '@/components/auth/BuildSafeAuthStatus'
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 export default function UnauthorizedPage() {
   return (
@@ -21,7 +26,7 @@ export default function UnauthorizedPage() {
 
         <div className="space-y-4">
           <div className="flex justify-center">
-            <AuthStatus />
+            <BuildSafeAuthStatus />
           </div>
 
           <div className="flex flex-col justify-center gap-3 sm:flex-row">

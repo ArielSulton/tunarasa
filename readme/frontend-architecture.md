@@ -105,7 +105,6 @@ interface GestureCaptureProps {
 interface GestureVisualizerProps {
   landmarks: HandLandmark[]
   confidence: number
-  handedness: 'left' | 'right' | 'both'
   showLabels: boolean
   accessibilityMode: boolean
 }

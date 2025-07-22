@@ -145,6 +145,9 @@ temp/
 /readme/*/
 CLAUDE.md
 
+# Reference
+reference/
+
 # Database files (if any local)
 /frontend/drizzle/meta
 *.db
@@ -155,6 +158,7 @@ CLAUDE.md
 /backend/documents/buku-saku-pelayanan-dukcapil-8166.pdf
 /frontend/public/models/tfjs_model/*.bin
 /frontend/public/models/*.h5
+!/frontend/public/models/model.h5
 
 # Backup files
 *.bak

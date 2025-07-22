@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import { ClerkProvider } from '@clerk/nextjs'
+import AuthProvider from '@/components/auth/AuthProvider'
 import { AuthStatusWrapper } from '@/components/auth/AuthStatusWrapper'
 import './globals.css'
 
@@ -40,19 +40,19 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <AuthProvider>
           <header className="bg-background border-b">
             <div className="container mx-auto flex items-center justify-between px-4 py-3">
               <h1 className="text-xl font-semibold">Tunarasa</h1>
-              {/* Auth component with hydration fix */}
+              {/* Auth component with conditional Clerk support */}
               <AuthStatusWrapper />
             </div>
           </header>
           {children}
-        </body>
-      </html>
-    </ClerkProvider>
+        </AuthProvider>
+      </body>
+    </html>
   )
 }

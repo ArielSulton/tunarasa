@@ -38,7 +38,6 @@ Process A-Z hand gesture landmarks into text question.
   "sessionId": "uuid",
   "gestureData": {
     "landmarks": [[x, y, z], ...],
-    "handedness": "left|right|both",
     "timestamp": "2024-01-01T10:00:00Z"
   },
   "sequenceNumber": 1

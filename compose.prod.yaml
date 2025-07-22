@@ -31,8 +31,15 @@ services:
         # Authentication & Security
         - SECRET_KEY
         - ACCESS_TOKEN_EXPIRE_MINUTES
+        - NEXT_PUBLIC_ENABLE_CLERK_AUTH
         - CLERK_SECRET_KEY
         - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        
+        # Clerk Configuration URLs
+        - NEXT_PUBLIC_CLERK_SIGN_IN_URL
+        - NEXT_PUBLIC_CLERK_SIGN_UP_URL
+        - NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL
+        - NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL
 
         # AI Services Configuration
         - GROQ_API_KEY
@@ -51,6 +58,9 @@ services:
 
         # External Services - Email Configuration (Frontend Only)
         - RESEND_API_KEY
+        - FROM_EMAIL
+        - FROM_NAME
+        - ADMIN_EMAIL
         - REDIS_URL
 
         # API & Security Configuration
@@ -69,7 +79,6 @@ services:
         - GRAFANA_ADMIN_PASSWORD
         - GRAFANA_DOMAIN
         - GRAFANA_URL
-        - ALERTMANAGER_DOMAIN
     env_file:
       - .env
     environment:
@@ -98,8 +107,15 @@ services:
       # Authentication & Security
       - SECRET_KEY=${SECRET_KEY}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - NEXT_PUBLIC_ENABLE_CLERK_AUTH=${NEXT_PUBLIC_ENABLE_CLERK_AUTH}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      
+      # Clerk Configuration URLs
+      - NEXT_PUBLIC_CLERK_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_URL}
+      - NEXT_PUBLIC_CLERK_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_URL}
+      - NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL}
+      - NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL}
 
       # AI Services Configuration
       - GROQ_API_KEY=${GROQ_API_KEY}
@@ -118,6 +134,9 @@ services:
 
       # External Services - Email Configuration (Frontend Only)
       - RESEND_API_KEY=${RESEND_API_KEY}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - FROM_NAME=${FROM_NAME}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
       - REDIS_URL=${REDIS_URL}
 
       # API & Security Configuration
@@ -136,7 +155,6 @@ services:
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
       - GRAFANA_URL=${GRAFANA_URL}
-      - ALERTMANAGER_DOMAIN=${ALERTMANAGER_DOMAIN}
     depends_on:
       - backend
     ports:
@@ -188,8 +206,15 @@ services:
       # Authentication & Security
       - SECRET_KEY=${SECRET_KEY}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - NEXT_PUBLIC_ENABLE_CLERK_AUTH=${NEXT_PUBLIC_ENABLE_CLERK_AUTH}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      
+      # Clerk Configuration URLs
+      - NEXT_PUBLIC_CLERK_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_URL}
+      - NEXT_PUBLIC_CLERK_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_URL}
+      - NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL}
+      - NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL}
 
       # AI Services Configuration
       - GROQ_API_KEY=${GROQ_API_KEY}
@@ -208,6 +233,9 @@ services:
 
       # External Services - Email Configuration (Frontend Only)
       - RESEND_API_KEY=${RESEND_API_KEY}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - FROM_NAME=${FROM_NAME}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
       - REDIS_URL=${REDIS_URL}
 
       # API & Security Configuration
@@ -226,7 +254,6 @@ services:
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
       - GRAFANA_URL=${GRAFANA_URL}
-      - ALERTMANAGER_DOMAIN=${ALERTMANAGER_DOMAIN}
     depends_on:
       redis:
         condition: service_healthy
@@ -358,36 +385,12 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     restart: unless-stopped
 
-  # AlertManager (Alert Management)
-  alertmanager:
-    container_name: tunarasa-alertmanager
-    image: prom/alertmanager:latest
-    ports:
-      - "9093:9093"
-    dns:
-      - 1.1.1.1
-      - 1.0.0.1
-      - 8.8.8.8
-      - 8.8.4.4
-    networks:
-      - tunarasa-net
-    volumes:
-      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanager_data:/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-      - '--web.external-url=https://${ALERTMANAGER_DOMAIN}'
-    restart: unless-stopped
-
 volumes:
   redis_data_prod:
     driver: local
   prometheus_data_prod:
     driver: local
   grafana_data_prod:
-    driver: local
-  alertmanager_data:
     driver: local
   uploads_data:
     driver: local
@@ -443,10 +446,22 @@ secrets:
     environment: SECRET_KEY
   ACCESS_TOKEN_EXPIRE_MINUTES:
     environment: ACCESS_TOKEN_EXPIRE_MINUTES
+  NEXT_PUBLIC_ENABLE_CLERK_AUTH:
+    environment: NEXT_PUBLIC_ENABLE_CLERK_AUTH
   CLERK_SECRET_KEY:
     environment: CLERK_SECRET_KEY
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
     environment: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+    
+  # Clerk Configuration URLs
+  NEXT_PUBLIC_CLERK_SIGN_IN_URL:
+    environment: NEXT_PUBLIC_CLERK_SIGN_IN_URL
+  NEXT_PUBLIC_CLERK_SIGN_UP_URL:
+    environment: NEXT_PUBLIC_CLERK_SIGN_UP_URL
+  NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL:
+    environment: NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL
+  NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL:
+    environment: NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL
 
   # AI Services Configuration
   GROQ_API_KEY:
@@ -477,6 +492,12 @@ secrets:
   # External Services - Email Configuration (Frontend Only)
   RESEND_API_KEY:
     environment: RESEND_API_KEY
+  FROM_EMAIL:
+    environment: FROM_EMAIL
+  FROM_NAME:
+    environment: FROM_NAME
+  ADMIN_EMAIL:
+    environment: ADMIN_EMAIL
   REDIS_URL:
     environment: REDIS_URL
 
@@ -509,5 +530,3 @@ secrets:
     environment: GRAFANA_DOMAIN
   GRAFANA_URL:
     environment: GRAFANA_URL
-  ALERTMANAGER_DOMAIN:
-    environment: ALERTMANAGER_DOMAIN

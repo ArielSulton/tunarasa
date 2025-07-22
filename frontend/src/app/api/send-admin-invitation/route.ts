@@ -3,10 +3,33 @@ import { Resend } from 'resend'
 import { AdminInvitationEmailTemplate } from '@/components/email/admin-invitation-template'
 import { auth } from '@clerk/nextjs/server'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Initialize Resend only when needed to avoid build-time errors
+let resend: Resend | null = null
+
+function getResendClient(): Resend {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY environment variable is not set')
+    }
+    resend = new Resend(apiKey)
+  }
+  return resend
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if email service is configured
+    if (!process.env.RESEND_API_KEY) {
+      return NextResponse.json(
+        {
+          error: 'Email service not configured',
+          message: 'RESEND_API_KEY environment variable is not set',
+        },
+        { status: 503 },
+      )
+    }
+
     // Verify authentication
     const { userId } = await auth()
     if (!userId) {
@@ -38,9 +61,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid invitation URL' }, { status: 400 })
     }
 
+    // Get email configuration from environment
+    const fromEmail = process.env.FROM_EMAIL || 'admin@mail.tunarasa.my.id'
+    const fromName = process.env.FROM_NAME || 'Tunarasa Admin'
+    const replyToEmail = process.env.ADMIN_EMAIL || 'noreply@mail.tunarasa.my.id'
+
     // Send email using Resend
-    const { data, error } = await resend.emails.send({
-      from: `${organizationName} Admin <admin@tunarasa.com>`,
+    const resendClient = getResendClient()
+    const { data, error } = await resendClient.emails.send({
+      from: `${fromName} <${fromEmail}>`,
       to: [inviteeEmail],
       subject: `Admin Invitation - ${organizationName} Dashboard`,
       react: AdminInvitationEmailTemplate({
@@ -50,7 +79,7 @@ export async function POST(request: NextRequest) {
         invitationUrl,
       }),
       // Add reply-to for better user experience
-      replyTo: 'noreply@tunarasa.com',
+      replyTo: replyToEmail,
       // Add headers for tracking
       headers: {
         'X-Entity-Ref-ID': `admin-invitation-${Date.now()}`,
@@ -88,3 +117,6 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({ error: 'Method not allowed' }, { status: 405 })
 }
+
+// Dynamic configuration - prevents build-time evaluation
+export const dynamic = 'force-dynamic'

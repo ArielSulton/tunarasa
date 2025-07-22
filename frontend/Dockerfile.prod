@@ -25,6 +25,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Next.js Standalone Mode
 ENV NEXT_PRIVATE_STANDALONE=true
 
+# Disable Clerk during build time to avoid Docker compatibility issues
+ENV NEXT_PUBLIC_ENABLE_CLERK_AUTH=false
+
 # Copy all files
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -58,8 +61,13 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
     # Authentication & Security
     --mount=type=secret,id=SECRET_KEY,env=SECRET_KEY \
     --mount=type=secret,id=ACCESS_TOKEN_EXPIRE_MINUTES,env=ACCESS_TOKEN_EXPIRE_MINUTES \
+    --mount=type=secret,id=NEXT_PUBLIC_ENABLE_CLERK_AUTH,env=NEXT_PUBLIC_ENABLE_CLERK_AUTH \
     --mount=type=secret,id=CLERK_SECRET_KEY,env=CLERK_SECRET_KEY \
     --mount=type=secret,id=NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,env=NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY \
+    --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_IN_URL,env=NEXT_PUBLIC_CLERK_SIGN_IN_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_UP_URL,env=NEXT_PUBLIC_CLERK_SIGN_UP_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL,env=NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL,env=NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL \
 
     # AI Services Configuration
     --mount=type=secret,id=GROQ_API_KEY,env=GROQ_API_KEY \
@@ -98,8 +106,7 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
     --mount=type=secret,id=GRAFANA_ADMIN_USER,env=GRAFANA_ADMIN_USER \
     --mount=type=secret,id=GRAFANA_ADMIN_PASSWORD,env=GRAFANA_ADMIN_PASSWORD \
     --mount=type=secret,id=GRAFANA_DOMAIN,env=GRAFANA_DOMAIN \
-    --mount=type=secret,id=GRAFANA_URL,env=GRAFANA_URL \
-    --mount=type=secret,id=ALERTMANAGER_DOMAIN,env=ALERTMANAGER_DOMAIN \
+    --mount=type=secret,id=GRAFANA_URL,env=GRAFANA_URL
 
 # Build the application
 RUN bun run build

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { adminApiClient, AdminSession, GestureAnalytics as ApiGestureAnalytics } from '@/lib/api/admin-client'
+import { useAdminClient } from '@/lib/hooks/use-admin-client'
+import type { AdminSession, GestureAnalytics as ApiGestureAnalytics } from '@/lib/api/admin-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -41,6 +42,9 @@ import {
   Laptop,
 } from 'lucide-react'
 import { QALogsViewer } from '@/components/admin/QALogsViewer'
+
+// Force dynamic rendering to prevent build-time Clerk evaluation
+export const dynamic = 'force-dynamic'
 
 interface DashboardStats {
   totalSessions: number
@@ -84,6 +88,7 @@ interface SystemMetrics {
 }
 
 export default function AdminDashboard() {
+  const adminClient = useAdminClient()
   const [stats, setStats] = useState<DashboardStats>({
     totalSessions: 0,
     totalConversations: 0,
@@ -124,7 +129,7 @@ export default function AdminDashboard() {
     const fetchDashboardData = async () => {
       try {
         // Fetch dashboard statistics
-        const statsResponse = await adminApiClient.getDashboardStats()
+        const statsResponse = await adminClient.getDashboardStats()
 
         if (statsResponse.success && statsResponse.data) {
           const statsData = statsResponse.data
@@ -144,7 +149,7 @@ export default function AdminDashboard() {
         }
 
         // Fetch session data
-        const sessionsResponse = await adminApiClient.getSessions()
+        const sessionsResponse = await adminClient.getSessions()
 
         if (sessionsResponse.success && sessionsResponse.data) {
           const sessionsData = sessionsResponse.data
@@ -169,7 +174,7 @@ export default function AdminDashboard() {
         }
 
         // Fetch gesture analytics
-        const analyticsResponse = await adminApiClient.getGestureAnalytics()
+        const analyticsResponse = await adminClient.getGestureAnalytics()
 
         if (analyticsResponse.success && analyticsResponse.data) {
           const analyticsData = analyticsResponse.data
@@ -195,7 +200,7 @@ export default function AdminDashboard() {
         }
 
         // Fetch system metrics
-        const metricsResponse = await adminApiClient.getSystemMetrics()
+        const metricsResponse = await adminClient.getSystemMetrics()
 
         if (metricsResponse.success && metricsResponse.data) {
           const metricsData = metricsResponse.data
@@ -237,7 +242,7 @@ export default function AdminDashboard() {
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [autoRefresh])
+  }, [autoRefresh, adminClient])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -277,7 +282,7 @@ export default function AdminDashboard() {
   const handleSaveSettings = async () => {
     setSettingsLoading(true)
     try {
-      const response = await adminApiClient.updateSettings({
+      const response = await adminClient.updateSettings({
         confidence_threshold: settings.confidenceThreshold,
         enable_smoothing: settings.enableSmoothing,
         debounce_time: settings.debounceTime,

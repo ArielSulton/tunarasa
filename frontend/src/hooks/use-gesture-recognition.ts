@@ -125,10 +125,10 @@ export const useGestureRecognition = (options: UseGestureRecognitionOptions = {}
 
         if (serviceStatus.isInitialized) {
           setIsInitialized(true)
-          if (serviceStatus.classifierReady) {
+          if (serviceStatus.handPoseReady) {
             setStatus('Gesture recognition fully operational')
           } else {
-            setStatus('Gesture recognition ready (hand detection only)')
+            setStatus('Gesture recognition ready (initializing HandPose)')
           }
         } else {
           setIsInitialized(false)

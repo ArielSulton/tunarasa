@@ -3,7 +3,7 @@
  * Handles all administrative API calls to the backend with Clerk authentication
  */
 
-import { getAuthHeaders } from '@/lib/auth/utils'
+// Client-side admin API client - token should be passed from component using useAuth
 
 export interface AdminDashboardStats {
   total_sessions: number
@@ -199,18 +199,17 @@ class AdminApiClient {
     this.baseUrl = baseUrl
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  private async request<T>(endpoint: string, options: RequestInit = {}, token?: string): Promise<ApiResponse<T>> {
     try {
-      // Get authentication headers
-      const authHeaders = await getAuthHeaders()
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...((options.headers as Record<string, string>) || {}),
+      }
 
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-          ...options.headers,
-        },
+        headers,
       })
 
       if (!response.ok) {
@@ -237,39 +236,43 @@ class AdminApiClient {
   /**
    * Get dashboard statistics
    */
-  async getDashboardStats(): Promise<ApiResponse<AdminDashboardStats>> {
-    return this.request<AdminDashboardStats>('/api/v1/admin/dashboard/stats')
+  async getDashboardStats(token?: string): Promise<ApiResponse<AdminDashboardStats>> {
+    return this.request<AdminDashboardStats>('/api/v1/admin/dashboard/stats', {}, token)
   }
 
   /**
    * Get active sessions
    */
-  async getSessions(): Promise<ApiResponse<{ sessions: AdminSession[] }>> {
-    return this.request<{ sessions: AdminSession[] }>('/api/v1/admin/users')
+  async getSessions(token?: string): Promise<ApiResponse<{ sessions: AdminSession[] }>> {
+    return this.request<{ sessions: AdminSession[] }>('/api/v1/admin/users', {}, token)
   }
 
   /**
    * Get system metrics
    */
-  async getSystemMetrics(): Promise<ApiResponse<SystemMetrics>> {
-    return this.request<SystemMetrics>('/api/v1/admin/dashboard/metrics')
+  async getSystemMetrics(token?: string): Promise<ApiResponse<SystemMetrics>> {
+    return this.request<SystemMetrics>('/api/v1/admin/dashboard/metrics', {}, token)
   }
 
   /**
    * Get health status
    */
-  async getHealthStatus(): Promise<ApiResponse<{ status: string; services: Record<string, unknown> }>> {
-    return this.request<{ status: string; services: Record<string, unknown> }>('/api/v1/admin/system/health')
+  async getHealthStatus(token?: string): Promise<ApiResponse<{ status: string; services: Record<string, unknown> }>> {
+    return this.request<{ status: string; services: Record<string, unknown> }>('/api/v1/admin/system/health', {}, token)
   }
 
   /**
    * Update system settings
    */
-  async updateSettings(settings: Record<string, unknown>): Promise<ApiResponse<{ message: string }>> {
-    return this.request<{ message: string }>('/api/v1/admin/settings', {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    })
+  async updateSettings(settings: Record<string, unknown>, token?: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>(
+      '/api/v1/admin/settings',
+      {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+      },
+      token,
+    )
   }
 
   /**
@@ -431,20 +434,27 @@ class AdminApiClient {
   /**
    * Get gesture analytics with optional parameters
    */
-  async getGestureAnalytics(params?: {
-    timeframe?: string
-    format?: string
-  }): Promise<ApiResponse<{ gesture_analytics?: GestureAnalytics[]; timeseries?: Array<Record<string, unknown>> }>> {
+  async getGestureAnalytics(
+    params?: {
+      timeframe?: string
+      format?: string
+    },
+    token?: string,
+  ): Promise<ApiResponse<{ gesture_analytics?: GestureAnalytics[]; timeseries?: Array<Record<string, unknown>> }>> {
     if (params) {
       const queryParams = new URLSearchParams()
       if (params.timeframe) queryParams.append('timeframe', params.timeframe)
       if (params.format) queryParams.append('format', params.format)
       return this.request<{ gesture_analytics?: GestureAnalytics[]; timeseries?: Array<Record<string, unknown>> }>(
         `/api/v1/admin/analytics?${queryParams.toString()}`,
+        {},
+        token,
       )
     }
     return this.request<{ gesture_analytics?: GestureAnalytics[]; timeseries?: Array<Record<string, unknown>> }>(
       '/api/v1/admin/analytics',
+      {},
+      token,
     )
   }
 
