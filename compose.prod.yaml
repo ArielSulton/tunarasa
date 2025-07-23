@@ -289,7 +289,7 @@ services:
       - 8.8.4.4
     volumes:
       - redis_data_prod:/data
-      - ../files/monitoring/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./monitoring/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     networks:
       - tunarasa-net
     command: redis-server /usr/local/etc/redis/redis.conf
@@ -344,8 +344,8 @@ services:
     networks:
       - tunarasa-net
     volumes:
-      - ../files/monitoring/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
-      - ../files/monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - ./monitoring/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
       - prometheus_data_prod:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -381,8 +381,8 @@ services:
       - tunarasa-net
     volumes:
       - grafana_data_prod:/var/lib/grafana
-      - ../files/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - ../files/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     restart: unless-stopped
 
 volumes:
