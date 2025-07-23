@@ -90,56 +90,12 @@ export function AuthSignUpButton() {
 /**
  * Auth status component showing current user or sign in options
  */
-export function AuthStatus() {
-  const [mounted, setMounted] = useState(false)
-
-  // Always call hooks at the top level - conditional hook calls are not allowed
-  const shouldUseClerk = authEnv.NEXT_PUBLIC_ENABLE_CLERK_AUTH && isClerkConfigured()
-
-  // Always call useUser hook unconditionally at top level
+/**
+ * Internal Clerk-enabled auth component
+ */
+function AuthStatusWithClerk() {
   const userData = useUser()
-
-  // Only use Clerk data if properly configured
-  const clerkData = shouldUseClerk ? userData : { isSignedIn: false, user: null, isLoaded: true }
-  const hasError = shouldUseClerk && userData.isLoaded && !userData.isSignedIn && userData.user === undefined
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Show loading state during SSR or when not mounted
-  if (!mounted || typeof window === 'undefined') {
-    return (
-      <div className="flex items-center space-x-2">
-        <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />
-      </div>
-    )
-  }
-
-  // Check if Clerk is configured and enabled
-  if (!shouldUseClerk) {
-    // Show simple guest state when Clerk is disabled (e.g., during Docker builds)
-    return (
-      <div className="flex items-center space-x-2">
-        <Button variant="outline" size="sm" disabled>
-          Guest Mode
-        </Button>
-      </div>
-    )
-  }
-
-  // Handle Clerk hook errors
-  if (hasError) {
-    return (
-      <div className="flex items-center space-x-2">
-        <Button variant="outline" size="sm" disabled>
-          Auth Error
-        </Button>
-      </div>
-    )
-  }
-
-  const { isSignedIn, user, isLoaded } = clerkData
+  const { isSignedIn, user, isLoaded } = userData
 
   if (!isLoaded) {
     return (
@@ -167,45 +123,50 @@ export function AuthStatus() {
 }
 
 /**
- * Admin only wrapper component
+ * Auth status component showing current user or sign in options
  */
-export function AdminOnly({ children }: { children: React.ReactNode }) {
-  // Always call hooks at the top level - conditional hook calls are not allowed
+export function AuthStatus() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Show loading state during SSR or when not mounted
+  if (!mounted || typeof window === 'undefined') {
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />
+      </div>
+    )
+  }
+
+  // Check if Clerk is configured and enabled
   const shouldUseClerk = authEnv.NEXT_PUBLIC_ENABLE_CLERK_AUTH && isClerkConfigured()
 
-  // Always call useUser hook unconditionally at top level
-  const userData = useUser()
-
-  // Only use Clerk data if properly configured
-  const clerkData = shouldUseClerk ? userData : { user: null, isLoaded: true }
-  const hasError = shouldUseClerk && userData.isLoaded && userData.user === undefined
-
-  // If Clerk is not configured, allow access in guest mode for development/build
   if (!shouldUseClerk) {
+    // Show simple guest state when Clerk is disabled (e.g., during Docker builds)
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-warning mb-2 text-xl font-semibold">Development Mode</h2>
-          <p className="text-muted-foreground mb-4">Admin features are in guest mode (Clerk disabled)</p>
-          {children}
-        </div>
+      <div className="flex items-center space-x-2">
+        <Button variant="outline" size="sm" disabled>
+          Guest Mode
+        </Button>
       </div>
     )
   }
 
-  // Handle Clerk hook errors
-  if (hasError) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h2 className="text-destructive mb-2 text-xl font-semibold">Auth Error</h2>
-          <p className="text-muted-foreground">Unable to verify admin access.</p>
-        </div>
-      </div>
-    )
-  }
+  // Use separate component that calls useUser hook
+  return <AuthStatusWithClerk />
+}
 
-  const { user, isLoaded } = clerkData
+/**
+ * Admin only wrapper component
+ */
+/**
+ * Internal Clerk-enabled admin component
+ */
+function AdminOnlyWithClerk({ children }: { children: React.ReactNode }) {
+  const { user, isLoaded } = useUser()
 
   if (!isLoaded) {
     return (
@@ -229,4 +190,28 @@ export function AdminOnly({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>
+}
+
+/**
+ * Admin only wrapper component
+ */
+export function AdminOnly({ children }: { children: React.ReactNode }) {
+  // Check if Clerk is configured first
+  const shouldUseClerk = authEnv.NEXT_PUBLIC_ENABLE_CLERK_AUTH && isClerkConfigured()
+
+  // If Clerk is not configured, allow access in guest mode for development/build
+  if (!shouldUseClerk) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <h2 className="text-warning mb-2 text-xl font-semibold">Development Mode</h2>
+          <p className="text-muted-foreground mb-4">Admin features are in guest mode (Clerk disabled)</p>
+          {children}
+        </div>
+      </div>
+    )
+  }
+
+  // Use separate component that calls useUser hook
+  return <AdminOnlyWithClerk>{children}</AdminOnlyWithClerk>
 }
