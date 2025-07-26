@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.services.document_manager import get_document_manager, DocumentManager
 from app.services.pinecone_service import get_pinecone_service, DocumentType, ProcessingStatus
+from app.services.langchain_service import get_langchain_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -370,8 +371,13 @@ async def ask_question_with_rag(
     Ask a question and get an answer using RAG with Pinecone
     """
     try:
+        # Step 1: Perbaiki typo pada pertanyaan
+        langchain_service = get_langchain_service()
+        corrected_question = await langchain_service.correct_typo_question(request.question, language=request.language)
+
+        # Step 2: Proses RAG dengan pertanyaan yang sudah diperbaiki
         result = await doc_manager.search_with_qa(
-            question=request.question,
+            question=corrected_question,
             session_id=request.session_id,
             language=request.language,
             max_docs=request.max_sources,
@@ -380,7 +386,7 @@ async def ask_question_with_rag(
         
         return QuestionAnswerResponse(
             success=result["success"],
-            question=request.question,
+            question=corrected_question,  # kembalikan pertanyaan yang sudah diperbaiki
             answer=result.get("answer", ""),
             confidence=result.get("confidence", 0.0),
             sources=result.get("sources", []),

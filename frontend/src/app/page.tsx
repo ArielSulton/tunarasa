@@ -1,284 +1,355 @@
-'use client'
-
-import { useState, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Image from 'next/image'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import GestureRecognition from '@/components/gesture/gesture-recognition'
-import { Hand, MessageCircle, Send, User, Bot } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 
-interface ChatMessage {
-  id: string
-  type: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-  confidence?: number
-}
+const techStack = [
+  { name: 'TensorFlow.js', logo: '/assets/tech/tensorflowjs.png' },
+  { name: 'MediaPipe', logo: '/assets/tech/mediapipe.png' },
+  { name: 'Next.js', logo: '/assets/tech/nextjs.png' },
+  { name: 'LLaMA', logo: '/assets/tech/llama.png' },
+  { name: 'FastAPI', logo: '/assets/tech/fastapi.png' },
+  { name: 'Supabase', logo: '/assets/tech/supabase.png' },
+  { name: 'Scikit-learn', logo: '/assets/tech/sklearn.png' },
+  { name: 'Docker', logo: '/assets/tech/docker.png' },
+]
 
-export default function Home() {
-  const [currentWord, setCurrentWord] = useState<string>('')
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [inputMessage, setInputMessage] = useState<string>('')
-  const [isProcessing, setIsProcessing] = useState(false)
+const features = [
+  {
+    title: 'Penerjemah Bahasa Isyarat',
+    description: 'Mengubah bahasa isyarat menjadi teks digital dengan Computer Vision.',
+    icon: '/assets/tech/penerjemah.png',
+    bgColor: 'bg-orange-50',
+  },
+  {
+    title: 'Chatbot untuk Layanan Publik',
+    description: 'Memberikan informasi otomatis melalui chatbot berbasis large language model.',
+    icon: '/assets/tech/langchain_llama.png',
+    bgColor: 'bg-green-50',
+  },
+  {
+    title: 'Speech-to-Text Sebagai Feedback Komunikasi',
+    description: 'Mengubah suara menjadi teks untuk memudahkan komunikasi modal.',
+    icon: '/assets/tech/notes.png',
+    bgColor: 'bg-purple-50',
+  },
+  {
+    title: 'Sistem Rekomendasi Chatbot',
+    description: 'Evaluasi kinerja platform menggunakan similarity embedding.',
+    icon: '/assets/tech/sistem_rekomendasi.png',
+    bgColor: 'bg-blue-50',
+  },
+  {
+    title: 'Ringkasan Percakapan Otomatis',
+    description: 'Membuat catatan percakapan otomatis dalam format PDF dan QR.',
+    icon: '/assets/tech/ringkasan.png',
+    bgColor: 'bg-pink-50',
+  },
+  {
+    title: 'Dashboard Admin & Super Admin',
+    description: 'Monitoring dan evaluasi kinerja chatbot serta pengguna secara real-time.',
+    icon: '/assets/tech/dashboard_feature.png',
+    bgColor: 'bg-indigo-50',
+  },
+]
 
-  // Handle letter detection from gesture recognition
-  const handleLetterDetected = useCallback((letter: string, confidence: number) => {
-    console.log(`Detected letter: ${letter} (${Math.round(confidence * 100)}% confidence)`)
-  }, [])
-
-  // Handle word formation from gesture recognition
-  const handleWordFormed = useCallback((word: string) => {
-    setCurrentWord(word)
-    console.log(`Word formed: ${word}`)
-  }, [])
-
-  // Send message to chat (either gesture-formed word or typed message)
-  const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim()) return
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: content.trim(),
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setIsProcessing(true)
-
-    try {
-      // Call backend RAG Q&A API
-      const response = await fetch('http://localhost:8000/api/v1/rag/ask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          question: content.trim(),
-          session_id: `web-session-${Date.now()}`, // Generate unique session ID
-          language: 'id', // Indonesian language
-          max_sources: 3,
-          similarity_threshold: 0.7,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: data.answer || 'Sorry, I could not process your question at this time.',
-        timestamp: new Date(),
-        confidence: data.confidence,
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
-    } catch (error) {
-      console.error('Error sending message:', error)
-
-      // Show error message to user
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: 'Sorry, I am having trouble connecting to the AI service. Please try again later.',
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
-    } finally {
-      setIsProcessing(false)
-    }
-  }, [])
-
-  // Send gesture-formed word as question
-  const sendGestureWord = useCallback(() => {
-    if (currentWord.trim()) {
-      sendMessage(currentWord)
-      setCurrentWord('')
-    }
-  }, [currentWord, sendMessage])
-
-  // Send typed message
-  const sendTypedMessage = useCallback(() => {
-    if (inputMessage.trim()) {
-      sendMessage(inputMessage)
-      setInputMessage('')
-    }
-  }, [inputMessage, sendMessage])
-
+export default function Beranda() {
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* Header */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <Hand className="h-8 w-8 text-blue-600" />
-              Tunarasa - A-Z Sign Language Recognition
-            </CardTitle>
-            <p className="text-gray-600">
-              Real-time hand gesture recognition for A-Z sign language with AI-powered Q&A assistance
-            </p>
-          </CardHeader>
-        </Card>
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-blue-50 to-blue-100 py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+            {/* Hero Text */}
+            <div className="space-y-6">
+              <h1 className="text-4xl leading-tight font-bold text-gray-900 lg:text-5xl">
+                Menciptakan kota cerdas dengan{' '}
+                <span className="text-blue-600" style={{ fontFamily: 'cursive' }}>
+                  komunikasi tanpa batas
+                </span>
+              </h1>
+              <p className="max-w-xl text-lg text-gray-600">
+                Mendukung komunikasi tanpa batas untuk menciptakan aksesibilitas yang setara bagi penyandang
+                disabilitas.
+              </p>
+              <Link href="/layanan">
+                <Button size="lg" className="rounded-full bg-blue-600 px-8 py-3 text-lg text-white hover:bg-blue-700">
+                  Akses komunikasi →
+                </Button>
+              </Link>
+            </div>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          {/* Gesture Recognition Panel */}
-          <div className="space-y-4">
-            <GestureRecognition
-              onLetterDetected={handleLetterDetected}
-              onWordFormed={handleWordFormed}
-              showAlternatives={true}
-              enableWordFormation={true}
-              maxWordLength={50}
-            />
+            {/* Hero Image - Layered Design matching reference */}
+            <div className="relative min-h-[400px]">
+              {/* Background Tunarasa Book (Main Image) */}
+              <div className="relative ml-auto max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+                <Image
+                  src="/assets/tech/header_tunarasa.png"
+                  alt="Tunarasa System"
+                  width={500}
+                  height={350}
+                  className="h-auto w-full rounded-lg"
+                />
+              </div>
 
-            {/* Gesture Word Actions */}
-            {currentWord && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Current Word</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="px-4 py-2 font-mono text-xl">
-                      {currentWord}
-                    </Badge>
-                    <span className="text-sm text-gray-500">{currentWord.length} letters</span>
+              {/* Overlaid Cards and Elements */}
+              <div className="absolute inset-0">
+                {/* Dukcapil Document Card */}
+                <div className="absolute top-8 left-8 z-10 max-w-xs rotate-6 transform rounded-xl bg-white p-4 shadow-xl">
+                  <div className="mb-2 rounded-lg bg-green-100 p-3">
+                    <div className="mb-1 text-xs font-semibold text-green-800">📄 DUKCAPIL</div>
+                    <div className="text-sm text-green-700">Layanan Publik Digital</div>
                   </div>
-
-                  <div className="flex gap-2">
-                    <Button onClick={sendGestureWord} className="flex items-center gap-2">
-                      <Send className="h-4 w-4" />
-                      Ask Question
-                    </Button>
-                    <Button variant="outline" onClick={() => setCurrentWord('')}>
-                      Clear
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Chat Panel */}
-          <Card className="flex h-[600px] flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
-                Q&A Chat
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="flex flex-1 flex-col p-0">
-              {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
-                  {messages.length === 0 ? (
-                    <div className="py-8 text-center text-gray-500">
-                      <MessageCircle className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-                      <p>Start a conversation by signing letters or typing a question</p>
-                    </div>
-                  ) : (
-                    messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`flex max-w-[80%] gap-2 ${
-                            message.type === 'user' ? 'flex-row-reverse' : 'flex-row'
-                          }`}
-                        >
-                          <div className="flex-shrink-0">
-                            {message.type === 'user' ? (
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white">
-                                <User className="h-4 w-4" />
-                              </div>
-                            ) : (
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-600 text-white">
-                                <Bot className="h-4 w-4" />
-                              </div>
-                            )}
-                          </div>
-
-                          <div
-                            className={`rounded-lg px-4 py-2 ${
-                              message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-                            }`}
-                          >
-                            <p className="text-sm">{message.content}</p>
-                            <div className="mt-1 flex items-center justify-between text-xs opacity-70">
-                              <span>{message.timestamp.toLocaleTimeString()}</span>
-                              {message.confidence && (
-                                <span className="ml-2">{Math.round(message.confidence * 100)}% confidence</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-
-                  {isProcessing && (
-                    <div className="flex justify-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-600 text-white">
-                        <Bot className="h-4 w-4" />
-                      </div>
-                      <div className="rounded-lg bg-gray-200 px-4 py-2 text-gray-800">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400"></div>
-                          <div
-                            className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
-                            style={{ animationDelay: '0.1s' }}
-                          ></div>
-                          <div
-                            className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
-                            style={{ animationDelay: '0.2s' }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-
-              <Separator />
-
-              {/* Input */}
-              <div className="p-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Type your question here..."
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendTypedMessage()}
+                  <Image
+                    src="/assets/tech/header_dukcapil.png"
+                    alt="Dukcapil Document"
+                    width={200}
+                    height={120}
+                    className="h-auto w-full rounded-lg"
                   />
-                  <Button onClick={sendTypedMessage} disabled={!inputMessage.trim() || isProcessing}>
-                    <Send className="h-4 w-4" />
-                  </Button>
+                </div>
+
+                {/* Performance Statistics Card */}
+                <div className="absolute top-4 right-12 z-20 -rotate-3 transform rounded-xl bg-white p-4 shadow-xl">
+                  <div className="text-center">
+                    <div className="mb-1 text-xs text-gray-600">🎯 AKURASI SISTEM</div>
+                    <div className="text-2xl font-bold text-blue-600">95.9%</div>
+                    <div className="text-xs text-gray-500">Recognition Rate</div>
+                  </div>
+                </div>
+
+                {/* Live System Indicator */}
+                <div className="absolute bottom-20 left-4 z-10 rounded-lg bg-white p-3 shadow-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-3 w-3 animate-pulse rounded-full bg-green-500"></div>
+                    <span className="text-xs font-medium text-gray-700">System Online</span>
+                  </div>
+                </div>
+
+                {/* Mini Performance Chart */}
+                <div className="absolute right-4 bottom-4 z-10 rotate-3 transform rounded-lg bg-white p-4 shadow-xl">
+                  <div className="mb-2 text-center text-xs font-medium text-gray-700">📊 Performance</div>
+                  <div className="flex items-end justify-center space-x-1">
+                    <div className="h-4 w-2 rounded-sm bg-blue-300"></div>
+                    <div className="h-6 w-2 rounded-sm bg-blue-400"></div>
+                    <div className="h-8 w-2 rounded-sm bg-blue-500"></div>
+                    <div className="h-6 w-2 rounded-sm bg-blue-400"></div>
+                    <div className="h-7 w-2 rounded-sm bg-blue-500"></div>
+                  </div>
+                  <div className="mt-1 text-center text-xs text-gray-500">Real-time</div>
+                </div>
+
+                {/* Feature Badges */}
+                <div className="absolute top-1/2 left-0 -translate-y-1/2 transform space-y-2">
+                  <div className="rounded-full bg-orange-100 px-3 py-1 text-xs font-medium text-orange-800 shadow-lg">
+                    🤲 SIBI Support
+                  </div>
+                  <div className="ml-4 rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-800 shadow-lg">
+                    🎤 Speech-to-Text
+                  </div>
+                  <div className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800 shadow-lg">
+                    🤖 AI Assistant
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tech Stack Section */}
+      <section className="bg-white py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900">
+              Pilar{' '}
+              <span className="text-blue-600" style={{ fontFamily: 'cursive' }}>
+                Teknologi
+              </span>{' '}
+              Sebagai Dapur Pacu
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:grid-cols-8">
+            {techStack.map((tech, index) => (
+              <div
+                key={index}
+                className="flex flex-col items-center rounded-lg bg-white p-6 transition-shadow hover:shadow-lg"
+              >
+                <div className="relative mb-4 h-20 w-20">
+                  <Image
+                    src={tech.logo}
+                    alt={tech.name}
+                    fill
+                    className="object-contain filter transition-all hover:brightness-110"
+                  />
+                </div>
+                <p className="text-center text-sm font-medium text-gray-700">{tech.name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Statistics Section */}
+      <section className="bg-blue-50 py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900">
+              Kenapa teknologi komunikasi inklusif{' '}
+              <span className="text-blue-600" style={{ fontFamily: 'cursive' }}>
+                penting
+              </span>{' '}
+              untuk masyarakat?
+            </h2>
+          </div>
+
+          <div className="mx-auto max-w-6xl">
+            {/* Mobile Layout */}
+            <div className="grid grid-cols-1 gap-8 md:hidden">
+              {/* Left Stats */}
+              <div className="text-center">
+                <div className="mb-2 text-4xl font-bold text-gray-900">313 ribu</div>
+                <p className="text-base text-gray-700">Total penyandang disabilitas pendengaran Indonesia 2023</p>
+              </div>
+
+              {/* Center Image */}
+              <div className="relative text-center">
+                <Image
+                  src="/assets/tech/persentase.png"
+                  alt="Statistics Infographic"
+                  width={400}
+                  height={300}
+                  className="mx-auto h-auto w-full max-w-xs"
+                />
+                <p className="mt-4 text-xs text-gray-600">
+                  Hasil survei &quot;aksebilitas penyandang disabilitas pendengaran&quot; di Indonesia
+                </p>
+              </div>
+
+              {/* Right Stats */}
+              <div className="text-center">
+                <div className="mb-2 text-4xl font-bold text-gray-900">43.0%</div>
+                <p className="text-base text-gray-700">
+                  Fasilitas penyandang disabilitas pendengaran masih belum terlayani
+                </p>
+              </div>
+            </div>
+
+            {/* Tablet Layout */}
+            <div className="hidden md:flex md:flex-col md:items-center md:gap-8 lg:hidden">
+              {/* Stats Row */}
+              <div className="flex flex-col items-center gap-8 md:flex-row md:gap-16">
+                {/* Left Stats */}
+                <div className="text-center">
+                  <div className="mb-2 text-5xl font-bold text-gray-900">313 ribu</div>
+                  <p className="text-lg text-gray-700">Total penyandang disabilitas pendengaran Indonesia 2023</p>
+                </div>
+
+                {/* Right Stats */}
+                <div className="text-center">
+                  <div className="mb-2 text-5xl font-bold text-gray-900">43.0%</div>
+                  <p className="text-lg text-gray-700">
+                    Fasilitas penyandang disabilitas pendengaran masih belum terlayani
+                  </p>
+                </div>
+              </div>
+
+              {/* Center Image */}
+              <div className="relative text-center">
+                <Image
+                  src="/assets/tech/persentase.png"
+                  alt="Statistics Infographic"
+                  width={400}
+                  height={300}
+                  className="mx-auto h-auto w-full max-w-sm"
+                />
+                <p className="mt-4 text-sm text-gray-600">
+                  Hasil survei &quot;aksebilitas penyandang disabilitas pendengaran&quot; di Indonesia
+                </p>
+              </div>
+            </div>
+
+            {/* Desktop Layout - Centered Flex */}
+            <div className="hidden lg:flex lg:items-center lg:justify-center lg:gap-12">
+              {/* Left Stats */}
+              <div className="text-center">
+                <div className="mb-2 text-6xl font-bold text-gray-900">313 ribu</div>
+                <p className="text-lg text-gray-700">Total penyandang disabilitas pendengaran Indonesia 2023</p>
+              </div>
+
+              {/* Center Image */}
+              <div className="relative flex-shrink-0 text-center">
+                <Image
+                  src="/assets/tech/persentase.png"
+                  alt="Statistics Infographic"
+                  width={400}
+                  height={300}
+                  className="mx-auto h-auto w-full max-w-sm"
+                />
+                <p className="mt-4 text-sm text-gray-600">
+                  Hasil survei &quot;aksebilitas penyandang disabilitas pendengaran&quot; di Indonesia
+                </p>
+              </div>
+
+              {/* Right Stats */}
+              <div className="text-center">
+                <div className="mb-2 text-6xl font-bold text-gray-900">43.0%</div>
+                <p className="text-lg text-gray-700">
+                  Fasilitas penyandang disabilitas pendengaran masih belum terlayani
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="bg-white py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900">
+              Bagaimana tunarasa membantu penyandang{' '}
+              <span className="text-blue-600" style={{ fontFamily: 'cursive' }}>
+                disabilitas berkomunikasi disabilitas publik?
+              </span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature, index) => (
+              <Card key={index} className={`${feature.bgColor} border-0 transition-shadow hover:shadow-lg`}>
+                <CardContent className="p-8 text-center">
+                  <div className="relative mx-auto mb-6 h-64 w-64">
+                    <Image src={feature.icon} alt={feature.title} fill className="object-contain" />
+                  </div>
+                  <h3 className="mb-4 text-xl font-bold text-gray-900">{feature.title}</h3>
+                  <p className="leading-relaxed text-gray-600">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="bg-gray-50 py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Card className="border-0 bg-gradient-to-r from-blue-600 to-blue-700 shadow-xl">
+            <CardContent className="p-12 text-center">
+              <h2 className="mb-4 text-3xl font-bold text-white">Siap untuk berkomunikasi tanpa batas?</h2>
+              <p className="mb-8 text-lg text-blue-100">
+                Bergabunglah dengan ribuan pengguna yang telah merasakan kemudahan berkomunikasi dengan Tunarasa
+              </p>
+              <Link href="/layanan">
+                <Button size="lg" variant="secondary" className="rounded-full px-8 py-3 text-lg">
+                  Mulai Sekarang →
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
-
-        {/* Footer */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-sm text-gray-500">
-              <p>Tunarasa - Empowering communication through sign language recognition</p>
-              <p>Built with Next.js, MediaPipe, TensorFlow.js, and FastAPI</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      </section>
     </div>
   )
 }

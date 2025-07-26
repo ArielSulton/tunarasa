@@ -195,6 +195,111 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
     return 'bg-red-500'
   }
 
+  // Compact UI mode for integration with komunikasi page
+  if (className?.includes('compact')) {
+    return (
+      <div className="relative h-full w-full">
+        {/* Camera feed with canvas overlay */}
+        <div className="relative h-full w-full overflow-hidden rounded-lg bg-gray-900">
+          {/* Video element */}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ opacity: showCamera ? 1 : 0 }}
+          />
+
+          {/* Canvas for hand tracking overlay */}
+          <canvas
+            ref={canvasRef}
+            width="640"
+            height="480"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ display: isRunning ? 'block' : 'none', pointerEvents: 'none' }}
+          />
+
+          {/* Initialization/Start screen */}
+          {!isRunning && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-white">
+                {!isInitialized ? (
+                  <>
+                    <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+                    <p className="mb-2 text-lg font-medium">Memuat TensorFlow.js...</p>
+                    <p className="text-sm opacity-75">Sedang mempersiapkan deteksi gesture</p>
+                  </>
+                ) : (
+                  <>
+                    <Hand className="mx-auto mb-4 h-16 w-16 opacity-50" />
+                    <p className="mb-2 text-lg font-medium">Deteksi Gesture SIBI</p>
+                    <p className="mb-4 text-sm opacity-75">Menggunakan TensorFlow.js untuk deteksi handpose</p>
+                    <Button
+                      onClick={toggleCamera}
+                      className="bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
+                      disabled={!isInitialized || isLoading}
+                    >
+                      <Play className="mr-2 h-4 w-4" />
+                      Mulai Deteksi
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Error display */}
+          {error && (
+            <div className="absolute inset-0 flex items-center justify-center bg-red-900/90">
+              <div className="text-center text-white">
+                <AlertCircle className="mx-auto mb-4 h-12 w-12" />
+                <p className="mb-2 text-lg font-medium">Error</p>
+                <p className="text-sm">{error.message}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Controls overlay */}
+          {isRunning && (
+            <div className="absolute top-4 right-4 flex flex-col space-y-2">
+              <Button onClick={toggleCamera} size="sm" className="bg-red-600 text-white hover:bg-red-700">
+                <Pause className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Detection info overlay */}
+          {isRunning && (
+            <div className="absolute top-4 left-4 space-y-2">
+              {/* Status indicator */}
+              <div className="rounded-lg bg-black/50 px-3 py-1 text-sm text-white">
+                <div className="flex items-center space-x-2">
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
+                  <span>TensorFlow.js Aktif</span>
+                </div>
+              </div>
+
+              {/* Current detection - moved below TensorFlow.js status */}
+              {lastResult && (
+                <div className="rounded-lg bg-blue-600 px-4 py-2 text-white">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-2xl font-bold">{lastResult.letter}</span>
+                    <div className="text-xs">
+                      <div>Confidence:</div>
+                      <div>{Math.round(lastResult.confidence * 100)}%</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Original full UI mode
   return (
     <Card className={`mx-auto w-full max-w-4xl ${className}`}>
       <CardHeader>

@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import AuthProvider from '@/components/auth/AuthProvider'
-import { AuthStatusWrapper } from '@/components/auth/AuthStatusWrapper'
+import { Navbar } from '@/components/layout/Navbar'
+import { Footer } from '@/components/layout/Footer'
+import 'regenerator-runtime/runtime'
 import './globals.css'
 
 const geistSans = Geist({
@@ -15,17 +17,17 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Tunarasa - A-Z Sign Language Recognition',
+  title: 'Tunarasa - Platform Komunikasi Inklusif',
   description:
-    'Real-time hand gesture recognition for A-Z sign language with AI-powered Q&A assistance. Built with MediaPipe, TensorFlow.js, and FastAPI.',
-  keywords: ['sign language', 'gesture recognition', 'accessibility', 'AI', 'MediaPipe', 'TensorFlow'],
+    'Menciptakan kota cerdas dengan komunikasi tanpa batas. Platform komunikasi inklusif untuk aksesibilitas layanan publik bagi penyandang disabilitas.',
+  keywords: ['komunikasi inklusif', 'aksesibilitas', 'bahasa isyarat', 'SIBI', 'tuna rungu', 'tuna wicara'],
   authors: [{ name: 'Tunarasa Team' }],
   robots: 'index, follow',
   openGraph: {
-    title: 'Tunarasa - A-Z Sign Language Recognition',
-    description: 'Real-time hand gesture recognition for A-Z sign language with AI-powered Q&A assistance',
+    title: 'Tunarasa - Platform Komunikasi Inklusif',
+    description: 'Menciptakan kota cerdas dengan komunikasi tanpa batas',
     type: 'website',
-    locale: 'en_US',
+    locale: 'id_ID',
   },
 }
 
@@ -40,17 +42,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-          <header className="bg-background border-b">
-            <div className="container mx-auto flex items-center justify-between px-4 py-3">
-              <h1 className="text-xl font-semibold">Tunarasa</h1>
-              {/* Auth component with conditional Clerk support */}
-              <AuthStatusWrapper />
-            </div>
-          </header>
-          {children}
+          <div className="flex min-h-screen flex-col">
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
         </AuthProvider>
       </body>
     </html>

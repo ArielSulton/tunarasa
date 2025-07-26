@@ -998,6 +998,25 @@ class EnhancedLangChainService:
             logger.error(f"Failed to clear conversation memory: {e}")
             return False
 
+    async def correct_typo_question(self, question: str, language: str = "id") -> str:
+        """Correct typos in the question using LLM, focusing only on spelling/typo, not grammar or structure. Context: Dukcapil public service."""
+        if language == "id":
+            prompt = (
+               "Perbaiki hanya kesalahan ketik (typo) pada pertanyaan berikut, tanpa mengubah struktur kalimat atau memperbaiki tata bahasa. "
+                "Fokus pada konteks pelayanan publik Dukcapil. Pastikan tidak ada tanda baca yang salah dan hindari penggunaan singkatan. "
+                "Kembalikan hanya pertanyaan yang telah diperbaiki tanpa penjelasan apapun.\n"
+                f"PERTANYAAN: {question}"
+            )
+        else:
+            prompt = (
+               "Correct only the typos in the following question, without changing the sentence structure or grammar. "
+                "Focus on the context of Indonesian public service (Dukcapil). Ensure there are no incorrect punctuation marks and avoid abbreviations. "
+                "Return only the corrected question, without any explanation.\n"
+                f"QUESTION: {question}"
+            )
+        response = await asyncio.to_thread(self.llm.invoke, prompt)
+        return response.content.strip() if hasattr(response, 'content') else str(response).strip()
+
 
 # Mock classes removed - use real services only
 
