@@ -149,7 +149,7 @@ python -m pytest tests/test_integration.py::TestAdminValidation -v
 # All basic tests
 python -m pytest tests/test_chatbot.py -v
 
-# All Pinecone tests  
+# All Pinecone tests
 python -m pytest tests/test_pinecone.py -v
 
 # All integration tests

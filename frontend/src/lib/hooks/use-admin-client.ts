@@ -14,28 +14,28 @@ export function useAdminClient() {
   // Memoized dashboard methods
   const getDashboardStats = useCallback(async () => {
     const token = await getToken()
-    return adminApiClient.getDashboardStats(token || undefined)
+    return adminApiClient.getDashboardStats(token ?? undefined)
   }, [getToken])
 
   const getSessions = useCallback(async () => {
     const token = await getToken()
-    return adminApiClient.getSessions(token || undefined)
+    return adminApiClient.getSessions(token ?? undefined)
   }, [getToken])
 
   const getSystemMetrics = useCallback(async () => {
     const token = await getToken()
-    return adminApiClient.getSystemMetrics(token || undefined)
+    return adminApiClient.getSystemMetrics(token ?? undefined)
   }, [getToken])
 
   const getHealthStatus = useCallback(async () => {
     const token = await getToken()
-    return adminApiClient.getHealthStatus(token || undefined)
+    return adminApiClient.getHealthStatus(token ?? undefined)
   }, [getToken])
 
   const getGestureAnalytics = useCallback(
     async (params?: { timeframe?: string; format?: string }) => {
       const token = await getToken()
-      return adminApiClient.getGestureAnalytics(params, token || undefined)
+      return adminApiClient.getGestureAnalytics(params, token ?? undefined)
     },
     [getToken],
   )
@@ -43,7 +43,7 @@ export function useAdminClient() {
   const updateSettings = useCallback(
     async (settings: Record<string, unknown>) => {
       const token = await getToken()
-      return adminApiClient.updateSettings(settings, token || undefined)
+      return adminApiClient.updateSettings(settings, token ?? undefined)
     },
     [getToken],
   )

@@ -52,6 +52,9 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
 
     # Database Configuration
     --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_SUPABASE_URL,env=NEXT_PUBLIC_SUPABASE_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_SUPABASE_ANON_KEY,env=NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    --mount=type=secret,id=SUPABASE_SERVICE_ROLE_KEY,env=SUPABASE_SERVICE_ROLE_KEY \
     --mount=type=secret,id=user,env=user \
     --mount=type=secret,id=password,env=password \
     --mount=type=secret,id=host,env=host \
@@ -62,8 +65,9 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
     --mount=type=secret,id=SECRET_KEY,env=SECRET_KEY \
     --mount=type=secret,id=ACCESS_TOKEN_EXPIRE_MINUTES,env=ACCESS_TOKEN_EXPIRE_MINUTES \
     --mount=type=secret,id=NEXT_PUBLIC_ENABLE_CLERK_AUTH,env=NEXT_PUBLIC_ENABLE_CLERK_AUTH \
-    --mount=type=secret,id=CLERK_SECRET_KEY,env=CLERK_SECRET_KEY \
     --mount=type=secret,id=NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,env=NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY \
+    --mount=type=secret,id=CLERK_SECRET_KEY,env=CLERK_SECRET_KEY \
+    --mount=type=secret,id=CLERK_WEBHOOK_SIGNING_SECRET,env=CLERK_WEBHOOK_SIGNING_SECRET \
     --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_IN_URL,env=NEXT_PUBLIC_CLERK_SIGN_IN_URL \
     --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_UP_URL,env=NEXT_PUBLIC_CLERK_SIGN_UP_URL \
     --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL,env=NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL \
@@ -74,17 +78,17 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
     --mount=type=secret,id=LLM_MODEL,env=LLM_MODEL \
     --mount=type=secret,id=LLM_TEMPERATURE,env=LLM_TEMPERATURE \
     --mount=type=secret,id=LLM_MAX_TOKENS,env=LLM_MAX_TOKENS \
-    --mount=type=secret,id=PINECONE_API_KEY,env=PINECONE_API_KEY \
-    --mount=type=secret,id=EMBEDDING_MODEL,env=EMBEDDING_MODEL \
-    --mount=type=secret,id=PINECONE_INDEX_NAME,env=PINECONE_INDEX_NAME \
 
     # RAG System Configuration
+    --mount=type=secret,id=PINECONE_API_KEY,env=PINECONE_API_KEY \
+    --mount=type=secret,id=PINECONE_INDEX_NAME,env=PINECONE_INDEX_NAME \
+    --mount=type=secret,id=EMBEDDING_MODEL,env=EMBEDDING_MODEL \
     --mount=type=secret,id=RAG_CHUNK_SIZE,env=RAG_CHUNK_SIZE \
     --mount=type=secret,id=RAG_CHUNK_OVERLAP,env=RAG_CHUNK_OVERLAP \
     --mount=type=secret,id=RAG_RETRIEVAL_K,env=RAG_RETRIEVAL_K \
     --mount=type=secret,id=RAG_SIMILARITY_THRESHOLD,env=RAG_SIMILARITY_THRESHOLD \
 
-    # External Services - Email Configuration
+    # External Services
     --mount=type=secret,id=RESEND_API_KEY,env=RESEND_API_KEY \
     --mount=type=secret,id=FROM_EMAIL,env=FROM_EMAIL \
     --mount=type=secret,id=FROM_NAME,env=FROM_NAME \

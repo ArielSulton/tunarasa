@@ -135,6 +135,7 @@ export function AdminValidationForm({ initialData, onSubmit }: AdminValidationFo
 
   // Perform comprehensive validation
   const performValidation = async (): Promise<ValidationResult[]> => {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
     const results: ValidationResult[] = []
 
     // Security validation
@@ -292,7 +293,7 @@ export function AdminValidationForm({ initialData, onSubmit }: AdminValidationFo
         </CardContent>
       </Card>
 
-      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+      <form onSubmit={() => void handleSubmit(onFormSubmit)} className="space-y-6">
         {/* Security Settings */}
         <Card>
           <CardHeader>
@@ -523,7 +524,7 @@ export function AdminValidationForm({ initialData, onSubmit }: AdminValidationFo
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-4">
-          <Button type="button" variant="outline" onClick={() => performValidation().then(setValidationResults)}>
+          <Button type="button" variant="outline" onClick={() => void performValidation().then(setValidationResults)}>
             <BarChart3 className="mr-2 h-4 w-4" />
             Validate Settings
           </Button>

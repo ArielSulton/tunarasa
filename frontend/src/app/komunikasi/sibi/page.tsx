@@ -76,7 +76,7 @@ export default function KomunikasiSIBI() {
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: data.answer || 'Maaf, saya tidak dapat memproses pertanyaan Anda saat ini.',
+        content: data.answer ?? 'Maaf, saya tidak dapat memproses pertanyaan Anda saat ini.',
         timestamp: new Date(),
         confidence: data.confidence,
       }
@@ -100,7 +100,7 @@ export default function KomunikasiSIBI() {
   // Send gesture-formed word as question
   const sendGestureWord = useCallback(() => {
     if (currentWord.trim()) {
-      sendMessage(currentWord)
+      void sendMessage(currentWord)
       setCurrentWord('')
     }
   }, [currentWord, sendMessage])
@@ -264,7 +264,7 @@ export default function KomunikasiSIBI() {
                         ? 'border-blue-200 bg-blue-50 text-blue-800'
                         : 'border-gray-200 bg-gray-50 text-sm text-gray-700'
                     }`}
-                    onClick={() => sendMessage(question)}
+                    onClick={() => void sendMessage(question)}
                   >
                     {question}
                   </div>

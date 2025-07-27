@@ -60,7 +60,7 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
   })
 
   useEffect(() => {
-    fetchConversations()
+    void fetchConversations()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, statusFilter, dateRange])
 
@@ -88,12 +88,12 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
         setStats({
           totalConversations: response.data.total,
           activeConversations: conversations.filter((c) => c.is_active).length,
-          avgConfidence: conversations.reduce((sum, c) => sum + (c.avg_confidence || 0), 0) / conversations.length || 0,
+          avgConfidence: conversations.reduce((sum, c) => sum + (c.avg_confidence ?? 0), 0) / conversations.length || 0,
           avgResponseTime:
-            conversations.reduce((sum, c) => sum + (c.total_response_time || 0), 0) / conversations.length || 0,
+            conversations.reduce((sum, c) => sum + (c.total_response_time ?? 0), 0) / conversations.length || 0,
         })
       } else {
-        setError(response.error || 'Failed to fetch conversations')
+        setError(response.error ?? 'Failed to fetch conversations')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred')
@@ -104,7 +104,7 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
 
   const handleSearch = () => {
     setCurrentPage(1)
-    fetchConversations()
+    void fetchConversations()
   }
 
   const viewConversationDetails = async (conversationId: string) => {
@@ -173,7 +173,7 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchConversations} disabled={isLoading}>
+          <Button variant="outline" size="sm" onClick={() => void fetchConversations()} disabled={isLoading}>
             <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -374,7 +374,7 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4" />
-                            {conversation.user_info?.full_name || conversation.user_id}
+                            {conversation.user_info?.full_name ?? conversation.user_id}
                           </div>
                         </TableCell>
                         <TableCell>{conversation.message_count}</TableCell>
@@ -397,7 +397,7 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => viewConversationDetails(conversation.conversation_id)}
+                            onClick={() => void viewConversationDetails(conversation.conversation_id)}
                           >
                             <Eye className="mr-1 h-4 w-4" />
                             View
@@ -456,7 +456,7 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div>
                     <p className="text-sm font-medium">User</p>
-                    <p className="text-sm text-gray-600">{selectedConversation.user_info?.full_name || 'Unknown'}</p>
+                    <p className="text-sm text-gray-600">{selectedConversation.user_info?.full_name ?? 'Unknown'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Status</p>

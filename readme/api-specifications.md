@@ -1,15 +1,17 @@
-# Tunarasa API Specifications
+# Tunarasa API Specifications v1.3
 
 ## Overview
-RESTful API design for Tunarasa platform with FastAPI backend located in `backend/` directory and Next.js frontend integration from `frontend/` directory.
+Production-ready RESTful API design for Tunarasa platform with FastAPI backend (Python 3.11+) and Next.js 15 frontend integration. Features comprehensive monitoring, authentication, and quality assurance.
 
 ## Base Configuration
 - **Development URL**: `http://localhost:8000/api/v1`
 - **Production URL**: `https://api.tunarasa.com/v1`
+- **Documentation**: Available at `/api/v1/docs` (development only)
 - **Authentication**: Clerk JWT tokens + Role-based access control
-- **Rate Limiting**: 100 requests/minute for users, 1000 requests/minute for admins
+- **Rate Limiting**: Intelligent tiered limits (20-5000 req/min based on role)
 - **Content-Type**: `application/json`
-- **CORS**: Configured for frontend domains (localhost:3000 in dev)
+- **CORS**: Configured for frontend domains (localhost:5000 in dev)
+- **Monitoring**: Prometheus metrics + DeepEval quality assessment
 
 ## Authentication & Authorization
 
@@ -75,17 +77,17 @@ Process multiple A-Z gesture sequences for complex questions.
 }
 ```
 
-### 2. Question Processing Service
+### 2. Summary & QR Code Service
 
-#### POST /api/v1/question/process
-Process text question through RAG pipeline and LLM.
+#### POST /api/v1/summary/generate
+Generate summary and QR code for question-answer pairs.
 
 **Request:**
 ```json
 {
   "sessionId": "uuid",
-  "qnaLogId": "uuid",
   "question": "Bagaimana cara membuat KTP?",
+  "answer": "Untuk membuat KTP, Anda perlu...",
   "context": {
     "userLocation": "Jakarta",
     "preferredLanguage": "id"
@@ -98,26 +100,17 @@ Process text question through RAG pipeline and LLM.
 {
   "success": true,
   "data": {
-    "answer": "Untuk membuat KTP, Anda perlu...",
+    "summary": "Proses pembuatan KTP meliputi...",
     "qrCode": "data:image/png;base64,...",
-    "sources": [
-      {
-        "documentId": "uuid",
-        "title": "Panduan KTP",
-        "relevanceScore": 0.92
-      }
-    ],
-    "metrics": {
-      "responseTime": 1200,
-      "tokensUsed": 150,
-      "ragDocuments": 3
-    }
+    "qrUrl": "https://tunarasa.com/s/abc123",
+    "noteId": "uuid",
+    "expiresAt": "2024-12-31T23:59:59Z"
   }
 }
 ```
 
-#### GET /api/v1/question/history
-Retrieve user's question history.
+#### GET /api/v1/summary/history
+Retrieve user's summary history.
 
 **Query Parameters:**
 - `sessionId`: UUID (required)
@@ -129,13 +122,13 @@ Retrieve user's question history.
 {
   "success": true,
   "data": {
-    "questions": [
+    "summaries": [
       {
         "id": "uuid",
-        "question": "Bagaimana cara membuat KTP?",
-        "answer": "Untuk membuat KTP...",
+        "summary": "Proses pembuatan KTP...",
+        "qrCode": "data:image/png;base64,...",
         "timestamp": "2024-01-01T10:00:00Z",
-        "qrCode": "data:image/png;base64,..."
+        "urlAccess": "https://tunarasa.com/s/abc123"
       }
     ],
     "pagination": {

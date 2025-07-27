@@ -7,18 +7,18 @@ Next.js 15 + React 19 component architecture located in `frontend/` directory, o
 ```
 frontend/
 ├── src/
-│   ├── app/              # Next.js App Router pages
-│   ├── components/       # React components
-│   │   ├── ui/          # Shadcn UI components
-│   │   ├── layout/      # Layout components
-│   │   ├── gesture/     # Gesture recognition components
-│   │   ├── chat/        # Chat interface components
-│   │   └── admin/       # Admin dashboard components
-│   ├── hooks/           # Custom React hooks
-│   └── lib/            # Utility functions and configurations
-├── public/             # Static assets
-├── package.json        # Dependencies and scripts
-└── Dockerfile         # Container configuration
+│   ├── app/         # Next.js App Router pages
+│   ├── components/  # React components
+│   │   ├── ui/      # Shadcn UI components
+│   │   ├── layout/  # Layout components
+│   │   ├── gesture/ # Gesture recognition components
+│   │   ├── chat/    # Chat interface components
+│   │   └── admin/   # Admin dashboard components
+│   ├── hooks/       # Custom React hooks
+│   └── lib/         # Utility functions and configurations
+├── public/          # Static assets
+├── package.json     # Dependencies and scripts
+└── Dockerfile       # Container configuration
 ```
 
 ## Core Principles
@@ -359,13 +359,13 @@ export default {
           accent: '#ffff00'
         }
       },
-      
+
       // Accessibility-focused spacing
       spacing: {
         'touch-target': '44px', // Minimum touch target size
         'focus-ring': '3px'
       },
-      
+
       // Typography for readability
       fontSize: {
         'a11y-small': ['16px', '24px'],
@@ -374,7 +374,7 @@ export default {
       }
     }
   },
-  
+
   // Accessibility plugins
   plugins: [
     require('@tailwindcss/forms'),
@@ -422,19 +422,19 @@ interface AccessibilityContextType {
   // Theme and contrast
   theme: 'light' | 'dark' | 'high-contrast'
   setTheme: (theme: string) => void
-  
+
   // Screen reader preferences
   announcements: boolean
   setAnnouncements: (enabled: boolean) => void
-  
+
   // Motion preferences
   reducedMotion: boolean
   setReducedMotion: (reduced: boolean) => void
-  
+
   // Input preferences
   preferredInputMethod: 'gesture' | 'text' | 'voice'
   setPreferredInputMethod: (method: string) => void
-  
+
   // Focus management
   focusMode: 'automatic' | 'manual'
   setFocusMode: (mode: string) => void
@@ -463,15 +463,15 @@ describe('Accessibility Tests', () => {
   test('keyboard navigation works for all interactive elements', async () => {
     // Test keyboard navigation flow
   })
-  
+
   test('screen reader announcements are properly triggered', async () => {
     // Test ARIA live regions and labels
   })
-  
+
   test('color contrast meets WCAG AA standards', async () => {
     // Test color contrast ratios
   })
-  
+
   test('focus management works correctly', async () => {
     // Test focus trap and restoration
   })
@@ -485,7 +485,7 @@ describe('Gesture Recognition Integration', () => {
   test('gesture to text flow works end-to-end', async () => {
     // Mock MediaPipe and test full gesture workflow
   })
-  
+
   test('fallback input methods work when gesture fails', async () => {
     // Test alternative input methods
   })

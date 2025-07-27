@@ -1,62 +1,78 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    cluster: 'tunarasa-dev'
+    environment: 'development'
 
 rule_files:
-  - "alert_rules.yml"
   - "deepeval_rules.yml"
-
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets:
-          - alertmanager:9093
+  - "sli_slo_rules.yml"
 
 scrape_configs:
-  # Tunarasa Backend Metrics
+  # Tunarasa Backend Metrics (FastAPI with Prometheus Instrumentator)
   - job_name: 'tunarasa-backend'
     static_configs:
       - targets: ['backend:8000']
     metrics_path: '/metrics'
     scrape_interval: 10s
     scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'tunarasa-backend'
+      - source_labels: []
+        target_label: service
+        replacement: 'tunarasa'
+      - source_labels: []
+        target_label: component
+        replacement: 'backend'
+    metric_relabel_configs:
+      # Relabel Tunarasa-specific metrics
+      - source_labels: [__name__]
+        regex: 'tunarasa_(.+)'
+        target_label: metric_type
+        replacement: '${1}'
+      # Label AI/LLM metrics
+      - source_labels: [__name__]
+        regex: 'tunarasa_(ai|deepeval|llm)_(.+)'
+        target_label: ai_component
+        replacement: '${1}_${2}'
+      # Label gesture recognition metrics
+      - source_labels: [__name__]
+        regex: 'tunarasa_gesture_(.+)'
+        target_label: gesture_component
+        replacement: '${1}'
 
-  # Tunarasa Admin DeepEval Metrics
-  - job_name: 'tunarasa-deepeval'
+  # Tunarasa DeepEval and System Monitoring (Real Endpoints)
+  - job_name: 'tunarasa-monitoring'
     static_configs:
       - targets: ['backend:8000']
-    metrics_path: '/api/v1/admin/monitoring/prometheus-metrics'
+    metrics_path: '/api/v1/monitoring/prometheus-metrics'
     scrape_interval: 30s
     scrape_timeout: 10s
-
-  # Tunarasa Frontend Metrics (if implemented)
-  - job_name: 'tunarasa-frontend'
-    static_configs:
-      - targets: ['frontend:3000']
-    metrics_path: '/api/metrics'
-    scrape_interval: 30s
-    scrape_timeout: 10s
-
-  # Redis Metrics
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis:6379']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # PostgreSQL Metrics (Supabase)
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['postgres_exporter:9187']
-    scrape_interval: 30s
-
-  # Node Exporter for System Metrics
-  - job_name: 'node'
-    static_configs:
-      - targets: ['node_exporter:9100']
-    scrape_interval: 30s
+    honor_labels: true
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'tunarasa_deepeval_(.+)'
+        target_label: deepeval_metric
+        replacement: '${1}'
+      - source_labels: [metric_type]
+        target_label: evaluation_category
+      - source_labels: [__name__]
+        regex: 'tunarasa_(gesture|ai)_(.+)'
+        target_label: service_component
+        replacement: '${1}_${2}'
 
   # Prometheus itself
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+    scrape_interval: 15s
+
+  # Grafana Metrics
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s

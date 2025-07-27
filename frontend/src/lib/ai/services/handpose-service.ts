@@ -87,7 +87,7 @@ export class HandPoseService {
       // Store gestures for creating new GestureEstimator instances (match reference pattern)
       this.allGestures = SIBIGestures.getAllGestures()
       console.log('✅ Loaded', this.allGestures.length, 'SIBI gestures (A-Z) for per-detection estimation')
-      console.log('Available gestures:', this.allGestures.map((g) => g.name || 'unnamed').join(', '))
+      console.log('Available gestures:', this.allGestures.map((g) => g.name ?? 'unnamed').join(', '))
 
       this.isInitialized = true
     } catch (error) {
@@ -149,6 +149,7 @@ export class HandPoseService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async recognizeGesture(landmarks: HandLandmark[]): Promise<GestureRecognitionResult> {
     console.log('🚀 recognizeGesture called with', landmarks.length, 'landmarks')
     // Debug: Check if landmarks are actually changing

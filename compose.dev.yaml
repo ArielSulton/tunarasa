@@ -24,6 +24,9 @@ services:
 
       # Database Configuration
       - DATABASE_URL=${DATABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - user=${user}
       - password=${password}
       - host=${host}
@@ -34,10 +37,9 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
       - NEXT_PUBLIC_ENABLE_CLERK_AUTH=${NEXT_PUBLIC_ENABLE_CLERK_AUTH}
-      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-      
-      # Clerk Configuration URLs
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CLERK_WEBHOOK_SIGNING_SECRET=${CLERK_WEBHOOK_SIGNING_SECRET}
       - NEXT_PUBLIC_CLERK_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_URL}
       - NEXT_PUBLIC_CLERK_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_URL}
       - NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL}
@@ -48,17 +50,17 @@ services:
       - LLM_MODEL=${LLM_MODEL}
       - LLM_TEMPERATURE=${LLM_TEMPERATURE}
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
+
+      # RAG System Configuration
       - PINECONE_API_KEY=${PINECONE_API_KEY}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL}
-
-      # RAG System Configuration
       - RAG_CHUNK_SIZE=${RAG_CHUNK_SIZE}
       - RAG_CHUNK_OVERLAP=${RAG_CHUNK_OVERLAP}
       - RAG_RETRIEVAL_K=${RAG_RETRIEVAL_K}
       - RAG_SIMILARITY_THRESHOLD=${RAG_SIMILARITY_THRESHOLD}
 
-      # Email Configuration - Frontend Only (Resend API)
+      # External Services
       - RESEND_API_KEY=${RESEND_API_KEY}
       - FROM_EMAIL=${FROM_EMAIL}
       - FROM_NAME=${FROM_NAME}
@@ -118,8 +120,8 @@ services:
       - SITE_NAME=${SITE_NAME}
 
       # Frontend Configuration (Next.js)
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - BACKEND_URL=http://backend:8000
       - NEXT_TELEMETRY_DISABLED=1
@@ -127,6 +129,9 @@ services:
 
       # Database Configuration
       - DATABASE_URL=${DATABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - user=${user}
       - password=${password}
       - host=${host}
@@ -137,10 +142,9 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
       - NEXT_PUBLIC_ENABLE_CLERK_AUTH=${NEXT_PUBLIC_ENABLE_CLERK_AUTH}
-      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-      
-      # Clerk Configuration URLs
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CLERK_WEBHOOK_SIGNING_SECRET=${CLERK_WEBHOOK_SIGNING_SECRET}
       - NEXT_PUBLIC_CLERK_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_URL}
       - NEXT_PUBLIC_CLERK_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_URL}
       - NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL}
@@ -151,17 +155,17 @@ services:
       - LLM_MODEL=${LLM_MODEL}
       - LLM_TEMPERATURE=${LLM_TEMPERATURE}
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
+
+      # RAG System Configuration
       - PINECONE_API_KEY=${PINECONE_API_KEY}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL}
-
-      # RAG System Configuration
       - RAG_CHUNK_SIZE=${RAG_CHUNK_SIZE}
       - RAG_CHUNK_OVERLAP=${RAG_CHUNK_OVERLAP}
       - RAG_RETRIEVAL_K=${RAG_RETRIEVAL_K}
       - RAG_SIMILARITY_THRESHOLD=${RAG_SIMILARITY_THRESHOLD}
 
-      # Email Configuration - Frontend Only (Resend API)
+      # External Services
       - RESEND_API_KEY=${RESEND_API_KEY}
       - FROM_EMAIL=${FROM_EMAIL}
       - FROM_NAME=${FROM_NAME}
@@ -207,7 +211,7 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
-  
+
   # Redis Service (Caching & Sessions)
   redis:
     container_name: tunarasa-redis
@@ -239,6 +243,7 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
       - prometheus_data_dev:/prometheus
     dns:
       - 1.1.1.1
@@ -254,19 +259,33 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
-  # Grafana (Monitoring Dashboard)
+  # Grafana (Advanced Monitoring Dashboard)
   grafana:
     container_name: tunarasa-grafana
     image: grafana/grafana:latest
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_USERS_DEFAULT_THEME=dark
+      - GF_FEATURE_TOGGLES_ENABLE=panelTitleSearch,publicDashboards
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel,grafana-piechart-panel
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_LOG_LEVEL=info
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_DATASOURCES_DEFAULT_NAME=Prometheus
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_healthy
     ports:
       - "3030:3000"
     dns:
@@ -280,8 +299,13 @@ services:
       - grafana_data_dev:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
-
 
 volumes:
   redis_data_dev:

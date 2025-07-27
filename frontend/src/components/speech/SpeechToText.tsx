@@ -28,15 +28,15 @@ export function SpeechToText({ onSpeechResult, language = 'id-ID' }: SpeechToTex
   const startListening = () => {
     console.log('🎤 Starting speech recognition...')
     resetTranscript()
-    SpeechRecognition.startListening({
+    void SpeechRecognition.startListening({
       continuous: true,
-      language: language,
+      language,
     })
   }
 
   const stopListening = () => {
     console.log('🎤 Stopping speech recognition...')
-    SpeechRecognition.stopListening()
+    void SpeechRecognition.stopListening()
   }
 
   const handleButtonClick = (event: React.MouseEvent) => {

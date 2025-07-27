@@ -40,13 +40,14 @@ Comprehensive monitoring stack with Prometheus, Grafana, and DeepEval for real-t
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 ├─────────────────────────────────────────────────────────────────┤
 │  Visualization & Alerting Layer                                 │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
-│  │    Grafana      │  │   AlertManager  │  │   Email/Slack   │  │
-│  │                 │  │                 │  │   Notifications │  │
-│  │ • Dashboards    │  │ • Alert Rules   │  │                 │  │
-│  │ • Analytics     │  │ • Routing       │  │ • Escalation    │  │
-│  │ • Reporting     │  │ • Grouping      │  │ • Integration   │  │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
+│                       ┌─────────────────┐                       │
+│                       │    Grafana      │                       │
+│                       │                 │                       │
+│                       │ • Dashboards    │                       │
+│                       │ • Analytics     │                       │
+│                       │ • Reporting     │                       │
+│                       │ • Alerts        │                       │
+│                       └─────────────────┘                       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -58,14 +59,14 @@ Comprehensive monitoring stack with Prometheus, Grafana, and DeepEval for real-t
 export class ClientMetrics {
   private static instance: ClientMetrics
   private metricsEndpoint = '/api/metrics/client'
-  
+
   static getInstance(): ClientMetrics {
     if (!this.instance) {
       this.instance = new ClientMetrics()
     }
     return this.instance
   }
-  
+
   // Gesture Recognition Metrics
   async recordGestureMetrics(data: {
     sessionId: string
@@ -80,7 +81,7 @@ export class ClientMetrics {
       timestamp: Date.now()
     })
   }
-  
+
   // User Interaction Metrics
   async recordUserInteraction(data: {
     sessionId: string
@@ -94,13 +95,13 @@ export class ClientMetrics {
       timestamp: Date.now()
     })
   }
-  
+
   // Performance Metrics
   async recordPerformanceMetrics(): Promise<void> {
     if (typeof window !== 'undefined' && 'performance' in window) {
       const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
       const paint = performance.getEntriesByType('paint')
-      
+
       await this.sendMetric('performance', {
         pageLoadTime: navigation.loadEventEnd - navigation.fetchStart,
         domContentLoaded: navigation.domContentLoadedEventEnd - navigation.fetchStart,
@@ -111,7 +112,7 @@ export class ClientMetrics {
       })
     }
   }
-  
+
   // Error Tracking
   async recordError(error: {
     message: string
@@ -128,7 +129,7 @@ export class ClientMetrics {
       url: window.location.href
     })
   }
-  
+
   private async sendMetric(type: string, data: any): Promise<void> {
     try {
       await fetch(this.metricsEndpoint, {
@@ -190,29 +191,29 @@ def metrics_middleware(app):
     @app.middleware("http")
     async def add_metrics(request, call_next):
         start_time = time.time()
-        
+
         # Process request
         response = await call_next(request)
-        
+
         # Record metrics
         duration = time.time() - start_time
         user_type = "admin" if "/admin/" in str(request.url) else "user"
-        
+
         REQUEST_COUNT.labels(
             method=request.method,
             endpoint=request.url.path,
             status_code=response.status_code,
             user_type=user_type
         ).inc()
-        
+
         REQUEST_DURATION.labels(
             method=request.method,
             endpoint=request.url.path,
             user_type=user_type
         ).observe(duration)
-        
+
         return response
-    
+
     return app
 
 def track_llm_metrics(model_name: str, prompt_type: str):
@@ -220,31 +221,31 @@ def track_llm_metrics(model_name: str, prompt_type: str):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             start_time = time.time()
-            
+
             try:
                 result = await func(*args, **kwargs)
-                
+
                 # Record response time
                 duration = time.time() - start_time
                 LLM_RESPONSE_TIME.labels(
                     model_name=model_name,
                     prompt_type=prompt_type
                 ).observe(duration)
-                
+
                 # Record token usage if available
                 if hasattr(result, 'token_usage'):
                     LLM_TOKEN_USAGE.labels(
                         model_name=model_name,
                         token_type='input'
                     ).inc(result.token_usage.input_tokens)
-                    
+
                     LLM_TOKEN_USAGE.labels(
                         model_name=model_name,
                         token_type='output'
                     ).inc(result.token_usage.output_tokens)
-                
+
                 return result
-                
+
             except Exception as e:
                 # Record error metrics
                 duration = time.time() - start_time
@@ -253,7 +254,7 @@ def track_llm_metrics(model_name: str, prompt_type: str):
                     prompt_type=f"{prompt_type}_error"
                 ).observe(duration)
                 raise
-        
+
         return wrapper
     return decorator
 ```
@@ -276,7 +277,7 @@ class TunarasaEvaluator:
             FaithfulnessMetric(threshold=0.8),
             ContextualRecallMetric(threshold=0.6)
         ]
-    
+
     async def evaluate_response(
         self,
         qna_log_id: str,
@@ -286,14 +287,14 @@ class TunarasaEvaluator:
         expected_answer: str = None
     ) -> Dict[str, float]:
         """Evaluate single LLM response quality"""
-        
+
         test_case = LLMTestCase(
             input=question,
             actual_output=answer,
             context=[context],
             expected_output=expected_answer
         )
-        
+
         results = {}
         for metric in self.metrics:
             try:
@@ -302,18 +303,18 @@ class TunarasaEvaluator:
             except Exception as e:
                 print(f"Evaluation error for {metric.__class__.__name__}: {e}")
                 results[metric.__class__.__name__] = 0.0
-        
+
         # Store results in database
         await self.store_evaluation_results(qna_log_id, results)
-        
+
         return results
-    
+
     async def batch_evaluate(
         self,
         test_cases: List[Dict]
     ) -> Dict[str, List[float]]:
         """Batch evaluate multiple responses"""
-        
+
         deepeval_test_cases = []
         for case in test_cases:
             deepeval_test_cases.append(
@@ -324,28 +325,28 @@ class TunarasaEvaluator:
                     expected_output=case.get('expected_answer')
                 )
             )
-        
+
         # Run evaluation
         results = evaluate(deepeval_test_cases, self.metrics)
-        
+
         # Process and store results
         evaluation_summary = {}
         for metric in self.metrics:
             metric_name = metric.__class__.__name__
             evaluation_summary[metric_name] = [
-                result.metrics_data[metric_name].score 
+                result.metrics_data[metric_name].score
                 for result in results
             ]
-        
+
         return evaluation_summary
-    
+
     async def store_evaluation_results(
         self,
         qna_log_id: str,
         results: Dict[str, float]
     ):
         """Store evaluation results in performance metrics table"""
-        
+
         for metric_name, score in results.items():
             await db.insert(performance_metrics).values({
                 'metric_type': f'llm_quality_{metric_name.lower()}',
@@ -364,7 +365,7 @@ class TunarasaEvaluator:
 class ABTestingFramework:
     def __init__(self):
         self.test_configurations = {}
-    
+
     async def create_experiment(
         self,
         experiment_name: str,
@@ -374,7 +375,7 @@ class ABTestingFramework:
         success_metrics: List[str] = None
     ):
         """Create new A/B test experiment"""
-        
+
         experiment = {
             'name': experiment_name,
             'status': 'active',
@@ -386,30 +387,30 @@ class ABTestingFramework:
             'participants': {'control': 0, 'treatment': 0},
             'results': {'control': [], 'treatment': []}
         }
-        
+
         self.test_configurations[experiment_name] = experiment
         return experiment
-    
+
     async def assign_variant(
         self,
         experiment_name: str,
         user_session_id: str
     ) -> str:
         """Assign user to control or treatment group"""
-        
+
         if experiment_name not in self.test_configurations:
             return 'control'
-        
+
         experiment = self.test_configurations[experiment_name]
-        
+
         # Use consistent hashing for session assignment
         hash_value = hash(user_session_id) % 100
         variant = 'treatment' if hash_value < (experiment['traffic_split'] * 100) else 'control'
-        
+
         experiment['participants'][variant] += 1
-        
+
         return variant
-    
+
     async def record_experiment_result(
         self,
         experiment_name: str,
@@ -418,17 +419,17 @@ class ABTestingFramework:
         metrics: Dict[str, float]
     ):
         """Record experiment results"""
-        
+
         if experiment_name not in self.test_configurations:
             return
-        
+
         experiment = self.test_configurations[experiment_name]
         experiment['results'][variant].append({
             'session_id': session_id,
             'metrics': metrics,
             'timestamp': datetime.utcnow()
         })
-        
+
         # Store in database for analysis
         await self.store_experiment_data(experiment_name, variant, session_id, metrics)
 ```
@@ -553,7 +554,7 @@ groups:
         annotations:
           summary: "High response time detected"
           description: "95th percentile response time is {{ $value }}s"
-      
+
       - alert: LowGestureAccuracy
         expr: tunarasa_gesture_recognition_accuracy < 0.8
         for: 5m
@@ -562,7 +563,7 @@ groups:
         annotations:
           summary: "Gesture recognition accuracy below threshold"
           description: "Current accuracy is {{ $value }}"
-      
+
       - alert: LLMResponseTimeHigh
         expr: rate(tunarasa_llm_response_time_seconds_sum[5m]) / rate(tunarasa_llm_response_time_seconds_count[5m]) > 5
         for: 3m
@@ -571,7 +572,7 @@ groups:
         annotations:
           summary: "LLM response time is high"
           description: "Average response time is {{ $value }}s"
-      
+
       - alert: ErrorRateHigh
         expr: rate(tunarasa_http_requests_total{status_code=~"5.."}[5m]) / rate(tunarasa_http_requests_total[5m]) > 0.05
         for: 2m
@@ -591,7 +592,7 @@ groups:
         annotations:
           summary: "LLM answer quality has degraded"
           description: "Average answer relevancy is {{ $value }}"
-      
+
       - alert: UserSatisfactionLow
         expr: avg_over_time(tunarasa_user_satisfaction_score[6h]) < 3.5
         for: 30m
@@ -600,55 +601,6 @@ groups:
         annotations:
           summary: "User satisfaction score is low"
           description: "Current satisfaction score is {{ $value }}"
-```
-
-### AlertManager Configuration
-```yaml
-# monitoring/alertmanager/config.yml
-global:
-  smtp_smarthost: 'localhost:587'
-  smtp_from: 'alerts@tunarasa.com'
-
-route:
-  group_by: ['alertname']
-  group_wait: 10s
-  group_interval: 10s
-  repeat_interval: 1h
-  receiver: 'web.hook'
-  routes:
-    - match:
-        severity: critical
-      receiver: 'critical-alerts'
-    - match:
-        severity: warning
-      receiver: 'warning-alerts'
-
-receivers:
-  - name: 'web.hook'
-    webhook_configs:
-      - url: 'http://localhost:5001/webhook'
-  
-  - name: 'critical-alerts'
-    email_configs:
-      - to: 'admin@tunarasa.com'
-        subject: 'CRITICAL: Tunarasa Alert'
-        body: |
-          Alert: {{ .GroupLabels.alertname }}
-          Description: {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
-          
-    slack_configs:
-      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
-        channel: '#alerts'
-        title: 'Critical Alert: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
-  
-  - name: 'warning-alerts'
-    email_configs:
-      - to: 'monitoring@tunarasa.com'
-        subject: 'WARNING: Tunarasa Alert'
-        body: |
-          Alert: {{ .GroupLabels.alertname }}
-          Description: {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
 ```
 
 ## 5. Custom Business Metrics
@@ -666,7 +618,7 @@ export class BusinessMetrics {
     userSatisfied: boolean
   }): Promise<void> {
     const completionRate = Object.values(journey).filter(Boolean).length / Object.keys(journey).length
-    
+
     await this.recordMetric('user_journey_completion', {
       sessionId,
       completionRate,
@@ -674,7 +626,7 @@ export class BusinessMetrics {
       timestamp: Date.now()
     })
   }
-  
+
   // Question Category Analysis
   async analyzeQuestionCategory(question: string, category: string): Promise<void> {
     await this.recordMetric('question_category', {
@@ -683,7 +635,7 @@ export class BusinessMetrics {
       timestamp: Date.now()
     })
   }
-  
+
   // User Feedback Analysis
   async recordUserFeedback(feedback: {
     sessionId: string

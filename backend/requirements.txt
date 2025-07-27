@@ -35,6 +35,7 @@ markdown
 
 # Monitoring and Observability
 prometheus-client
+prometheus-fastapi-instrumentator
 deepeval
 
 # Utilities
@@ -46,8 +47,10 @@ Pillow
 aiofiles
 
 # Development
+pre-commit
 pytest
 pytest-asyncio
 black
+ruff
 isort
 mypy

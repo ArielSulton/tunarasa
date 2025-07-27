@@ -68,13 +68,16 @@ backend/.hypothesis/
 backend/.deepeval/
 backend/.pytest_cache/
 backend/cover/
+**_cache
 
 # Virtual environments
-backend/venv/
-backend/env/
-backend/ENV/
-backend/env.bak/
-backend/venv.bak/
+backend/.venv/
+backend/.env.bak/
+backend/.venv.bak/
+backend/.env/
+backend/.ENV/
+backend/.env.*
+backend/.ENV.*
 
 # Uploads and temp files
 backend/uploads/

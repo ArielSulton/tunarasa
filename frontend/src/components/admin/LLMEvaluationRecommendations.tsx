@@ -36,7 +36,7 @@ export function LLMEvaluationRecommendations() {
   const [timePeriod, setTimePeriod] = useState('24h')
 
   useEffect(() => {
-    fetchEvaluationData()
+    void fetchEvaluationData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timePeriod])
 
@@ -133,7 +133,7 @@ export function LLMEvaluationRecommendations() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" size="sm" onClick={fetchEvaluationData} disabled={isLoading}>
+          <Button variant="outline" size="sm" onClick={() => void fetchEvaluationData} disabled={isLoading}>
             <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
