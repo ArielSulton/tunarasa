@@ -4,12 +4,15 @@ Summary and QR code endpoints for conversation downloads
 
 import logging
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, status, Response
+from fastapi import APIRouter, HTTPException, status, Response, Depends
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.qr_service import qr_service
 from app.models import Conversation, Message, Note
 from app.core.config import settings
+from app.core.database import get_db_session
+from app.db.crud import MessageCRUD
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -42,7 +45,7 @@ class SummaryResponse(BaseModel):
 
 
 @router.post("/generate", response_model=SummaryResponse)
-async def generate_conversation_summary(request: SummaryRequest):
+async def generate_conversation_summary(request: SummaryRequest, db: AsyncSession = Depends(get_db_session)):
     """
     Generate downloadable summary for conversation with QR code
     """
@@ -52,23 +55,19 @@ async def generate_conversation_summary(request: SummaryRequest):
             "conversation_id": request.conversation_id,
             "user_id": request.user_id,
             "title": f"Percakapan #{request.conversation_id}",
-            "created_at": "2025-07-18T10:30:00Z"
+            "created_at": "2025-07-18T10:30:00Z"  # TODO: fetch real created_at if needed
         }
         
-        # Get messages (mock for now)
+        # Fetch messages from database
+        db_messages = await MessageCRUD.get_by_conversation(db, request.conversation_id)
         messages = [
             {
-                "message_id": 1,
-                "sender_type": "user",
-                "content": "Bagaimana cara menandatangani huruf A?",
-                "created_at": "2025-07-18T10:30:00Z"
-            },
-            {
-                "message_id": 2,
-                "sender_type": "ai",
-                "content": "Untuk menandatangani huruf A, buat kepalan tangan dengan tangan dominan Anda dan letakkan ibu jari di samping jari telunjuk.",
-                "created_at": "2025-07-18T10:31:00Z"
+                "message_id": msg.message_id,
+                "sender_type": "user" if msg.is_user else "ai",
+                "content": msg.message_content,
+                "created_at": msg.created_at.isoformat() if hasattr(msg, "created_at") else None
             }
+            for msg in db_messages
         ]
         
         # Create summary document
@@ -86,8 +85,8 @@ async def generate_conversation_summary(request: SummaryRequest):
             summary_data = {
                 "title": conversation_data["title"],
                 "message_count": len(messages),
-                "duration": "2 menit",
-                "topics": ["Bahasa Isyarat", "Huruf A"]
+                "duration": "2 menit",  # TODO: calculate real duration if needed
+                "topics": ["Bahasa Isyarat", "Huruf A"]  # TODO: extract real topics if needed
             }
             
             qr_result = qr_service.generate_conversation_summary_qr(
@@ -123,30 +122,34 @@ async def generate_conversation_summary(request: SummaryRequest):
 
 
 @router.get("/{access_token}")
-async def download_summary(access_token: str, format: str = "text"):
+async def download_summary(access_token: str, format: str = "text", db: AsyncSession = Depends(get_db_session)):
     """
     Download conversation summary using QR code access token
     """
     try:
-        # In production, validate access_token from database/Redis
-        # For now, return mock summary
+        # In production, validate access_token from database/Redis and get conversation_id
+        # For now, you must implement logic to map access_token to conversation_id
+        # Here, we use a placeholder conversation_id for demonstration
+        conversation_id = 1  # TODO: Replace with real lookup from access_token
+        user_id = 1  # TODO: Replace with real user_id if needed
         
         conversation_data = {
-            "title": "Percakapan Bahasa Isyarat",
-            "created_at": "2025-07-18T10:30:00Z"
+            "conversation_id": conversation_id,
+            "user_id": user_id,
+            "title": f"Percakapan #{conversation_id}",
+            "created_at": "2025-07-18T10:30:00Z"  # TODO: fetch real created_at if needed
         }
         
+        # Fetch messages from database
+        db_messages = await MessageCRUD.get_by_conversation(db, conversation_id)
         messages = [
             {
-                "sender_type": "user",
-                "content": "Bagaimana cara menandatangani huruf A?",
-                "created_at": "2025-07-18T10:30:00Z"
-            },
-            {
-                "sender_type": "ai", 
-                "content": "Untuk menandatangani huruf A, buat kepalan tangan dengan tangan dominan Anda dan letakkan ibu jari di samping jari telunjuk.",
-                "created_at": "2025-07-18T10:31:00Z"
+                "message_id": msg.message_id,
+                "sender_type": "user" if msg.is_user else "ai",
+                "content": msg.message_content,
+                "created_at": msg.created_at.isoformat() if hasattr(msg, "created_at") else None
             }
+            for msg in db_messages
         ]
         
         # Generate summary content
