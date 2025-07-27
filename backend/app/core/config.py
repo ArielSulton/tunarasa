@@ -76,6 +76,8 @@ class Settings(BaseSettings):
     RATE_LIMIT_REQUESTS: int
     RATE_LIMIT_WINDOW: int
     
+    DATABASE_URL: Optional[str] = None
+    
     # Monitoring
     PROMETHEUS_PORT: int
     GRAFANA_ADMIN_USER: Optional[str] = None
@@ -93,6 +95,9 @@ class Settings(BaseSettings):
     
     # DeepEval Configuration
     DEEPEVAL_API_KEY: Optional[str] = None
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_TIMEOUT: int = 30
     
     class Config:
         env_file = ".env"
@@ -125,27 +130,30 @@ def get_database_url() -> str:
     return f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
 
 # Create SQLAlchemy engine
-engine = create_engine(get_database_url())
+# engine = create_engine(get_database_url())
 
 # Create SessionLocal class
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Database dependency
-def get_db():
-    """Database session dependency"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# def get_db():
+#     """Database session dependency"""
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
 
 # Test database connection
+# def test_database_connection():
+#     """Test database connection"""
+#     try:
+#         with engine.connect() as connection:
+#             print("✅ Database connection successful!")
+#             return True
+#     except Exception as e:
+#         print(f"❌ Failed to connect to database: {e}")
+#         return False
+
 def test_database_connection():
-    """Test database connection"""
-    try:
-        with engine.connect() as connection:
-            print("✅ Database connection successful!")
-            return True
-    except Exception as e:
-        print(f"❌ Failed to connect to database: {e}")
-        return False
+    pass

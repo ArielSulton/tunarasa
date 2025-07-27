@@ -35,6 +35,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/health/check",
         "/api/v1/rag/ask",  # Allow public access for gesture recognition Q&A
         "/api/v1/question/ask",  # Allow public access for question answering
+        "/api/v1/summary/generate",  # Allow public access for gesture recognition Q&A
     }
     
     # Admin endpoints that require Clerk authentication
