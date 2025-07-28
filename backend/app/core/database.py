@@ -7,6 +7,7 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import MetaData
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
@@ -37,15 +38,18 @@ async def init_database():
         database_url = get_database_url()
         logger.info(f"Connecting to database...")
         
-        # Create async engine
+        # Create async engine - disable client side pooling for Supabase pooler
         engine = create_async_engine(
             database_url,
             echo=settings.DEBUG,
-            pool_size=settings.DB_POOL_SIZE,
-            max_overflow=settings.DB_MAX_OVERFLOW,
-            pool_timeout=settings.DB_POOL_TIMEOUT,
-            pool_pre_ping=True,
-            connect_args={"statement_cache_size": 0},
+            poolclass=NullPool,  # Disable SQLAlchemy pooling for Supabase Transaction Pooler
+            connect_args={
+                "statement_cache_size": 0,
+                "prepared_statement_cache_size": 0,
+                "server_settings": {
+                    "application_name": "tunarasa_backend"
+                }
+            },
         )
         
         # Create session factory
