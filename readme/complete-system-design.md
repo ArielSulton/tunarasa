@@ -1,4 +1,4 @@
-# Tunarasa Complete System Design Specification v1.2.0
+# Tunarasa Complete System Design Specification
 
 ## Executive Summary
 

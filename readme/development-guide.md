@@ -1,9 +1,5 @@
 # 🛠️ Tunarasa Development Guide
 
-**Version**: v1.2.0
-**Last Updated**: July 26, 2025
-**Audience**: Developers, Contributors, System Administrators
-
 ---
 
 ## 📋 Table of Contents
@@ -139,7 +135,7 @@ bun run lint  # Run ESLint with auto-fix
 - **Accessibility**: WCAG 2.1 AA compliance for all components
 - **Performance**: Optimize bundle size and loading times
 
-### Environment Variables (v1.2.0 Enhancement)
+### Environment Variables
 
 **57 environment variables synchronized across 6 files**:
 - `.env` (canonical reference)
