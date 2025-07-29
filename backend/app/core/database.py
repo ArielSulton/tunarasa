@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import MetaData
 from sqlalchemy.pool import NullPool
-
-from app.core.config import settings
+import uuid
+from app.core.config import settings, get_database_url
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +20,6 @@ Base = declarative_base(metadata=metadata)
 # Database engine
 engine = None
 async_session_factory = None
-
-
-def get_database_url() -> str:
-    """Get database URL from settings"""
-    if settings.DATABASE_URL:
-        return settings.DATABASE_URL
-    
-    return "postgresql+asyncpg://postgres:password@localhost:5432/tunarasa"
-
 
 async def init_database():
     """Initialize database connection"""
@@ -42,13 +33,12 @@ async def init_database():
         engine = create_async_engine(
             database_url,
             echo=settings.DEBUG,
-            poolclass=NullPool,  # Disable SQLAlchemy pooling for Supabase Transaction Pooler
+            poolclass=NullPool,
+            future=True,
             connect_args={
                 "statement_cache_size": 0,
                 "prepared_statement_cache_size": 0,
-                "server_settings": {
-                    "application_name": "tunarasa_backend"
-                }
+                "prepared_statement_name_func": lambda:  f"__asyncpg_{uuid.uuid4()}__",
             },
         )
         
