@@ -71,6 +71,62 @@ class AIService:
         # Initialize services
         self._initialize_services()
     
+
+    async def summarize_and_generate_title(self, conversation: str) -> Dict[str, str]:
+        """
+        Meringkas percakapan dan menghasilkan judul untuk percakapan tersebut.
+        
+        Args:
+            conversation: Percakapan lengkap yang akan diringkas.
+        
+        Returns:
+            Dict yang berisi summary dan title percakapan.
+        """
+        try:
+            # Prompt untuk ringkasan percakapan
+            summary_prompt = f"""
+                Ringkas percakapan berikut dalam 2-3 paragraf naratif. Fokus pada topik utama, poin-poin penting, dan kesimpulan. Hindari menggunakan format dialog dan gunakan bahasa Indonesia yang jelas dan mudah dipahami. Paragraf deskriptif harus mencakup informasi yang relevan tanpa mengandung kalimat seperti "terima kasih" atau "maaf" yang tidak berfokus pada layanan.
+
+                Setelah itu, buatkan judul yang mencerminkan topik utama percakapan. Judul harus maksimal 8-10 kata dan menggunakan bahasa Indonesia. Hindari kata-kata umum seperti "ringkasan", "percakapan". Judul harus berfokus pada substansi atau topik yang dibahas dalam percakapan.
+
+                Percakapan:
+                {conversation}
+            """
+            
+            # Menggunakan Groq LLM untuk mendapatkan hasil ringkasan dan judul
+            response = await self.groq_llm(summary_prompt)
+            
+            # Menguraikan ringkasan dan title dari response LLM
+            summary_data = self.extract_summary_and_title(response)
+            
+            return summary_data
+        
+        except Exception as e:
+            logger.error(f"Error in summarizing conversation: {e}")
+            return {"title": "Tidak ada judul yang tersedia", "summary": "Tidak ada ringkasan yang tersedia"}
+    
+    def extract_summary_and_title(self, response: str) -> Dict[str, str]:
+        """
+        Mengambil summary dan title dari hasil response LLM.
+        
+        Args:
+            response: Output dari LLM yang berisi ringkasan dan title.
+        
+        Returns:
+            Dictionary berisi title dan summary percakapan.
+        """
+        try:
+            # Asumsikan format output: "Title: <title>\nSummary: <summary>"
+            lines = response.split("\n")
+            title = lines[0].replace("Title:", "").strip()
+            summary = "\n".join(lines[1:]).replace("Summary:", "").strip()
+            return {"title": title, "summary": summary}
+        
+        except Exception as e:
+            logger.error(f"Error parsing LLM response: {e}")
+            return {"title": "Judul Tidak Ditemukan", "summary": "Ringkasan Tidak Ditemukan"}
+
+
     def _initialize_services(self):
         """Initialize AI services"""
         try:

@@ -95,9 +95,6 @@ class Settings(BaseSettings):
     
     # DeepEval Configuration
     DEEPEVAL_API_KEY: Optional[str] = None
-    DB_POOL_SIZE: int = 5
-    DB_MAX_OVERFLOW: int = 10
-    DB_POOL_TIMEOUT: int = 30
     
     class Config:
         env_file = ".env"
@@ -118,42 +115,16 @@ def get_allowed_hosts() -> List[str]:
 # Construct Supabase SQLAlchemy connection string
 def get_database_url() -> str:
     """Construct database URL from environment variables"""
-    USER = os.getenv("user")
-    PASSWORD = os.getenv("password")
-    HOST = os.getenv("host")
-    PORT = os.getenv("port")
-    DBNAME = os.getenv("dbname")
+    USER = settings.user
+    PASSWORD = settings.password
+    HOST = settings.host
+    PORT = settings.port
+    DBNAME = settings.dbname
     
     if not all([USER, PASSWORD, HOST, PORT, DBNAME]):
         raise ValueError("Missing required database environment variables")
     
-    return f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
-
-# Create SQLAlchemy engine
-# engine = create_engine(get_database_url())
-
-# Create SessionLocal class
-# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Database dependency
-# def get_db():
-#     """Database session dependency"""
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-
-# Test database connection
-# def test_database_connection():
-#     """Test database connection"""
-#     try:
-#         with engine.connect() as connection:
-#             print("✅ Database connection successful!")
-#             return True
-#     except Exception as e:
-#         print(f"❌ Failed to connect to database: {e}")
-#         return False
+    return f"postgresql+asyncpg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
 
 def test_database_connection():
     pass

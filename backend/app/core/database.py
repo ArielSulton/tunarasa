@@ -7,8 +7,9 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import MetaData
-
-from app.core.config import settings
+from sqlalchemy.pool import NullPool
+import uuid
+from app.core.config import settings, get_database_url
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +21,6 @@ Base = declarative_base(metadata=metadata)
 engine = None
 async_session_factory = None
 
-
-def get_database_url() -> str:
-    """Get database URL from settings"""
-    if settings.DATABASE_URL:
-        return settings.DATABASE_URL
-    
-    return "postgresql+asyncpg://postgres:password@localhost:5432/tunarasa"
-
-
 async def init_database():
     """Initialize database connection"""
     global engine, async_session_factory
@@ -37,15 +29,17 @@ async def init_database():
         database_url = get_database_url()
         logger.info(f"Connecting to database...")
         
-        # Create async engine
+        # Create async engine - disable client side pooling for Supabase pooler
         engine = create_async_engine(
             database_url,
             echo=settings.DEBUG,
-            pool_size=settings.DB_POOL_SIZE,
-            max_overflow=settings.DB_MAX_OVERFLOW,
-            pool_timeout=settings.DB_POOL_TIMEOUT,
-            pool_pre_ping=True,
-            connect_args={"statement_cache_size": 0},
+            poolclass=NullPool,
+            future=True,
+            connect_args={
+                "statement_cache_size": 0,
+                "prepared_statement_cache_size": 0,
+                "prepared_statement_name_func": lambda:  f"__asyncpg_{uuid.uuid4()}__",
+            },
         )
         
         # Create session factory

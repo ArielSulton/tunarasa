@@ -1016,9 +1016,63 @@ class EnhancedLangChainService:
             )
         response = await asyncio.to_thread(self.llm.invoke, prompt)
         return response.content.strip() if hasattr(response, 'content') else str(response).strip()
+    
+    async def generate_summary(self, conversation_text: str) -> str:
+        """
+        Generate summary and title for the conversation using LLM.
 
+        Args:
+            conversation_text: The full text of the conversation.
 
-# Mock classes removed - use real services only
+        Returns:
+            Dict containing the generated summary and title.
+        """
+        try:
+            # Create the prompt for the LLM
+            prompt = f"""
+            Berdasarkan percakapan berikut, buatlah ringkasan dalam format paragraf naratif yang mencakup poin-poin penting dari diskusi: 
+            
+            PERCAKAPAN:
+            {conversation_text}
+            
+            TUGAS:
+            1. Ringkas percakapan ini dalam 1-3 paragraf (tergantung panjang percakapan)
+            2. Fokus pada topik utama, poin penting, dan kesimpulan
+            3. Gunakan bahasa Indonesia yang jelas dan mudah dipahami
+            4. Jangan gunakan format dialog, tapi paragraf deskriptif
+
+            RINGKASAN:
+            """
+
+            # Call the LLM for generating summary and title
+            response = await asyncio.to_thread(self.llm.invoke, prompt)
+            return response.content.strip() if hasattr(response, 'content') else str(response).strip()
+        except:
+            logger.error(f"Failed to generate summary")
+
+    async def generate_title_of_summary(self, summary_text: str) -> str:
+        try:
+            prompt = f"""
+            Berdasarkan ringkasan percakapan berikut, buatlah judul yang singkat dan deskriptif: 
+            
+            RINGKASAN:
+            {summary_text}
+            
+            TUGAS:
+            1. Buat judul yang mencerminkan topik utama percakapan
+            2. Maksimal 8-10 kata
+            3. Gunakan bahasa Indonesia
+            4. Hindari kata-kata umum seperti "ringkasan", "percakapan"
+            5. Fokus pada substansi/topik yang dibahas
+
+            JUDUL:
+            """
+
+            # Call the LLM for generating summary and title
+            response = await asyncio.to_thread(self.llm.invoke, prompt)
+            return response.content.strip() if hasattr(response, 'content') else str(response).strip()
+        except:
+            logger.error(f"Failed to generate summary")
 
 
 # Global service instance

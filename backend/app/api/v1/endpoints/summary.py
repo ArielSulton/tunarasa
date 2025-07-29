@@ -13,6 +13,7 @@ from app.models import Conversation, Message, Note
 from app.core.config import settings
 from app.core.database import get_db_session
 from app.db.crud import MessageCRUD
+from app.services.langchain_service import get_langchain_service 
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -69,9 +70,19 @@ async def generate_conversation_summary(request: SummaryRequest, db: AsyncSessio
             }
             for msg in db_messages
         ]
+         # Concatenate conversation content
+           # Concatenate conversation content
+        conversation_text = "\n".join([msg['content'] for msg in messages])
+
+        langchain_service = get_langchain_service()
+        summary_text = await langchain_service.generate_summary(conversation_text)
+        title = await langchain_service.generate_title_of_summary(summary_text)
+
         
         # Create summary document
         summary_content = qr_service.create_summary_document(
+            title,
+            summary_text,
             conversation_data, 
             messages, 
             request.format_type
