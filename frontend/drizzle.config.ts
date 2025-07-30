@@ -16,6 +16,7 @@ export default defineConfig({
   migrations: {
     prefix: 'supabase',
     schema: 'public',
+    table: '__drizzle_migrations',
   },
 
   // Supabase specific configuration
