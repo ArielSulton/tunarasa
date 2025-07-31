@@ -176,18 +176,34 @@ class NoteCRUD:
     """CRUD operations for Note model"""
     
     @staticmethod
-    async def create(db: AsyncSession, conversation_id: int, note_content: str, 
+    async def create(db: AsyncSession, conversation_id: int, note_content: str, title: Optional[str] = None,
                     url_access: Optional[str] = None) -> Note:
         """Create a new note"""
         note = Note(
             conversation_id=conversation_id,
             note_content=note_content,
-            url_access=url_access
+            title=[title],  # Include the new title column
+            url_access=url_access  # Include url_access column
         )
         db.add(note)
         await db.commit()
         await db.refresh(note)
         return note
+
+    
+    @staticmethod
+    async def update(db: AsyncSession, note_id: int, title: Optional[str] = None, note_content: Optional[str] = None,
+                    url_access: Optional[str] = None) -> Optional[Note]:
+        """Update note by ID"""
+        stmt = update(Note).where(Note.note_id == note_id).values(
+            title=title, 
+            note_content=note_content, 
+            url_access=url_access  # Ensure url_access is included in the update query
+        )
+        await db.execute(stmt)
+        await db.commit()
+        return await NoteCRUD.get_by_id(db, note_id)
+
     
     @staticmethod
     async def get_by_conversation(db: AsyncSession, conversation_id: int) -> List[Note]:
@@ -197,19 +213,18 @@ class NoteCRUD:
         return result.scalars().all()
     
     @staticmethod
+    async def get_by_url_access(db: AsyncSession, url_access: str) -> List[Note]:
+        """Get all notes for a given URL access"""
+        stmt = select(Note).where(Note.url_access == url_access).order_by(Note.created_at)
+        result = await db.execute(stmt)
+        return result.scalars().all()
+    
+    @staticmethod
     async def get_by_id(db: AsyncSession, note_id: int) -> Optional[Note]:
         """Get note by ID"""
         stmt = select(Note).where(Note.note_id == note_id)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
-    
-    @staticmethod
-    async def update(db: AsyncSession, note_id: int, **updates) -> Optional[Note]:
-        """Update note by ID"""
-        stmt = update(Note).where(Note.note_id == note_id).values(**updates)
-        await db.execute(stmt)
-        await db.commit()
-        return await NoteCRUD.get_by_id(db, note_id)
     
     @staticmethod
     async def delete(db: AsyncSession, note_id: int) -> bool:

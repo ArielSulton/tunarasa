@@ -52,3 +52,5 @@ pytest-asyncio
 black
 isort
 mypy
+
+reportlab

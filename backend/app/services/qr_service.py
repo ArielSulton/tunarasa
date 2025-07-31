@@ -13,6 +13,15 @@ import json
 import uuid
 from app.core.config import settings
 
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib import colors
+import textwrap
+import re
+
 logger = logging.getLogger(__name__)
 
 class QRCodeService:
@@ -55,9 +64,7 @@ class QRCodeService:
                 "generated_at": datetime.utcnow().isoformat(),
                 "summary": {
                     "title": summary_data.get("title", "Ringkasan Percakapan"),
-                    "message_count": summary_data.get("message_count", 0),
-                    "duration": summary_data.get("duration", "0 menit"),
-                    "topics": summary_data.get("topics", [])
+                    "message_count": summary_data.get("message_count", 0)
                 }
             }
             
@@ -362,5 +369,129 @@ https://tunarasa.my.id
         
         return html
 
+
+    def create_note_pdf(self, filename, title, note_content, url_access, created_at):
+        c = canvas.Canvas(filename, pagesize=A4)
+        width, height = A4
+        margin = 2 * cm
+        content_width = width - 2 * margin
+        
+        # Current Y position (starting from top)
+        y_position = height - 2 * cm
+        
+        # Header section with metadata
+        c.setFont("Helvetica", 9)
+        c.setFillColor(colors.grey)
+        c.drawRightString(width - margin, y_position, f"ID: {url_access}")
+        y_position -= 0.4 * cm
+        c.drawRightString(width - margin, y_position, f"Created: {created_at}")
+        
+        # Move down for title
+        y_position -= 1.5 * cm
+        
+        # Title (centered, bold, with some styling)
+        c.setFont("Helvetica-Bold", 16)
+        c.setFillColor(colors.black)
+        # Wrap title if too long
+        title_wrapped = textwrap.fill(title, width=60)
+        title_lines = title_wrapped.split('\n')
+        
+        for line in title_lines:
+            c.drawCentredString(width / 2, y_position, line)
+            y_position -= 0.6 * cm
+        
+        # Add separator line
+        y_position -= 0.5 * cm
+        c.setStrokeColor(colors.grey)
+        c.setLineWidth(0.5)
+        c.line(margin, y_position, width - margin, y_position)
+        y_position -= 1 * cm
+        
+        # Content section with justified text
+        c.setFont("Helvetica", 11)
+        c.setFillColor(colors.black)
+        
+        # Wrap content text with better parameters for justification
+        max_chars_per_line = 75  # Slightly reduced for better word distribution
+        content_lines = wrap_text_for_justify(note_content, max_chars_per_line)
+        
+        line_height = 0.5 * cm
+        
+        for i, line in enumerate(content_lines):
+            # Check if we need a new page
+            if y_position < 3 * cm:  # Leave margin at bottom
+                c.showPage()
+                y_position = height - 2 * cm
+            
+            if line.strip():  # Only justify non-empty lines
+                # Don't justify the last line of a paragraph or very short lines
+                is_last_line_of_paragraph = (i == len(content_lines) - 1 or 
+                                        content_lines[i + 1].strip() == "")
+                is_short_line = len(line.split()) <= 3
+                
+                if is_last_line_of_paragraph or is_short_line:
+                    # Draw normally (left-aligned) for last lines and short lines
+                    c.drawString(margin, y_position, line)
+                else:
+                    # Draw justified
+                    justify_text(c, line, margin, y_position, content_width)
+            
+            y_position -= line_height
+        
+        c.save()
 # Global QR service instance
 qr_service = QRCodeService()
+
+
+def justify_text(c, text, x, y, max_width, font_name="Helvetica", font_size=11):
+    """
+    Draw justified text on canvas
+    """
+    c.setFont(font_name, font_size)
+    
+    # Split text into words
+    words = text.split()
+    if len(words) <= 1:
+        # If only one word or empty, just draw normally
+        c.drawString(x, y, text)
+        return
+    
+    # Calculate total width of all words without spaces
+    total_word_width = sum(c.stringWidth(word, font_name, font_size) for word in words)
+    
+    # Calculate available space for gaps between words
+    available_space = max_width - total_word_width
+    
+    # Number of gaps between words
+    num_gaps = len(words) - 1
+    
+    if num_gaps > 0 and available_space > 0:
+        # Calculate space between each word
+        space_per_gap = available_space / num_gaps
+        
+        # Draw each word with calculated spacing
+        current_x = x
+        for i, word in enumerate(words):
+            c.drawString(current_x, y, word)
+            if i < len(words) - 1:  # Not the last word
+                word_width = c.stringWidth(word, font_name, font_size)
+                current_x += word_width + space_per_gap
+    else:
+        # Fallback to normal left-aligned text
+        c.drawString(x, y, text)
+
+def wrap_text_for_justify(text, max_chars_per_line):
+    """
+    Custom text wrapping that's better suited for justification
+    """
+    paragraphs = text.split('\n\n')
+    wrapped_lines = []
+    
+    for paragraph in paragraphs:
+        if paragraph.strip():
+            # Use textwrap but with more conservative line length for better justification
+            lines = textwrap.wrap(paragraph.strip(), width=max_chars_per_line, break_long_words=False)
+            wrapped_lines.extend(lines)
+        wrapped_lines.append("")  # Empty line between paragraphs
+    
+    return wrapped_lines

@@ -4,15 +4,18 @@ Summary and QR code endpoints for conversation downloads
 
 import logging
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, status, Response, Depends
+from fastapi import APIRouter, HTTPException, status, Response, Depends, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.responses import FileResponse
+import os
 
 from app.services.qr_service import qr_service
 from app.models import Conversation, Message, Note
 from app.core.config import settings
 from app.core.database import get_db_session
 from app.db.crud import MessageCRUD
+from app.db.crud import NoteCRUD
 from app.services.langchain_service import get_langchain_service 
 
 logger = logging.getLogger(__name__)
@@ -94,10 +97,8 @@ async def generate_conversation_summary(request: SummaryRequest, db: AsyncSessio
         
         if request.include_qr:
             summary_data = {
-                "title": conversation_data["title"],
-                "message_count": len(messages),
-                "duration": "2 menit",  # TODO: calculate real duration if needed
-                "topics": ["Bahasa Isyarat", "Huruf A"]  # TODO: extract real topics if needed
+                "title": title,
+                "message_count": len(messages)
             }
             
             qr_result = qr_service.generate_conversation_summary_qr(
@@ -115,6 +116,35 @@ async def generate_conversation_summary(request: SummaryRequest, db: AsyncSessio
             )
             
             download_url = qr_result["download_url"]
+            print(f"Download URL: {download_url}")
+
+        try:
+            existing_note = await NoteCRUD.get_by_conversation(db, request.conversation_id)
+            if existing_note:
+                # Update the existing note with a new title and content
+                await NoteCRUD.update(
+                    db,
+                    note_id=existing_note[0].note_id,  # Assuming we want to update the first note for the conversation
+                    title=[title],  # Set the title when updating
+                    note_content=summary_text,
+                    url_access=qr_result["access_token"]  # Set url_access when updating
+                )
+            else:
+                # Create a new note if it doesn't exist
+                await NoteCRUD.create(
+                    db,
+                    conversation_id=request.conversation_id,
+                    note_content=summary_text,
+                    title=[title],  # Set the title when creating a new note
+                    url_access=qr_result["access_token"]  # Set url_access when creating
+                )
+        except Exception as e:
+            logger.error(f"Failed to create or update note: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create or update conversation note"
+            )
+
         
         return SummaryResponse(
             conversation_id=request.conversation_id,
@@ -141,55 +171,65 @@ async def download_summary(access_token: str, format: str = "text", db: AsyncSes
         # In production, validate access_token from database/Redis and get conversation_id
         # For now, you must implement logic to map access_token to conversation_id
         # Here, we use a placeholder conversation_id for demonstration
-        conversation_id = 1  # TODO: Replace with real lookup from access_token
-        user_id = 1  # TODO: Replace with real user_id if needed
+    
         
-        conversation_data = {
-            "conversation_id": conversation_id,
-            "user_id": user_id,
-            "title": f"Percakapan #{conversation_id}",
-            "created_at": "2025-07-18T10:30:00Z"  # TODO: fetch real created_at if needed
-        }
+        # conversation_data = {
+        #     "conversation_id": conversation_id,
+        #     "user_id": user_id,
+        #     "title": f"Percakapan #{conversation_id}",
+        #     "created_at": "2025-07-18T10:30:00Z"  # TODO: fetch real created_at if needed
+        # }
         
-        # Fetch messages from database
-        db_messages = await MessageCRUD.get_by_conversation(db, conversation_id)
-        messages = [
-            {
-                "message_id": msg.message_id,
-                "sender_type": "user" if msg.is_user else "ai",
-                "content": msg.message_content,
-                "created_at": msg.created_at.isoformat() if hasattr(msg, "created_at") else None
-            }
-            for msg in db_messages
-        ]
-        
-        # Generate summary content
-        summary_content = qr_service.create_summary_document(
-            conversation_data,
-            messages,
-            format
+
+        notes = await NoteCRUD.get_by_url_access(db, access_token)
+        if not notes:
+            raise HTTPException(status_code=404, detail="Note not found")
+        note = notes[0]  # Ambil satu note (atau sesuaikan jika ingin multi)
+
+        # 2. Siapkan data
+        title = note.title if isinstance(note.title, str) else (note.title[0] if note.title else "")
+        note_content = note.note_content
+        url_access = note.url_access
+        created_at = note.created_at.strftime("%Y-%m-%d %H:%M")
+
+        print(f"Downloading note: {note.note_id}, Title: {title}, Created At: {created_at}, URL Access: {url_access}")
+
+        # filename = f"/home/dimas/tunarasa/assets/note_{note.note_id}.pdf"
+        filename = f"/app/assets/note_{note.note_id}.pdf"
+        qr_service.create_note_pdf(filename, title, note_content, url_access, created_at)
+
+        return FileResponse(
+            filename,
+            media_type="application/pdf",
+            filename=os.path.basename(filename)
         )
+        # # Generate summary content
+        # summary_content = qr_service.create_summary_document(
+        #     conversation_data,
+        #     messages,
+        #     format
+        # )
         
-        # Set appropriate content type and filename
-        if format == "json":
-            media_type = "application/json"
-            filename = f"tunarasa-summary-{access_token[:8]}.json"
-        elif format == "html":
-            media_type = "text/html"
-            filename = f"tunarasa-summary-{access_token[:8]}.html"
-        else:
-            media_type = "text/plain"
-            filename = f"tunarasa-summary-{access_token[:8]}.txt"
+        # # Set appropriate content type and filename
+        # if format == "json":
+        #     media_type = "application/json"
+        #     filename = f"tunarasa-summary-{access_token[:8]}.json"
+        # elif format == "html":
+        #     media_type = "text/html"
+        #     filename = f"tunarasa-summary-{access_token[:8]}.html"
+        # else:
+        #     media_type = "text/plain"
+        #     filename = f"tunarasa-summary-{access_token[:8]}.txt"
         
-        # Return file download
-        return Response(
-            content=summary_content.encode('utf-8'),
-            media_type=media_type,
-            headers={
-                "Content-Disposition": f"attachment; filename={filename}",
-                "Content-Type": f"{media_type}; charset=utf-8"
-            }
-        )
+        # # Return file download
+        # return Response(
+        #     content=summary_content.encode('utf-8'),
+        #     media_type=media_type,
+        #     headers={
+        #         "Content-Disposition": f"attachment; filename={filename}",
+        #         "Content-Type": f"{media_type}; charset=utf-8"
+        #     }
+        # )
         
     except Exception as e:
         logger.error(f"Failed to download summary: {e}")
@@ -197,38 +237,6 @@ async def download_summary(access_token: str, format: str = "text", db: AsyncSes
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Summary not found or access token expired"
         )
-
-
-@router.post("/note/qr", response_model=Dict[str, str])
-async def generate_note_qr(
-    note_id: int,
-    conversation_id: int,
-    note_content: str
-):
-    """
-    Generate QR code for individual note access
-    """
-    try:
-        qr_result = qr_service.generate_note_qr(
-            note_id,
-            conversation_id, 
-            note_content
-        )
-        
-        return {
-            "qr_code_base64": qr_result["qr_code_base64"],
-            "access_token": qr_result["access_token"],
-            "access_url": qr_result["access_url"],
-            "note_preview": note_content[:100] + "..." if len(note_content) > 100 else note_content
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to generate note QR: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate QR code for note"
-        )
-
 
 @router.get("/note/{access_token}")
 async def access_note(access_token: str):
@@ -259,3 +267,34 @@ async def access_note(access_token: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Note not found or access token expired"
         )
+    
+
+# @router.post("/note/qr", response_model=Dict[str, str])
+# async def generate_note_qr(
+#     note_id: int,
+#     conversation_id: int,
+#     note_content: str
+# ):
+#     """
+#     Generate QR code for individual note access
+#     """
+#     try:
+#         qr_result = qr_service.generate_note_qr(
+#             note_id,
+#             conversation_id, 
+#             note_content
+#         )
+        
+#         return {
+#             "qr_code_base64": qr_result["qr_code_base64"],
+#             "access_token": qr_result["access_token"],
+#             "access_url": qr_result["access_url"],
+#             "note_preview": note_content[:100] + "..." if len(note_content) > 100 else note_content
+#         }
+        
+#     except Exception as e:
+#         logger.error(f"Failed to generate note QR: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to generate QR code for note"
+#         )

@@ -11,6 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import ARRAY
 
 from app.core.database import Base
 
@@ -124,6 +125,8 @@ class Note(Base):
     note_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     conversation_id: Mapped[int] = mapped_column(Integer, ForeignKey("conversations.conversation_id"), nullable=False)
     note_content: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[Optional[list[str]]] = mapped_column(ARRAY(String), nullable=True)
+    # qr_code_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     url_access: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     

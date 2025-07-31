@@ -1039,7 +1039,8 @@ class EnhancedLangChainService:
             1. Ringkas percakapan ini dalam 1-3 paragraf (tergantung panjang percakapan)
             2. Fokus pada topik utama, poin penting, dan kesimpulan
             3. Gunakan bahasa Indonesia yang jelas dan mudah dipahami
-            4. Jangan gunakan format dialog, tapi paragraf deskriptif
+            4. Hindari penggunaan kalimat pengantar seperti "berikut hasil rangkuman" atau kata-kata penghubung lainnya.
+            5. Jangan menggunakan format dialog, tapi buatlah dalam bentuk paragraf deskriptif.
 
             RINGKASAN:
             """
@@ -1059,11 +1060,12 @@ class EnhancedLangChainService:
             {summary_text}
             
             TUGAS:
-            1. Buat judul yang mencerminkan topik utama percakapan
-            2. Maksimal 8-10 kata
-            3. Gunakan bahasa Indonesia
-            4. Hindari kata-kata umum seperti "ringkasan", "percakapan"
-            5. Fokus pada substansi/topik yang dibahas
+            1. Buat judul yang menggambarkan topik utama percakapan.
+            2. Judul maksimal terdiri dari 8-10 kata.
+            3. Gunakan bahasa Indonesia yang jelas dan lugas.
+            4. Hindari penggunaan kata-kata umum seperti "ringkasan", "percakapan", atau istilah generik lainnya.
+            5. Fokuskan judul pada substansi/topik yang dibahas tanpa menambahkan karakter atau tanda selain kata-kata yang relevan.
+
 
             JUDUL:
             """

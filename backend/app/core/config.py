@@ -127,8 +127,4 @@ def get_database_url() -> str:
     return f"postgresql+asyncpg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
 
 def test_database_connection():
-<<<<<<< HEAD
     pass
-=======
-    pass
->>>>>>> origin/dimas-dev
