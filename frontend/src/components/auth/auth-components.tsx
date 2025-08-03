@@ -160,9 +160,6 @@ export function AuthStatus() {
 }
 
 /**
- * Admin only wrapper component
- */
-/**
  * Internal Clerk-enabled admin component
  */
 function AdminOnlyWithClerk({ children }: { children: React.ReactNode }) {

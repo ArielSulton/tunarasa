@@ -308,13 +308,15 @@ class NoteCRUD:
         db: AsyncSession,
         conversation_id: int,
         note_content: str,
+        title: Optional[str] = None,
         url_access: Optional[str] = None,
     ) -> Note:
         """Create a new note"""
         note = Note(
             conversation_id=conversation_id,
             note_content=note_content,
-            url_access=url_access,
+            title=[title] if title else None,  # Include the new title column
+            url_access=url_access,  # Include url_access column
         )
         db.add(note)
         await db.commit()
@@ -333,6 +335,15 @@ class NoteCRUD:
         return result.scalars().all()
 
     @staticmethod
+    async def get_by_url_access(db: AsyncSession, url_access: str) -> List[Note]:
+        """Get all notes for a given URL access"""
+        stmt = (
+            select(Note).where(Note.url_access == url_access).order_by(Note.created_at)
+        )
+        result = await db.execute(stmt)
+        return result.scalars().all()
+
+    @staticmethod
     async def get_by_id(db: AsyncSession, note_id: int) -> Optional[Note]:
         """Get note by ID"""
         stmt = select(Note).where(Note.note_id == note_id)
@@ -340,9 +351,27 @@ class NoteCRUD:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def update(db: AsyncSession, note_id: int, **updates) -> Optional[Note]:
+    async def update(
+        db: AsyncSession,
+        note_id: int,
+        title: Optional[str] = None,
+        note_content: Optional[str] = None,
+        url_access: Optional[str] = None,
+        **updates
+    ) -> Optional[Note]:
         """Update note by ID"""
-        stmt = update(Note).where(Note.note_id == note_id).values(**updates)
+        update_data = {}
+        if title is not None:
+            update_data["title"] = [title] if title else None
+        if note_content is not None:
+            update_data["note_content"] = note_content
+        if url_access is not None:
+            update_data["url_access"] = url_access
+
+        # Include any additional updates
+        update_data.update(updates)
+
+        stmt = update(Note).where(Note.note_id == note_id).values(**update_data)
         await db.execute(stmt)
         await db.commit()
         return await NoteCRUD.get_by_id(db, note_id)

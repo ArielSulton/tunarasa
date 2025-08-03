@@ -201,6 +201,7 @@ services:
     networks:
       - tunarasa-net
     volumes:
+      - ./assets:/app/assets
       - ./backend:/app
       - ./backend/uploads:/app/uploads
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

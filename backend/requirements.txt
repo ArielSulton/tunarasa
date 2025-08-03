@@ -8,6 +8,7 @@ pydantic-settings
 sqlalchemy
 psycopg2-binary
 alembic
+asyncpg
 
 # Authentication and Security
 python-jose[cryptography]
@@ -54,3 +55,6 @@ black
 ruff
 isort
 mypy
+
+# PDF Generation
+reportlab

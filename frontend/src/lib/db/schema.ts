@@ -185,6 +185,7 @@ export const notes = pgTable(
       .notNull()
       .references(() => conversations.conversationId, { onDelete: 'cascade' }),
     noteContent: text('note_content').notNull(),
+    title: varchar('title', { length: 255 }), // New column for title
     urlAccess: varchar('url_access', { length: 255 }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },

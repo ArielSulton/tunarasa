@@ -1023,8 +1023,97 @@ class EnhancedLangChainService:
             logger.error(f"Failed to clear conversation memory: {e}")
             return False
 
+    async def correct_typo_question(self, question: str, language: str = "id") -> str:
+        """Correct typos in the question using LLM, focusing only on spelling/typo, not grammar or structure. Context: Dukcapil public service."""
+        if language == "id":
+            prompt = (
+                "Perbaiki hanya kesalahan ketik (typo) pada pertanyaan berikut, tanpa mengubah struktur kalimat atau memperbaiki tata bahasa. "
+                "Fokus pada konteks pelayanan publik Dukcapil. Pastikan tidak ada tanda baca yang salah dan hindari penggunaan singkatan. "
+                "Kembalikan hanya pertanyaan yang telah diperbaiki tanpa penjelasan apapun.\n"
+                f"PERTANYAAN: {question}"
+            )
+        else:
+            prompt = (
+                "Correct only the typos in the following question, without changing the sentence structure or grammar. "
+                "Focus on the context of Indonesian public service (Dukcapil). Ensure there are no incorrect punctuation marks and avoid abbreviations. "
+                "Return only the corrected question, without any explanation.\n"
+                f"QUESTION: {question}"
+            )
+        response = await asyncio.to_thread(self.llm.invoke, prompt)
+        return (
+            response.content.strip()
+            if hasattr(response, "content")
+            else str(response).strip()
+        )
 
-# Mock classes removed - use real services only
+    async def generate_summary(self, conversation_text: str) -> str:
+        """
+        Generate summary and title for the conversation using LLM.
+
+        Args:
+            conversation_text: The full text of the conversation.
+
+        Returns:
+            Dict containing the generated summary and title.
+        """
+        try:
+            # Create the prompt for the LLM
+            prompt = f"""
+            Berdasarkan percakapan berikut, buatlah ringkasan dalam format paragraf naratif yang mencakup poin-poin penting dari diskusi:
+
+            PERCAKAPAN:
+            {conversation_text}
+
+            TUGAS:
+            1. Ringkas percakapan ini dalam 1-3 paragraf (tergantung panjang percakapan)
+            2. Fokus pada topik utama, poin penting, dan kesimpulan
+            3. Gunakan bahasa Indonesia yang jelas dan mudah dipahami
+            4. Hindari penggunaan kalimat pengantar seperti "berikut hasil rangkuman" atau kata-kata penghubung lainnya.
+            5. Jangan menggunakan format dialog, tapi buatlah dalam bentuk paragraf deskriptif.
+
+            RINGKASAN:
+            """
+
+            # Call the LLM for generating summary and title
+            response = await asyncio.to_thread(self.llm.invoke, prompt)
+            return (
+                response.content.strip()
+                if hasattr(response, "content")
+                else str(response).strip()
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate summary: {e}")
+            return "Gagal menghasilkan ringkasan percakapan"
+
+    async def generate_title_of_summary(self, summary_text: str) -> str:
+        try:
+            prompt = f"""
+            Berdasarkan ringkasan percakapan berikut, buatlah judul yang singkat dan deskriptif:
+
+            RINGKASAN:
+            {summary_text}
+
+            TUGAS:
+            1. Buat judul yang menggambarkan topik utama percakapan.
+            2. Judul maksimal terdiri dari 8-10 kata.
+            3. Gunakan bahasa Indonesia yang jelas dan lugas.
+            4. Hindari penggunaan kata-kata umum seperti "ringkasan", "percakapan", atau istilah generik lainnya.
+            5. Fokuskan judul pada substansi/topik yang dibahas tanpa menambahkan karakter atau tanda selain kata-kata yang relevan.
+
+
+            JUDUL:
+            """
+
+            # Call the LLM for generating summary and title
+            response = await asyncio.to_thread(self.llm.invoke, prompt)
+            return (
+                response.content.strip()
+                if hasattr(response, "content")
+                else str(response).strip()
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate summary: {e}")
+            return "Gagal menghasilkan ringkasan percakapan"
 
 
 # Global service instance

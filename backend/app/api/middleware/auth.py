@@ -64,6 +64,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/session/create",
         "/api/v1/health/check",
         "/api/v1/rag/ask",  # Allow public access for gesture recognition Q&A
+        "/api/v1/question/ask",  # Allow public access for question answering
+        "/api/v1/summary/generate",  # Allow public access for summary generation
     }
 
     # Admin endpoints that require Clerk authentication
@@ -81,6 +83,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
         """
 
         # Skip authentication for public endpoints
+
+        if request.url.path in self.PUBLIC_ENDPOINTS or request.url.path.startswith(
+            "/api/v1/summary/"
+        ):
+            return await call_next(request)
+
         if self._is_public_endpoint(request.url.path):
             return await call_next(request)
 

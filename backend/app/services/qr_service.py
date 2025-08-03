@@ -5,6 +5,7 @@ QR Code generation service for conversation summaries
 import base64
 import json
 import logging
+import textwrap
 import uuid
 from datetime import datetime
 from io import BytesIO
@@ -12,6 +13,10 @@ from typing import Any, Dict
 
 import qrcode
 import qrcode.image.svg
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.pdfgen import canvas
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +176,8 @@ class QRCodeService:
 
     def create_summary_document(
         self,
+        title: str,
+        summary_text: str,
         conversation_data: Dict[str, Any],
         messages: list,
         format_type: str = "text",
@@ -190,47 +197,41 @@ class QRCodeService:
             if format_type == "json":
                 return self._create_json_summary(conversation_data, messages)
             elif format_type == "html":
-                return self._create_html_summary(conversation_data, messages)
+                return self._create_html_summary(
+                    conversation_data, messages, summary_text, title
+                )
             else:
-                return self._create_text_summary(conversation_data, messages)
+                return self._create_text_summary(
+                    conversation_data, messages, summary_text, title
+                )
 
         except Exception as e:
             logger.error(f"Failed to create summary document: {e}")
             raise
 
-    def _create_text_summary(self, conversation_data: Dict, messages: list) -> str:
+    def _create_text_summary(
+        self, conversation_data: Dict, messages: list, summary: str, title_text: str
+    ) -> str:
         """Create plain text summary"""
 
-        title = conversation_data.get("title", "Ringkasan Percakapan")
         created_at = conversation_data.get("created_at", datetime.utcnow().isoformat())
 
-        summary = f"""
+        text_summary = f"""
 RINGKASAN PERCAKAPAN TUNARASA
 =============================
 
-Judul: {title}
+Judul: {title_text}
 Tanggal: {created_at}
 Total Pesan: {len(messages)}
 
-ISI PERCAKAPAN:
----------------
+{summary}
 
-"""
-
-        for i, message in enumerate(messages, 1):
-            sender = "👤 Pengguna" if message.get("sender_type") == "user" else "🤖 AI"
-            content = message.get("content", "")
-            timestamp = message.get("created_at", "")
-
-            summary += f"{i}. {sender} ({timestamp}):\n{content}\n\n"
-
-        summary += """
 ---
 Dibuat oleh Tunarasa - Platform Bahasa Isyarat Indonesia
-https://tunarasa.app
+https://tunarasa.my.id
 """
 
-        return summary
+        return text_summary
 
     def _create_json_summary(self, conversation_data: Dict, messages: list) -> str:
         """Create JSON summary"""
@@ -251,74 +252,259 @@ https://tunarasa.app
             "platform": {
                 "name": "Tunarasa",
                 "description": "Platform Bahasa Isyarat Indonesia",
-                "url": "https://tunarasa.app",
+                "url": "https://tunarasa.my.id",
             },
         }
 
         return json.dumps(summary_data, indent=2, ensure_ascii=False)
 
-    def _create_html_summary(self, conversation_data: Dict, messages: list) -> str:
+    def _create_html_summary(
+        self, conversation_data: Dict, messages: list, summary: str, title_text: str
+    ) -> str:
         """Create HTML summary"""
 
+        # Extract title and created_at from the conversation_data
         title = conversation_data.get("title", "Ringkasan Percakapan")
         created_at = conversation_data.get("created_at", datetime.utcnow().isoformat())
 
+        # Format summary string into paragraphs by splitting at double newlines \n\n
+        formatted_messages = summary.split("\n\n")
+        formatted_content = "".join(
+            [f"<p>{message.strip()}</p>" for message in formatted_messages]
+        )
+
+        # Prepare the HTML structure with dynamic content
         html = f"""
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title} - Tunarasa</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px; }}
-        .message {{ margin: 15px 0; padding: 15px; border-radius: 8px; }}
-        .user {{ background: #e3f2fd; border-left: 4px solid #2196f3; }}
-        .ai {{ background: #f3e5f5; border-left: 4px solid #9c27b0; }}
-        .timestamp {{ font-size: 12px; color: #666; }}
-        .footer {{ margin-top: 30px; text-align: center; color: #666; }}
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🤟 {title}</h1>
-        <p><strong>Tanggal:</strong> {created_at}</p>
-        <p><strong>Total Pesan:</strong> {len(messages)}</p>
-    </div>
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{title} - Tunarasa</title>
+        <style>
+            /* General styles */
+            body {{
+                font-family: Arial, sans-serif;
+                background-color: #f4f7fa;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                color: #333;
+            }}
 
-    <div class="conversation">
-"""
+            h1 {{
+                font-size: 28px;
+                color: #333;
+            }}
 
-        for message in messages:
-            sender_class = "user" if message.get("sender_type") == "user" else "ai"
-            sender_name = (
-                "👤 Pengguna"
-                if message.get("sender_type") == "user"
-                else "🤖 AI Assistant"
-            )
-            content = message.get("content", "")
-            timestamp = message.get("created_at", "")
+            p {{
+                line-height: 1.6;
+            }}
 
-            html += f"""
-        <div class="message {sender_class}">
-            <div class="timestamp">{sender_name} - {timestamp}</div>
-            <div class="content">{content}</div>
+            /* Header Styles */
+            .header {{
+                background-color: #ffffff;
+                padding: 25px;
+                border-radius: 12px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+                text-align: center;
+            }}
+
+            .header h1 {{
+                font-size: 32px;
+                margin: 0;
+                color: #007bff;
+            }}
+
+            .header p {{
+                font-size: 14px;
+                color: #666;
+            }}
+
+            /* Summary Styles */
+            .summary {{
+                background-color: #ffffff;
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+            }}
+
+            .summary p {{
+                font-size: 16px;
+                color: #333;
+                margin-bottom: 20px;
+            }}
+
+            /* Footer Styles */
+            .footer {{
+                margin-top: 40px;
+                text-align: center;
+                font-size: 14px;
+                color: #888;
+            }}
+
+            .footer a {{
+                color: #007bff;
+                text-decoration: none;
+            }}
+
+            .footer a:hover {{
+                text-decoration: underline;
+            }}
+        </style>
+    </head>
+    <body>
+        <!-- Header -->
+        <div class="header">
+            <h1>{title_text}</h1>
+            <p><strong>Tanggal:</strong> {created_at}</p>
+            <p><strong>Total Pesan:</strong> {len(messages)}</p>
         </div>
-"""
 
-        html += """
-    </div>
+        <!-- Summary Content -->
+        <div class="summary" id="summaryContent">
+            {formatted_content}
+        </div>
 
-    <div class="footer">
-        <p>Dibuat oleh <strong>Tunarasa</strong> - Platform Bahasa Isyarat Indonesia</p>
-        <p><a href="https://tunarasa.app">https://tunarasa.app</a></p>
-    </div>
-</body>
-</html>
-"""
-
+        <!-- Footer -->
+        <div class="footer">
+            <p>Dibuat oleh <strong>Tunarasa</strong> - Platform Bahasa Isyarat Indonesia</p>
+            <p><a href="https://tunarasa.my.id" target="_blank">https://tunarasa.my.id</a></p>
+        </div>
+    </body>
+    </html>
+        """
         return html
+
+    def create_note_pdf(self, filename, title, note_content, url_access, created_at):
+        c = canvas.Canvas(filename, pagesize=A4)
+        width, height = A4
+        margin = 2 * cm
+        content_width = width - 2 * margin
+
+        # Current Y position (starting from top)
+        y_position = height - 2 * cm
+
+        # Header section with metadata
+        c.setFont("Helvetica", 9)
+        c.setFillColor(colors.grey)
+        c.drawRightString(width - margin, y_position, f"ID: {url_access}")
+        y_position -= 0.4 * cm
+        c.drawRightString(width - margin, y_position, f"Created: {created_at}")
+
+        # Move down for title
+        y_position -= 1.5 * cm
+
+        # Title (centered, bold, with some styling)
+        c.setFont("Helvetica-Bold", 16)
+        c.setFillColor(colors.black)
+        # Wrap title if too long
+        title_wrapped = textwrap.fill(title, width=60)
+        title_lines = title_wrapped.split("\n")
+
+        for line in title_lines:
+            c.drawCentredString(width / 2, y_position, line)
+            y_position -= 0.6 * cm
+
+        # Add separator line
+        y_position -= 0.5 * cm
+        c.setStrokeColor(colors.grey)
+        c.setLineWidth(0.5)
+        c.line(margin, y_position, width - margin, y_position)
+        y_position -= 1 * cm
+
+        # Content section with justified text
+        c.setFont("Helvetica", 11)
+        c.setFillColor(colors.black)
+
+        # Wrap content text with better parameters for justification
+        max_chars_per_line = 75  # Slightly reduced for better word distribution
+        content_lines = wrap_text_for_justify(note_content, max_chars_per_line)
+
+        line_height = 0.5 * cm
+
+        for i, line in enumerate(content_lines):
+            # Check if we need a new page
+            if y_position < 3 * cm:  # Leave margin at bottom
+                c.showPage()
+                y_position = height - 2 * cm
+
+            if line.strip():  # Only justify non-empty lines
+                # Don't justify the last line of a paragraph or very short lines
+                is_last_line_of_paragraph = (
+                    i == len(content_lines) - 1 or content_lines[i + 1].strip() == ""
+                )
+                is_short_line = len(line.split()) <= 3
+
+                if is_last_line_of_paragraph or is_short_line:
+                    # Draw normally (left-aligned) for last lines and short lines
+                    c.drawString(margin, y_position, line)
+                else:
+                    # Draw justified
+                    justify_text(c, line, margin, y_position, content_width)
+
+            y_position -= line_height
+
+        c.save()
+
+
+def justify_text(c, text, x, y, max_width, font_name="Helvetica", font_size=11):
+    """
+    Draw justified text on canvas
+    """
+    c.setFont(font_name, font_size)
+
+    # Split text into words
+    words = text.split()
+    if len(words) <= 1:
+        # If only one word or empty, just draw normally
+        c.drawString(x, y, text)
+        return
+
+    # Calculate total width of all words without spaces
+    total_word_width = sum(c.stringWidth(word, font_name, font_size) for word in words)
+
+    # Calculate available space for gaps between words
+    available_space = max_width - total_word_width
+
+    # Number of gaps between words
+    num_gaps = len(words) - 1
+
+    if num_gaps > 0 and available_space > 0:
+        # Calculate space between each word
+        space_per_gap = available_space / num_gaps
+
+        # Draw each word with calculated spacing
+        current_x = x
+        for i, word in enumerate(words):
+            c.drawString(current_x, y, word)
+            if i < len(words) - 1:  # Not the last word
+                word_width = c.stringWidth(word, font_name, font_size)
+                current_x += word_width + space_per_gap
+    else:
+        # Fallback to normal left-aligned text
+        c.drawString(x, y, text)
+
+
+def wrap_text_for_justify(text, max_chars_per_line):
+    """
+    Custom text wrapping that's better suited for justification
+    """
+    paragraphs = text.split("\n\n")
+    wrapped_lines = []
+
+    for paragraph in paragraphs:
+        if paragraph.strip():
+            # Use textwrap but with more conservative line length for better justification
+            lines = textwrap.wrap(
+                paragraph.strip(), width=max_chars_per_line, break_long_words=False
+            )
+            wrapped_lines.extend(lines)
+        wrapped_lines.append("")  # Empty line between paragraphs
+
+    return wrapped_lines
 
 
 # Global QR service instance

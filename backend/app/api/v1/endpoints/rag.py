@@ -13,6 +13,7 @@ import redis
 from app.core.config import settings
 from app.services.document_manager import DocumentManager, get_document_manager
 from app.services.evaluation_service import evaluation_service
+from app.services.langchain_service import get_langchain_service
 from app.services.metrics_service import metrics_service
 from app.services.qr_service import qr_service
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -505,9 +506,15 @@ async def ask_question_with_rag(
         # Generate conversation ID
         conversation_id = f"{request.session_id}_{int(start_time.timestamp())}"
 
-        # Process question through existing RAG pipeline
+        # Step 1: Correct typos in the question
+        langchain_service = get_langchain_service()
+        corrected_question = await langchain_service.correct_typo_question(
+            request.question, language=request.language
+        )
+
+        # Step 2: Process RAG with corrected question
         result = await doc_manager.search_with_qa(
-            question=request.question,
+            question=corrected_question,
             session_id=request.session_id,
             language=request.language,
             max_docs=request.max_sources,
@@ -599,7 +606,7 @@ async def ask_question_with_rag(
 
         return QuestionAnswerResponse(
             success=result["success"],
-            question=request.question,
+            question=corrected_question,  # return the corrected question
             answer=answer,
             confidence=confidence,
             sources=sources,

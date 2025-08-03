@@ -126,11 +126,12 @@ def get_allowed_hosts() -> List[str]:
 # Construct secure Supabase SQLAlchemy connection string
 def get_database_url() -> str:
     """Construct secure database URL with enhanced security parameters"""
-    USER = os.getenv("user")
-    PASSWORD = os.getenv("password")
-    HOST = os.getenv("host")
-    PORT = os.getenv("port")
-    DBNAME = os.getenv("dbname")
+    # Support both environment variables and settings
+    USER = os.getenv("user") or settings.user
+    PASSWORD = os.getenv("password") or settings.password
+    HOST = os.getenv("host") or settings.host
+    PORT = os.getenv("port") or settings.port
+    DBNAME = os.getenv("dbname") or settings.dbname
 
     if not all([USER, PASSWORD, HOST, PORT, DBNAME]):
         raise ValueError("Missing required database environment variables")
@@ -154,6 +155,21 @@ def get_database_url() -> str:
     params_string = "&".join([f"{k}={v}" for k, v in security_params.items()])
 
     return f"postgresql+psycopg2://{encoded_user}:{encoded_password}@{HOST}:{PORT}/{DBNAME}?{params_string}"
+
+
+# Support for async database connection (dimas-dev feature)
+def get_async_database_url() -> str:
+    """Construct async database URL for async operations"""
+    USER = os.getenv("user") or settings.user
+    PASSWORD = os.getenv("password") or settings.password
+    HOST = os.getenv("host") or settings.host
+    PORT = os.getenv("port") or settings.port
+    DBNAME = os.getenv("dbname") or settings.dbname
+
+    if not all([USER, PASSWORD, HOST, PORT, DBNAME]):
+        raise ValueError("Missing required database environment variables")
+
+    return f"postgresql+asyncpg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
 
 
 # Create secure SQLAlchemy engine with connection pooling
