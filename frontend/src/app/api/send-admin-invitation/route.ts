@@ -62,9 +62,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get email configuration from environment
-    const fromEmail = process.env.FROM_EMAIL || 'admin@mail.tunarasa.my.id'
-    const fromName = process.env.FROM_NAME || 'Tunarasa Admin'
-    const replyToEmail = process.env.ADMIN_EMAIL || 'noreply@mail.tunarasa.my.id'
+    const fromEmail = process.env.FROM_EMAIL ?? 'admin@mail.tunarasa.my.id'
+    const fromName = process.env.FROM_NAME ?? 'Tunarasa Admin'
+    const replyToEmail = process.env.ADMIN_EMAIL ?? 'noreply@mail.tunarasa.my.id'
 
     // Send email using Resend
     const resendClient = getResendClient()
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Optional: Add rate limiting
-export async function GET() {
+export function GET() {
   return NextResponse.json({ error: 'Method not allowed' }, { status: 405 })
 }
 

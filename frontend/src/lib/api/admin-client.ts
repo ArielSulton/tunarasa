@@ -193,9 +193,9 @@ export interface ConversationEvaluation {
 }
 
 class AdminApiClient {
-  private baseUrl: string
+  private readonly baseUrl: string
 
-  constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000') {
+  constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000') {
     this.baseUrl = baseUrl
   }
 
@@ -216,7 +216,7 @@ class AdminApiClient {
         const errorData = await response.json().catch(() => ({}))
         return {
           success: false,
-          error: errorData.detail || `HTTP ${response.status}: ${response.statusText}`,
+          error: errorData.detail ?? `HTTP ${response.status}: ${response.statusText}`,
         }
       }
 

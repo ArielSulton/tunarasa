@@ -36,10 +36,10 @@ interface GestureHealthResponse {
 }
 
 class GestureApiClient {
-  private baseUrl: string
+  private readonly baseUrl: string
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
   }
 
   /**
@@ -54,8 +54,8 @@ class GestureApiClient {
         },
         body: JSON.stringify({
           text: request.text,
-          session_id: request.session_id || `gesture_${Date.now()}`,
-          language: request.language || 'id',
+          session_id: request.session_id ?? `gesture_${Date.now()}`,
+          language: request.language ?? 'id',
           gesture_confidence: request.gesture_confidence,
         }),
       })

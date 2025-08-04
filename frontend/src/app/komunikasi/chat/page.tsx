@@ -59,7 +59,7 @@ export default function KomunikasiChat() {
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: data.answer || 'Maaf, saya tidak dapat memproses pertanyaan Anda saat ini.',
+        content: data.answer ?? 'Maaf, saya tidak dapat memproses pertanyaan Anda saat ini.',
         timestamp: new Date(),
         confidence: data.confidence,
       }
@@ -83,7 +83,7 @@ export default function KomunikasiChat() {
   // Send typed message
   const sendTypedMessage = useCallback(() => {
     if (inputMessage.trim()) {
-      sendMessage(inputMessage)
+      void sendMessage(inputMessage)
       setInputMessage('')
     }
   }, [inputMessage, sendMessage])
@@ -232,7 +232,7 @@ export default function KomunikasiChat() {
                     key={index}
                     variant="outline"
                     className="h-auto w-full justify-start p-3 text-left hover:bg-purple-50"
-                    onClick={() => sendMessage(question)}
+                    onClick={() => void sendMessage(question)}
                   >
                     <span className="text-sm">{question}</span>
                   </Button>

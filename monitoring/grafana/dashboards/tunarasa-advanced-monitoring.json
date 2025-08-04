@@ -1,0 +1,734 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Tunarasa Advanced Monitoring Hub",
+    "description": "Comprehensive monitoring dashboard with modern visualizations, AI insights, and interactive navigation for the Tunarasa accessibility platform",
+    "tags": ["tunarasa", "ai", "monitoring", "accessibility", "llm", "gesture-recognition"],
+    "style": "dark",
+    "timezone": "browser",
+    "editable": true,
+    "hideControls": false,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"],
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    },
+    "refresh": "10s",
+    "schemaVersion": 30,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "🎯 System Health Overview",
+        "type": "stat",
+        "description": "Real-time system health indicators with AI-powered anomaly detection",
+        "targets": [
+          {
+            "expr": "up{job=\"tunarasa-backend\"}",
+            "legendFormat": "Backend Health",
+            "refId": "A"
+          },
+          {
+            "expr": "up{job=\"tunarasa-frontend\"}",
+            "legendFormat": "Frontend Health",
+            "refId": "B"
+          },
+          {
+            "expr": "tunarasa_active_sessions_total",
+            "legendFormat": "Active Sessions",
+            "refId": "C"
+          },
+          {
+            "expr": "avg(tunarasa_llm_quality_score{metric=\"average\"})",
+            "legendFormat": "AI Quality Score",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.8},
+                {"color": "green", "value": 0.95}
+              ]
+            },
+            "mappings": [
+              {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
+              {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
+            ],
+            "custom": {
+              "displayMode": "gradient",
+              "orientation": "horizontal"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "AI Quality Score"},
+              "properties": [
+                {"id": "unit", "value": "percentunit"},
+                {"id": "max", "value": 1}
+              ]
+            }
+          ]
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "horizontal",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "center"
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+        "links": [
+          {
+            "title": "View System Details",
+            "url": "/d/tunarasa-system-details",
+            "type": "dashboard"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "🚀 Performance Metrics (Real-time)",
+        "type": "timeseries",
+        "description": "Dynamic performance visualization with threshold-based coloring",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "Response Time (P50)",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "Response Time (P95)",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "Response Time (P99)",
+            "refId": "C"
+          },
+          {
+            "expr": "sum(rate(tunarasa_http_requests_total[5m]))",
+            "legendFormat": "Request Rate",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "fillOpacity": 15,
+              "gradientMode": "scheme",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {"mode": "none", "group": "A"},
+              "axisPlacement": "auto",
+              "axisLabel": "Response Time",
+              "scaleDistribution": {"type": "linear"},
+              "hideFrom": {"legend": false, "tooltip": false, "vis": false},
+              "thresholdsStyle": {"mode": "area"}
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.5},
+                {"color": "red", "value": 1.0}
+              ]
+            },
+            "color": {"mode": "continuous-GrYlRd"}
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Request Rate"},
+              "properties": [
+                {"id": "unit", "value": "reqps"},
+                {"id": "custom.axisPlacement", "value": "right"},
+                {"id": "custom.axisLabel", "value": "Requests/sec"}
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {"mode": "multi", "sort": "desc"},
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["lastNotNull", "mean", "max"],
+            "showLegend": true
+          }
+        },
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 3,
+        "title": "🤖 AI Service Performance Heatmap",
+        "type": "heatmap",
+        "description": "AI request response times and confidence distribution",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(tunarasa_ai_request_duration_seconds_bucket[5m])) by (le, model))",
+            "legendFormat": "{{model}} Response Time",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "hideFrom": {"legend": false, "tooltip": false, "vis": false},
+              "scaleDistribution": {"type": "linear"}
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 3}
+              ]
+            },
+            "color": {"mode": "spectrum"},
+            "unit": "s"
+          }
+        },
+        "options": {
+          "calculate": false,
+          "cellGap": 2,
+          "cellValues": {
+            "unit": "s"
+          },
+          "color": {
+            "exponent": 0.5,
+            "fill": "dark-orange",
+            "min": 0,
+            "max": 5,
+            "mode": "spectrum",
+            "reverse": false,
+            "scale": "exponential",
+            "scheme": "Spectral",
+            "steps": 128
+          },
+          "exemplars": {
+            "color": "rgba(255,0,255,0.7)"
+          },
+          "filterValues": {
+            "le": 1e-9
+          },
+          "legend": {
+            "show": true
+          },
+          "rowsFrame": {
+            "layout": "auto"
+          },
+          "tooltip": {
+            "show": true,
+            "yHistogram": false
+          },
+          "yAxis": {
+            "axisPlacement": "left",
+            "reverse": false,
+            "unit": "s"
+          }
+        },
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8},
+        "links": [
+          {
+            "title": "View AI Service Details",
+            "url": "/d/tunarasa-ai-details?var-model=${__field.labels.model}",
+            "type": "dashboard"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "👁️ Gesture Recognition Analytics",
+        "type": "piechart",
+        "description": "Real-time gesture recognition accuracy and distribution",
+        "targets": [
+          {
+            "expr": "sum by (gesture_type) (rate(tunarasa_gesture_recognitions_total[5m]))",
+            "legendFormat": "{{gesture_type}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "hideFrom": {"legend": false, "tooltip": false, "vis": false}
+            },
+            "mappings": [],
+            "unit": "short",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "pieType": "donut",
+          "tooltip": {"mode": "single", "sort": "desc"},
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["percent", "value"]
+          },
+          "displayLabels": ["name", "percent"]
+        },
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 18}
+      },
+      {
+        "id": 5,
+        "title": "📊 Error Rate Analysis",
+        "type": "bargauge",
+        "description": "Error distribution across service endpoints",
+        "targets": [
+          {
+            "expr": "sum by (endpoint) (rate(tunarasa_http_requests_total{status_code=~\"5..\"}[5m])) / sum by (endpoint) (rate(tunarasa_http_requests_total[5m]))",
+            "legendFormat": "{{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.01},
+                {"color": "red", "value": 0.05}
+              ]
+            },
+            "custom": {
+              "orientation": "horizontal",
+              "displayMode": "gradient"
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true,
+          "minVizWidth": 0,
+          "minVizHeight": 10
+        },
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 18}
+      },
+      {
+        "id": 6,
+        "title": "💾 Resource Utilization",
+        "type": "timeseries",
+        "description": "System resource consumption with predictive trends",
+        "targets": [
+          {
+            "expr": "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "CPU Usage %",
+            "refId": "A"
+          },
+          {
+            "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
+            "legendFormat": "Memory Usage %",
+            "refId": "B"
+          },
+          {
+            "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{mountpoint=\"/\"})",
+            "legendFormat": "Disk Usage %",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "gradientMode": "opacity",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {"mode": "none", "group": "A"},
+              "axisPlacement": "auto",
+              "axisLabel": "Usage %",
+              "scaleDistribution": {"type": "linear"},
+              "hideFrom": {"legend": false, "tooltip": false, "vis": false},
+              "thresholdsStyle": {"mode": "line"}
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {"mode": "multi", "sort": "desc"},
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        },
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 18}
+      },
+      {
+        "id": 7,
+        "title": "🔍 DeepEval Quality Trends",
+        "type": "timeseries",
+        "description": "LLM quality metrics with anomaly detection and trend analysis",
+        "targets": [
+          {
+            "expr": "tunarasa_llm_quality_score{metric=\"average\"}",
+            "legendFormat": "{{category}} Quality",
+            "refId": "A"
+          },
+          {
+            "expr": "deriv(tunarasa_llm_quality_score{metric=\"average\"}[10m])",
+            "legendFormat": "{{category}} Trend",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "lineWidth": 3,
+              "fillOpacity": 25,
+              "gradientMode": "scheme",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "auto",
+              "pointSize": 8,
+              "stacking": {"mode": "none", "group": "A"},
+              "axisPlacement": "auto",
+              "axisLabel": "Quality Score",
+              "scaleDistribution": {"type": "linear"},
+              "hideFrom": {"legend": false, "tooltip": false, "vis": false},
+              "thresholdsStyle": {"mode": "area"}
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 0.5},
+                {"color": "green", "value": 0.7},
+                {"color": "dark-green", "value": 0.9}
+              ]
+            },
+            "color": {"mode": "continuous-BlPu"}
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byRegexp", "options": ".*Trend.*"},
+              "properties": [
+                {"id": "custom.axisPlacement", "value": "right"},
+                {"id": "custom.axisLabel", "value": "Trend Rate"},
+                {"id": "unit", "value": "short"},
+                {"id": "custom.drawStyle", "value": "bars"},
+                {"id": "custom.fillOpacity", "value": 50}
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {"mode": "multi", "sort": "desc"},
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["lastNotNull", "mean", "stdDev"],
+            "showLegend": true
+          }
+        },
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 26}
+      },
+      {
+        "id": 8,
+        "title": "📱 User Journey Tracking",
+        "type": "table",
+        "description": "Real-time user session analytics and conversion funnel",
+        "targets": [
+          {
+            "expr": "sum by (session_type, input_method) (tunarasa_user_sessions_total)",
+            "legendFormat": "",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "color-background",
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            },
+            "color": {"mode": "thresholds"}
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Value"},
+              "properties": [
+                {"id": "displayName", "value": "Session Count"},
+                {"id": "custom.displayMode", "value": "color-background"},
+                {"id": "custom.width", "value": 120}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "session_type"},
+              "properties": [
+                {"id": "displayName", "value": "Session Type"},
+                {"id": "custom.width", "value": 150}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "input_method"},
+              "properties": [
+                {"id": "displayName", "value": "Input Method"},
+                {"id": "custom.width", "value": 150}
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "frameIndex": 0,
+          "showTypeIcons": false
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36}
+      },
+      {
+        "id": 9,
+        "title": "⚡ Quick Actions & Navigation",
+        "type": "dashlist",
+        "description": "Smart dashboard navigation with contextual links",
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": []
+        },
+        "options": {
+          "showStarred": true,
+          "showRecent": true,
+          "showSearch": true,
+          "showHeadings": true,
+          "maxItems": 10,
+          "query": "tunarasa",
+          "tags": ["tunarasa"],
+          "recent": true,
+          "starred": true,
+          "headings": true,
+          "folderId": null
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36}
+      },
+      {
+        "id": 10,
+        "title": "🎮 Interactive Controls",
+        "type": "text",
+        "description": "Dynamic dashboard controls and quick filters",
+        "options": {
+          "mode": "html",
+          "content": "<div style=\"padding: 20px; text-align: center; font-family: Inter, sans-serif;\">\n  <h3 style=\"color: #58A6FF; margin-bottom: 20px;\">🎮 Dashboard Controls</h3>\n  \n  <div style=\"display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px;\">\n    <div style=\"background: rgba(88, 166, 255, 0.1); padding: 15px; border-radius: 8px; min-width: 200px;\">\n      <h4 style=\"color: #F0F6FC; margin: 0 0 10px 0;\">🔍 Filters</h4>\n      <p style=\"color: #8B949E; margin: 0; font-size: 14px;\">Use time range picker above<br/>Filter by service, endpoint, or user</p>\n    </div>\n    \n    <div style=\"background: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 8px; min-width: 200px;\">\n      <h4 style=\"color: #F0F6FC; margin: 0 0 10px 0;\">📊 Export</h4>\n      <p style=\"color: #8B949E; margin: 0; font-size: 14px;\">Share panels & dashboards<br/>Export data as CSV/JSON</p>\n    </div>\n    \n    <div style=\"background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 8px; min-width: 200px;\">\n      <h4 style=\"color: #F0F6FC; margin: 0 0 10px 0;\">🔔 Alerts</h4>\n      <p style=\"color: #8B949E; margin: 0; font-size: 14px;\">Configure thresholds<br/>Set up notifications</p>\n    </div>\n  </div>\n  \n  <div style=\"margin-top: 25px; padding: 15px; background: rgba(139, 148, 158, 0.1); border-radius: 8px;\">\n    <p style=\"color: #8B949E; margin: 0; font-size: 12px;\">💡 <strong>Pro Tip:</strong> Click on any metric value to drill down into detailed views. Use Ctrl+Click to open in new tab.</p>\n  </div>\n</div>"
+        },
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 44}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "allValue": null,
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": "Prometheus",
+          "definition": "label_values(tunarasa_http_requests_total, endpoint)",
+          "hide": 0,
+          "includeAll": true,
+          "label": "Endpoint",
+          "multi": true,
+          "name": "endpoint",
+          "options": [],
+          "query": {
+            "query": "label_values(tunarasa_http_requests_total, endpoint)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "allValue": null,
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": "Prometheus",
+          "definition": "label_values(tunarasa_llm_quality_score, category)",
+          "hide": 0,
+          "includeAll": true,
+          "label": "AI Category",
+          "multi": true,
+          "name": "ai_category",
+          "options": [],
+          "query": {
+            "query": "label_values(tunarasa_llm_quality_score, category)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "allValue": null,
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": "Prometheus",
+          "definition": "label_values(tunarasa_gesture_recognitions_total, gesture_type)",
+          "hide": 0,
+          "includeAll": true,
+          "label": "Gesture Type",
+          "multi": true,
+          "name": "gesture_type",
+          "options": [],
+          "query": {
+            "query": "label_values(tunarasa_gesture_recognitions_total, gesture_type)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query",
+          "useTags": false
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        },
+        {
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "ALERTS{alertname=~\".*Tunarasa.*\", alertstate=\"firing\"}",
+          "iconColor": "red",
+          "name": "System Alerts",
+          "showIn": 0,
+          "step": "10s",
+          "tagKeys": "alertname,severity",
+          "titleFormat": "🚨 {{alertname}}",
+          "useValueForTime": false
+        }
+      ]
+    },
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "cloud",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": ["tunarasa"],
+        "targetBlank": false,
+        "title": "Tunarasa Dashboards",
+        "tooltip": "Navigate to other Tunarasa monitoring dashboards",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "icon": "doc",
+        "tags": [],
+        "targetBlank": true,
+        "title": "Monitoring Documentation",
+        "tooltip": "View monitoring setup and configuration guide",
+        "type": "link",
+        "url": "https://github.com/your-org/tunarasa/docs/monitoring"
+      }
+    ]
+  },
+  "meta": {
+    "type": "db",
+    "canSave": true,
+    "canEdit": true,
+    "canAdmin": true,
+    "canStar": true,
+    "slug": "tunarasa-advanced-monitoring-hub",
+    "url": "/d/tunarasa-advanced-monitoring-hub/tunarasa-advanced-monitoring-hub",
+    "expires": "0001-01-01T00:00:00Z",
+    "created": "2024-07-26T00:00:00Z",
+    "updated": "2024-07-26T00:00:00Z",
+    "updatedBy": "admin",
+    "createdBy": "admin",
+    "version": 1,
+    "hasAcl": false,
+    "isFolder": false,
+    "folderId": 0,
+    "folderTitle": "Tunarasa Monitoring",
+    "folderUrl": "",
+    "provisioned": true,
+    "provisionedExternalId": "tunarasa-advanced-monitoring.json"
+  }
+}

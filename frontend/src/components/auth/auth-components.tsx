@@ -116,7 +116,7 @@ function AuthStatusWithClerk() {
 
   return (
     <div className="flex items-center space-x-2">
-      <span className="text-muted-foreground text-sm">{user?.firstName || user?.emailAddresses[0]?.emailAddress}</span>
+      <span className="text-muted-foreground text-sm">{user?.firstName ?? user?.emailAddresses[0]?.emailAddress}</span>
       <AuthUserButton />
     </div>
   )
@@ -159,9 +159,6 @@ export function AuthStatus() {
   return <AuthStatusWithClerk />
 }
 
-/**
- * Admin only wrapper component
- */
 /**
  * Internal Clerk-enabled admin component
  */

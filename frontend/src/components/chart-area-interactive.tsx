@@ -52,7 +52,7 @@ export function ChartAreaInteractive() {
         })
 
         if (response.success && response.data) {
-          const timeseriesData = response.data.timeseries || []
+          const timeseriesData = response.data.timeseries ?? []
           const transformedData: ChartDataPoint[] = timeseriesData.map((item: Record<string, unknown>) => ({
             date: typeof item.date === 'string' ? item.date : new Date().toISOString(),
             questions: typeof item.questions === 'number' ? item.questions : 0,
@@ -69,7 +69,7 @@ export function ChartAreaInteractive() {
       }
     }
 
-    fetchChartData()
+    void fetchChartData()
   }, [timeRange])
 
   const filteredData = chartData.filter((item) => {

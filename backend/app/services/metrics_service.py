@@ -3,12 +3,12 @@ Prometheus metrics collection service for Tunarasa
 """
 
 import logging
-from typing import Dict, Any, Optional
-from datetime import datetime
 import time
+from datetime import datetime
+from typing import Any, Dict, Optional
 
-from prometheus_client import Counter, Histogram, Gauge, Info, CollectorRegistry, REGISTRY
 from app.core.config import settings
+from prometheus_client import REGISTRY, Counter, Gauge, Histogram, Info
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +16,19 @@ logger = logging.getLogger(__name__)
 try:
     # Define Prometheus metrics
     tunarasa_http_requests_total = Counter(
-        'tunarasa_http_requests_total',
-        'Total HTTP requests',
-        ['method', 'endpoint', 'status_code']
+        "tunarasa_http_requests_total",
+        "Total HTTP requests",
+        ["method", "endpoint", "status_code"],
     )
 except ValueError as e:
     if "already exists" in str(e):
         logger.warning(f"Metric already exists, retrieving existing: {e}")
         # Get existing metric from registry
         for collector in list(REGISTRY._collector_to_names.keys()):
-            if hasattr(collector, '_name') and collector._name == 'tunarasa_http_requests_total':
+            if (
+                hasattr(collector, "_name")
+                and collector._name == "tunarasa_http_requests_total"
+            ):
                 tunarasa_http_requests_total = collector
                 break
     else:
@@ -33,15 +36,18 @@ except ValueError as e:
 
 try:
     tunarasa_http_request_duration_seconds = Histogram(
-        'tunarasa_http_request_duration_seconds',
-        'HTTP request duration in seconds',
-        ['method', 'endpoint']
+        "tunarasa_http_request_duration_seconds",
+        "HTTP request duration in seconds",
+        ["method", "endpoint"],
     )
 except ValueError as e:
     if "already exists" in str(e):
         logger.warning(f"Duration metric already exists, retrieving existing: {e}")
         for collector in list(REGISTRY._collector_to_names.keys()):
-            if hasattr(collector, '_name') and collector._name == 'tunarasa_http_request_duration_seconds':
+            if (
+                hasattr(collector, "_name")
+                and collector._name == "tunarasa_http_request_duration_seconds"
+            ):
                 tunarasa_http_request_duration_seconds = collector
                 break
     else:
@@ -49,14 +55,18 @@ except ValueError as e:
 
 try:
     tunarasa_active_sessions_total = Gauge(
-        'tunarasa_active_sessions_total',
-        'Number of active user sessions'
+        "tunarasa_active_sessions_total", "Number of active user sessions"
     )
 except ValueError as e:
     if "already exists" in str(e):
-        logger.warning(f"Active sessions metric already exists, retrieving existing: {e}")
+        logger.warning(
+            f"Active sessions metric already exists, retrieving existing: {e}"
+        )
         for collector in list(REGISTRY._collector_to_names.keys()):
-            if hasattr(collector, '_name') and collector._name == 'tunarasa_active_sessions_total':
+            if (
+                hasattr(collector, "_name")
+                and collector._name == "tunarasa_active_sessions_total"
+            ):
                 tunarasa_active_sessions_total = collector
                 break
     else:
@@ -64,15 +74,20 @@ except ValueError as e:
 
 try:
     tunarasa_gesture_recognitions_total = Counter(
-        'tunarasa_gesture_recognitions_total',
-        'Total gesture recognitions performed',
-        ['gesture_type', 'confidence_level']
+        "tunarasa_gesture_recognitions_total",
+        "Total gesture recognitions performed",
+        ["gesture_type", "confidence_level"],
     )
 except ValueError as e:
     if "already exists" in str(e):
-        logger.warning(f"Gesture recognition metric already exists, retrieving existing: {e}")
+        logger.warning(
+            f"Gesture recognition metric already exists, retrieving existing: {e}"
+        )
         for collector in list(REGISTRY._collector_to_names.keys()):
-            if hasattr(collector, '_name') and collector._name == 'tunarasa_gesture_recognitions_total':
+            if (
+                hasattr(collector, "_name")
+                and collector._name == "tunarasa_gesture_recognitions_total"
+            ):
                 tunarasa_gesture_recognitions_total = collector
                 break
     else:
@@ -80,14 +95,18 @@ except ValueError as e:
 
 try:
     tunarasa_gesture_recognition_accuracy = Gauge(
-        'tunarasa_gesture_recognition_accuracy',
-        'Current gesture recognition accuracy'
+        "tunarasa_gesture_recognition_accuracy", "Current gesture recognition accuracy"
     )
 except ValueError as e:
     if "already exists" in str(e):
-        logger.warning(f"Gesture accuracy metric already exists, retrieving existing: {e}")
+        logger.warning(
+            f"Gesture accuracy metric already exists, retrieving existing: {e}"
+        )
         for collector in list(REGISTRY._collector_to_names.keys()):
-            if hasattr(collector, '_name') and collector._name == 'tunarasa_gesture_recognition_accuracy':
+            if (
+                hasattr(collector, "_name")
+                and collector._name == "tunarasa_gesture_recognition_accuracy"
+            ):
                 tunarasa_gesture_recognition_accuracy = collector
                 break
     else:
@@ -95,15 +114,18 @@ except ValueError as e:
 
 try:
     tunarasa_ai_requests_total = Counter(
-        'tunarasa_ai_requests_total',
-        'Total AI requests processed',
-        ['model', 'request_type']
+        "tunarasa_ai_requests_total",
+        "Total AI requests processed",
+        ["model", "request_type"],
     )
 except ValueError as e:
     if "already exists" in str(e):
         logger.warning(f"AI requests metric already exists, retrieving existing: {e}")
         for collector in list(REGISTRY._collector_to_names.keys()):
-            if hasattr(collector, '_name') and collector._name == 'tunarasa_ai_requests_total':
+            if (
+                hasattr(collector, "_name")
+                and collector._name == "tunarasa_ai_requests_total"
+            ):
                 tunarasa_ai_requests_total = collector
                 break
     else:
@@ -111,15 +133,18 @@ except ValueError as e:
 
 try:
     tunarasa_ai_request_errors_total = Counter(
-        'tunarasa_ai_request_errors_total',
-        'Total AI request errors',
-        ['model', 'error_type']
+        "tunarasa_ai_request_errors_total",
+        "Total AI request errors",
+        ["model", "error_type"],
     )
 except ValueError as e:
     if "already exists" in str(e):
         logger.warning(f"AI errors metric already exists, retrieving existing: {e}")
         for collector in list(REGISTRY._collector_to_names.keys()):
-            if hasattr(collector, '_name') and collector._name == 'tunarasa_ai_request_errors_total':
+            if (
+                hasattr(collector, "_name")
+                and collector._name == "tunarasa_ai_request_errors_total"
+            ):
                 tunarasa_ai_request_errors_total = collector
                 break
     else:
@@ -127,113 +152,101 @@ except ValueError as e:
 
 try:
     tunarasa_ai_response_confidence_avg = Gauge(
-        'tunarasa_ai_response_confidence_avg',
-        'Average AI response confidence'
+        "tunarasa_ai_response_confidence_avg", "Average AI response confidence"
     )
 except ValueError as e:
     if "already exists" in str(e):
-        logger.warning(f"AI confidence metric already exists, retrieving existing")
+        logger.warning("AI confidence metric already exists, retrieving existing")
         for collector in list(REGISTRY._collector_to_names.keys()):
-            if hasattr(collector, '_name') and collector._name == 'tunarasa_ai_response_confidence_avg':
+            if (
+                hasattr(collector, "_name")
+                and collector._name == "tunarasa_ai_response_confidence_avg"
+            ):
                 tunarasa_ai_response_confidence_avg = collector
                 break
 
 try:
     tunarasa_ai_response_time_seconds = Histogram(
-        'tunarasa_ai_response_time_seconds',
-        'AI response time in seconds',
-        ['model', 'request_type']
+        "tunarasa_ai_response_time_seconds",
+        "AI response time in seconds",
+        ["model", "request_type"],
     )
 except ValueError as e:
     if "already exists" in str(e):
-        logger.warning(f"AI response time metric already exists, retrieving existing")
+        logger.warning("AI response time metric already exists, retrieving existing")
 
 try:
     tunarasa_qr_codes_generated_total = Counter(
-        'tunarasa_qr_codes_generated_total',
-        'Total QR codes generated',
-        ['qr_type']
+        "tunarasa_qr_codes_generated_total", "Total QR codes generated", ["qr_type"]
     )
 except ValueError as e:
     if "already exists" in str(e):
-        logger.warning(f"QR codes metric already exists, retrieving existing")
+        logger.warning("QR codes metric already exists, retrieving existing")
 
 try:
     tunarasa_database_connections_active = Gauge(
-        'tunarasa_database_connections_active',
-        'Number of active database connections'
+        "tunarasa_database_connections_active", "Number of active database connections"
     )
 except ValueError as e:
     if "already exists" in str(e):
-        logger.warning(f"Database connections metric already exists, retrieving existing")
+        logger.warning(
+            "Database connections metric already exists, retrieving existing"
+        )
 
 try:
     tunarasa_deepeval_scores = Histogram(
-            'tunarasa_deepeval_scores',
-        'DeepEval quality scores',
-        ['metric_type']
+        "tunarasa_deepeval_scores", "DeepEval quality scores", ["metric_type"]
     )
 except ValueError as e:
     if "already exists" in str(e):
-        logger.warning(f"DeepEval scores metric already exists, retrieving existing")
+        logger.warning("DeepEval scores metric already exists, retrieving existing")
 
 # Application info
-tunarasa_info = Info(
-    'tunarasa_info',
-    'Application information'
-)
+tunarasa_info = Info("tunarasa_info", "Application information")
 
 # Set application info
-tunarasa_info.info({
-    'version': '0.4.0',
-    'environment': settings.ENVIRONMENT,
-    'ai_model': settings.LLM_MODEL
-})
+tunarasa_info.info(
+    {
+        "version": "0.4.0",
+        "environment": settings.ENVIRONMENT,
+        "ai_model": settings.LLM_MODEL,
+    }
+)
 
 
 class MetricsService:
     """Service for collecting and managing Prometheus metrics"""
-    
+
     def __init__(self):
         self.start_time = time.time()
         self.gesture_accuracy_window = []
         self.ai_confidence_window = []
-        
+
     def record_http_request(
-        self,
-        method: str,
-        endpoint: str,
-        status_code: int,
-        duration: float
+        self, method: str, endpoint: str, status_code: int, duration: float
     ):
         """Record HTTP request metrics"""
         try:
             tunarasa_http_requests_total.labels(
-                method=method,
-                endpoint=endpoint,
-                status_code=str(status_code)
+                method=method, endpoint=endpoint, status_code=str(status_code)
             ).inc()
-            
+
             tunarasa_http_request_duration_seconds.labels(
-                method=method,
-                endpoint=endpoint
+                method=method, endpoint=endpoint
             ).observe(duration)
-            
+
         except Exception as e:
             logger.error(f"Failed to record HTTP metrics: {e}")
-    
+
     def update_active_sessions(self, count: int):
         """Update active sessions gauge"""
         try:
             tunarasa_active_sessions_total.set(count)
         except Exception as e:
             logger.error(f"Failed to update active sessions: {e}")
-    
+
     def record_gesture_recognition(
-        self,
-        gesture_type: str,
-        confidence: float,
-        accuracy: Optional[float] = None
+        self, gesture_type: str, confidence: float, accuracy: Optional[float] = None
     ):
         """Record gesture recognition metrics"""
         try:
@@ -244,97 +257,97 @@ class MetricsService:
                 confidence_level = "medium"
             else:
                 confidence_level = "low"
-            
+
             tunarasa_gesture_recognitions_total.labels(
-                gesture_type=gesture_type,
-                confidence_level=confidence_level
+                gesture_type=gesture_type, confidence_level=confidence_level
             ).inc()
-            
+
             # Update accuracy if provided
             if accuracy is not None:
                 self.gesture_accuracy_window.append(accuracy)
                 # Keep only last 100 values
                 if len(self.gesture_accuracy_window) > 100:
                     self.gesture_accuracy_window.pop(0)
-                
-                avg_accuracy = sum(self.gesture_accuracy_window) / len(self.gesture_accuracy_window)
+
+                avg_accuracy = sum(self.gesture_accuracy_window) / len(
+                    self.gesture_accuracy_window
+                )
                 tunarasa_gesture_recognition_accuracy.set(avg_accuracy)
-            
+
         except Exception as e:
             logger.error(f"Failed to record gesture metrics: {e}")
-    
+
     def record_ai_request(
         self,
         model: str,
         request_type: str,
         duration: float,
         confidence: Optional[float] = None,
-        error_type: Optional[str] = None
+        error_type: Optional[str] = None,
     ):
         """Record AI request metrics"""
         try:
             if error_type:
                 tunarasa_ai_request_errors_total.labels(
-                    model=model,
-                    error_type=error_type
+                    model=model, error_type=error_type
                 ).inc()
             else:
                 tunarasa_ai_requests_total.labels(
-                    model=model,
-                    request_type=request_type
+                    model=model, request_type=request_type
                 ).inc()
-                
+
                 tunarasa_ai_response_time_seconds.labels(
-                    model=model,
-                    request_type=request_type
+                    model=model, request_type=request_type
                 ).observe(duration)
-            
+
             # Update confidence average
             if confidence is not None:
                 self.ai_confidence_window.append(confidence)
                 # Keep only last 100 values
                 if len(self.ai_confidence_window) > 100:
                     self.ai_confidence_window.pop(0)
-                
-                avg_confidence = sum(self.ai_confidence_window) / len(self.ai_confidence_window)
+
+                avg_confidence = sum(self.ai_confidence_window) / len(
+                    self.ai_confidence_window
+                )
                 tunarasa_ai_response_confidence_avg.set(avg_confidence)
-            
+
         except Exception as e:
             logger.error(f"Failed to record AI metrics: {e}")
-    
+
     def record_qr_generation(self, qr_type: str):
         """Record QR code generation"""
         try:
             tunarasa_qr_codes_generated_total.labels(qr_type=qr_type).inc()
         except Exception as e:
             logger.error(f"Failed to record QR metrics: {e}")
-    
+
     def update_database_connections(self, count: int):
         """Update database connections gauge"""
         try:
             tunarasa_database_connections_active.set(count)
         except Exception as e:
             logger.error(f"Failed to update database metrics: {e}")
-    
+
     def record_deepeval_score(self, metric_type: str, score: float):
         """Record DeepEval quality scores"""
         try:
             tunarasa_deepeval_scores.labels(metric_type=metric_type).observe(score)
         except Exception as e:
             logger.error(f"Failed to record DeepEval metrics: {e}")
-    
+
     def get_system_metrics(self) -> Dict[str, Any]:
         """Get current system metrics summary"""
         try:
             uptime = time.time() - self.start_time
-            
+
             return {
                 "uptime_seconds": uptime,
                 "active_sessions": tunarasa_active_sessions_total._value._value,
                 "gesture_accuracy": tunarasa_gesture_recognition_accuracy._value._value,
                 "ai_confidence": tunarasa_ai_response_confidence_avg._value._value,
                 "database_connections": tunarasa_database_connections_active._value._value,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
         except Exception as e:
             logger.error(f"Failed to get system metrics: {e}")

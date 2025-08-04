@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAdminClient } from '@/lib/hooks/use-admin-client'
 import type { AdminSession, GestureAnalytics as ApiGestureAnalytics } from '@/lib/api/admin-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,8 +40,15 @@ import {
   Smartphone,
   Tablet,
   Laptop,
+  Mail,
+  UserPlus,
+  Crown,
+  ExternalLink,
+  PieChart,
+  LineChart,
 } from 'lucide-react'
 import { QALogsViewer } from '@/components/admin/QALogsViewer'
+import { SuperAdminOnly, useUserRole } from '@/components/auth/SuperAdminOnly'
 
 // Force dynamic rendering to prevent build-time Clerk evaluation
 export const dynamic = 'force-dynamic'
@@ -89,6 +96,7 @@ interface SystemMetrics {
 
 export default function AdminDashboard() {
   const adminClient = useAdminClient()
+  const {} = useUserRole()
   const [stats, setStats] = useState<DashboardStats>({
     totalSessions: 0,
     totalConversations: 0,
@@ -124,125 +132,126 @@ export default function AdminDashboard() {
     autoCleanup: true,
   })
 
-  // Fetch dashboard data from backend API
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // Fetch dashboard statistics
-        const statsResponse = await adminClient.getDashboardStats()
+  // Optimized data fetching with useCallback
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      // Fetch dashboard statistics
+      const statsResponse = await adminClient.getDashboardStats()
 
-        if (statsResponse.success && statsResponse.data) {
-          const statsData = statsResponse.data
-          setStats({
-            totalSessions: statsData.total_sessions || 0,
-            totalConversations: statsData.total_conversations || 0,
-            totalGestures: statsData.total_gestures || 0,
-            activeSessions: statsData.active_sessions || 0,
-            averageAccuracy: statsData.average_accuracy || 0,
-            averageResponseTime: statsData.average_response_time || 0,
-            systemHealth: statsData.system_health || 'healthy',
-            uptime: statsData.uptime || 0,
-          })
-        } else {
-          console.error('Failed to fetch dashboard stats:', statsResponse.error)
-          // Keep current stats or show error state - no fallback to dummy data
-        }
-
-        // Fetch session data
-        const sessionsResponse = await adminClient.getSessions()
-
-        if (sessionsResponse.success && sessionsResponse.data) {
-          const sessionsData = sessionsResponse.data
-          setSessions(
-            sessionsData.sessions?.map((session: AdminSession) => ({
-              id: session.id,
-              userId: session.user_id,
-              startTime: new Date(session.start_time),
-              lastActivity: new Date(session.last_activity),
-              gestureCount: session.gesture_count || 0,
-              conversationCount: session.conversation_count || 0,
-              accuracy: session.accuracy || 0,
-              device: session.device || 'Unknown',
-              location: session.location || 'Unknown',
-              status: session.status || 'ended',
-            })) || [],
-          )
-        } else {
-          console.error('Failed to fetch sessions:', sessionsResponse.error)
-          // Keep current sessions or set to empty array - no fallback to dummy data
-          setSessions([])
-        }
-
-        // Fetch gesture analytics
-        const analyticsResponse = await adminClient.getGestureAnalytics()
-
-        if (analyticsResponse.success && analyticsResponse.data) {
-          const analyticsData = analyticsResponse.data
-          setGestureAnalytics(
-            analyticsData.gesture_analytics?.map((gesture: ApiGestureAnalytics) => ({
-              letter: gesture.letter,
-              count: gesture.count || 0,
-              accuracy: gesture.accuracy || 0,
-              averageConfidence: gesture.average_confidence || 0,
-              improvements: gesture.improvements || 0,
-            })) || [],
-          )
-        } else {
-          // Fallback to mock data
-          console.warn('Failed to fetch gesture analytics:', analyticsResponse.error)
-          setGestureAnalytics([
-            { letter: 'A', count: 1245, accuracy: 94.2, averageConfidence: 0.92, improvements: 15 },
-            { letter: 'B', count: 1189, accuracy: 89.5, averageConfidence: 0.87, improvements: 8 },
-            { letter: 'C', count: 1067, accuracy: 91.8, averageConfidence: 0.89, improvements: 12 },
-            { letter: 'D', count: 998, accuracy: 86.3, averageConfidence: 0.84, improvements: 22 },
-            { letter: 'E', count: 1334, accuracy: 93.7, averageConfidence: 0.91, improvements: 7 },
-          ])
-        }
-
-        // Fetch system metrics
-        const metricsResponse = await adminClient.getSystemMetrics()
-
-        if (metricsResponse.success && metricsResponse.data) {
-          const metricsData = metricsResponse.data
-          setSystemMetrics({
-            cpu: metricsData.cpu_usage || 0,
-            memory: metricsData.memory_usage || 0,
-            storage: metricsData.storage_usage || 0,
-            network: metricsData.network_usage || 0,
-            latency: metricsData.response_time || 0,
-            errorRate: metricsData.error_rate || 0,
-          })
-        } else {
-          // Fallback to mock data
-          console.warn('Failed to fetch system metrics:', metricsResponse.error)
-          setSystemMetrics({
-            cpu: 45.2,
-            memory: 67.8,
-            storage: 34.5,
-            network: 89.1,
-            latency: 12.5,
-            errorRate: 0.02,
-          })
-        }
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
+      if (statsResponse.success && statsResponse.data) {
+        const statsData = statsResponse.data
+        setStats({
+          totalSessions: statsData.total_sessions || 0,
+          totalConversations: statsData.total_conversations || 0,
+          totalGestures: statsData.total_gestures || 0,
+          activeSessions: statsData.active_sessions || 0,
+          averageAccuracy: statsData.average_accuracy || 0,
+          averageResponseTime: statsData.average_response_time || 0,
+          systemHealth: statsData.system_health || 'healthy',
+          uptime: statsData.uptime || 0,
+        })
+      } else {
+        console.error('Failed to fetch dashboard stats:', statsResponse.error)
         // Keep current stats or show error state - no fallback to dummy data
       }
 
-      setLastUpdate(new Date())
+      // Fetch session data
+      const sessionsResponse = await adminClient.getSessions()
+
+      if (sessionsResponse.success && sessionsResponse.data) {
+        const sessionsData = sessionsResponse.data
+        setSessions(
+          sessionsData.sessions?.map((session: AdminSession) => ({
+            id: session.id,
+            userId: session.user_id,
+            startTime: new Date(session.start_time),
+            lastActivity: new Date(session.last_activity),
+            gestureCount: session.gesture_count || 0,
+            conversationCount: session.conversation_count || 0,
+            accuracy: session.accuracy || 0,
+            device: session.device || 'Unknown',
+            location: session.location || 'Unknown',
+            status: session.status || 'ended',
+          })) || [],
+        )
+      } else {
+        console.error('Failed to fetch sessions:', sessionsResponse.error)
+        // Keep current sessions or set to empty array - no fallback to dummy data
+        setSessions([])
+      }
+
+      // Fetch gesture analytics
+      const analyticsResponse = await adminClient.getGestureAnalytics()
+
+      if (analyticsResponse.success && analyticsResponse.data) {
+        const analyticsData = analyticsResponse.data
+        setGestureAnalytics(
+          analyticsData.gesture_analytics?.map((gesture: ApiGestureAnalytics) => ({
+            letter: gesture.letter,
+            count: gesture.count ?? 0,
+            accuracy: gesture.accuracy ?? 0,
+            averageConfidence: gesture.average_confidence ?? 0,
+            improvements: gesture.improvements ?? 0,
+          })) ?? [],
+        )
+      } else {
+        // Fallback to mock data
+        console.warn('Failed to fetch gesture analytics:', analyticsResponse.error)
+        setGestureAnalytics([
+          { letter: 'A', count: 1245, accuracy: 94.2, averageConfidence: 0.92, improvements: 15 },
+          { letter: 'B', count: 1189, accuracy: 89.5, averageConfidence: 0.87, improvements: 8 },
+          { letter: 'C', count: 1067, accuracy: 91.8, averageConfidence: 0.89, improvements: 12 },
+          { letter: 'D', count: 998, accuracy: 86.3, averageConfidence: 0.84, improvements: 22 },
+          { letter: 'E', count: 1334, accuracy: 93.7, averageConfidence: 0.91, improvements: 7 },
+        ])
+      }
+
+      // Fetch system metrics
+      const metricsResponse = await adminClient.getSystemMetrics()
+
+      if (metricsResponse.success && metricsResponse.data) {
+        const metricsData = metricsResponse.data
+        setSystemMetrics({
+          cpu: metricsData.cpu_usage || 0,
+          memory: metricsData.memory_usage || 0,
+          storage: metricsData.storage_usage || 0,
+          network: metricsData.network_usage || 0,
+          latency: metricsData.response_time || 0,
+          errorRate: metricsData.error_rate || 0,
+        })
+      } else {
+        // Fallback to mock data
+        console.warn('Failed to fetch system metrics:', metricsResponse.error)
+        setSystemMetrics({
+          cpu: 45.2,
+          memory: 67.8,
+          storage: 34.5,
+          network: 89.1,
+          latency: 12.5,
+          errorRate: 0.02,
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+      // Keep current stats or show error state - no fallback to dummy data
     }
 
-    fetchDashboardData()
+    setLastUpdate(new Date())
+  }, [adminClient])
+
+  // Fetch dashboard data from backend API
+  useEffect(() => {
+    void fetchDashboardData()
 
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       if (autoRefresh) {
-        fetchDashboardData()
+        void fetchDashboardData()
       }
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [autoRefresh, adminClient])
+  }, [autoRefresh, fetchDashboardData])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -270,16 +279,22 @@ export default function AdminDashboard() {
     }
   }
 
-  const filteredSessions = sessions.filter(
-    (session) =>
-      session.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.device.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  // Memoized filtered sessions for performance
+  const filteredSessions = useMemo(() => {
+    if (!searchTerm) return sessions
+
+    const term = searchTerm.toLowerCase()
+    return sessions.filter(
+      (session) =>
+        session.userId.toLowerCase().includes(term) ||
+        session.location.toLowerCase().includes(term) ||
+        session.device.toLowerCase().includes(term),
+    )
+  }, [sessions, searchTerm])
 
   const healthStatus = getHealthStatus()
 
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = useCallback(async () => {
     setSettingsLoading(true)
     try {
       const response = await adminClient.updateSettings({
@@ -302,7 +317,7 @@ export default function AdminDashboard() {
     } finally {
       setSettingsLoading(false)
     }
-  }
+  }, [adminClient, settings])
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -404,13 +419,14 @@ export default function AdminDashboard() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="qa-logs">Q&A Logs</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="admin">Admin</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -771,6 +787,155 @@ export default function AdminDashboard() {
             </div>
           </TabsContent>
 
+          {/* Admin Tab - SuperAdmin Only */}
+          <TabsContent value="admin" className="space-y-6">
+            <SuperAdminOnly>
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Admin Management */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Crown className="h-5 w-5 text-yellow-600" />
+                      Admin Management
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="rounded-lg bg-yellow-50 p-4 text-center">
+                        <Crown className="mx-auto mb-2 h-8 w-8 text-yellow-600" />
+                        <div className="font-medium">Super Admin</div>
+                        <div className="text-2xl font-bold text-yellow-600">1</div>
+                        <div className="text-sm text-yellow-600">Total</div>
+                      </div>
+                      <div className="rounded-lg bg-blue-50 p-4 text-center">
+                        <Shield className="mx-auto mb-2 h-8 w-8 text-blue-600" />
+                        <div className="font-medium">Admin</div>
+                        <div className="text-2xl font-bold text-blue-600">3</div>
+                        <div className="text-sm text-blue-600">Total</div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <Button className="w-full" size="sm" asChild>
+                        <a href="/dashboard/admin-invitations">
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Invite New Admin
+                        </a>
+                      </Button>
+                      <Button variant="outline" className="w-full" size="sm" asChild>
+                        <a href="/dashboard/admin-invitations#pending">
+                          <Mail className="mr-2 h-4 w-4" />
+                          View Pending Invitations
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Grafana Integration */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <PieChart className="h-5 w-5 text-purple-600" />
+                      Advanced Analytics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-center">
+                      <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
+                        <LineChart className="h-8 w-8 text-purple-600" />
+                      </div>
+                      <h3 className="mb-2 font-semibold">Grafana Dashboard</h3>
+                      <p className="mb-4 text-sm text-gray-600">
+                        Access advanced LLM & API visualization with real-time monitoring
+                      </p>
+                      <Button className="w-full" asChild>
+                        <a
+                          href="http://localhost:3001/d/tunarasa-overview/tunarasa-llm-monitoring"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center"
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Open Grafana
+                        </a>
+                      </Button>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>LLM Performance</span>
+                        <span className="text-green-600">✓ Monitored</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>API Response Times</span>
+                        <span className="text-green-600">✓ Tracked</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Error Rates</span>
+                        <span className="text-green-600">✓ Alerting</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Admin Activity */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Recent Admin Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-600 text-sm font-bold text-white">
+                          S
+                        </div>
+                        <div>
+                          <div className="font-medium">superadmin@tunarasa.com</div>
+                          <div className="text-sm text-gray-600">Invited new admin: admin2@tunarasa.com</div>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">10 min ago</div>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
+                          A
+                        </div>
+                        <div>
+                          <div className="font-medium">admin1@tunarasa.com</div>
+                          <div className="text-sm text-gray-600">Updated system settings</div>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">25 min ago</div>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
+                          A
+                        </div>
+                        <div>
+                          <div className="font-medium">admin3@tunarasa.com</div>
+                          <div className="text-sm text-gray-600">Reviewed Q&A logs and performance metrics</div>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">1 hour ago</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </SuperAdminOnly>
+          </TabsContent>
+
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -1020,7 +1185,7 @@ export default function AdminDashboard() {
                     >
                       Reset to Defaults
                     </Button>
-                    <Button onClick={handleSaveSettings} disabled={settingsLoading}>
+                    <Button onClick={() => void handleSaveSettings()} disabled={settingsLoading}>
                       {settingsLoading ? 'Saving...' : 'Save Changes'}
                     </Button>
                   </div>

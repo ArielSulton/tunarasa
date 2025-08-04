@@ -31,7 +31,7 @@ export interface GestureRecognitionConfig {
 }
 
 export class GestureRecognitionService {
-  private handPose: HandPoseService
+  private readonly handPose: HandPoseService
   private isInitialized = false
   private isRunning = false
   private lastProcessingTime = 0
@@ -130,6 +130,7 @@ export class GestureRecognitionService {
   /**
    * Start gesture recognition
    */
+  // eslint-disable-next-line @typescript-eslint/require-await
   async start(): Promise<void> {
     if (!this.isInitialized) {
       throw new Error('Gesture recognition not initialized')
@@ -158,6 +159,7 @@ export class GestureRecognitionService {
   /**
    * Stop gesture recognition
    */
+  // eslint-disable-next-line @typescript-eslint/require-await
   async stop(): Promise<void> {
     if (!this.isRunning) {
       return
@@ -214,8 +216,8 @@ export class GestureRecognitionService {
       try {
         // Apply debouncing
         const now = Date.now()
-        if (now - this.lastProcessingTime < (this.config.processingOptions?.debounceTime || 100)) {
-          this.animationFrameId = requestAnimationFrame(processFrame)
+        if (now - this.lastProcessingTime < (this.config.processingOptions?.debounceTime ?? 100)) {
+          this.animationFrameId = requestAnimationFrame(() => void processFrame())
           return
         }
         this.lastProcessingTime = now
@@ -274,12 +276,12 @@ export class GestureRecognitionService {
 
       // Schedule next frame
       if (this.isRunning) {
-        this.animationFrameId = requestAnimationFrame(processFrame)
+        this.animationFrameId = requestAnimationFrame(() => void processFrame)
       }
     }
 
     // Start the loop
-    processFrame()
+    void processFrame()
   }
 
   /**
@@ -328,7 +330,7 @@ export class GestureRecognitionService {
     this.smoothingBuffer.push(result)
 
     // Maintain window size
-    if (this.smoothingBuffer.length > (this.config.processingOptions?.smoothingWindow || 5)) {
+    if (this.smoothingBuffer.length > (this.config.processingOptions?.smoothingWindow ?? 5)) {
       this.smoothingBuffer.shift()
     }
 
@@ -343,8 +345,8 @@ export class GestureRecognitionService {
 
     for (const bufferedResult of this.smoothingBuffer) {
       const letter = bufferedResult.letter
-      letterCounts.set(letter, (letterCounts.get(letter) || 0) + 1)
-      confidenceSum.set(letter, (confidenceSum.get(letter) || 0) + bufferedResult.confidence)
+      letterCounts.set(letter, (letterCounts.get(letter) ?? 0) + 1)
+      confidenceSum.set(letter, (confidenceSum.get(letter) ?? 0) + bufferedResult.confidence)
     }
 
     // Find most frequent letter
@@ -359,7 +361,7 @@ export class GestureRecognitionService {
     }
 
     // Calculate average confidence for most frequent letter
-    const avgConfidence = (confidenceSum.get(mostFrequentLetter) || 0) / maxCount
+    const avgConfidence = (confidenceSum.get(mostFrequentLetter) ?? 0) / maxCount
 
     // Return smoothed result
     return {
@@ -427,11 +429,11 @@ export class GestureRecognitionService {
     // Update HandPose service config
     if (config.handPoseConfig) {
       this.handPose.updateConfig({
-        maxNumHands: config.handPoseConfig.maxNumHands || this.config.handPoseConfig.maxNumHands,
+        maxNumHands: config.handPoseConfig.maxNumHands ?? this.config.handPoseConfig.maxNumHands,
         detectionConfidence:
-          config.handPoseConfig.detectionConfidence || this.config.handPoseConfig.detectionConfidence,
-        scoreThreshold: config.handPoseConfig.scoreThreshold || this.config.handPoseConfig.scoreThreshold,
-        flipHorizontal: config.handPoseConfig.flipHorizontal || this.config.handPoseConfig.flipHorizontal,
+          config.handPoseConfig.detectionConfidence ?? this.config.handPoseConfig.detectionConfidence,
+        scoreThreshold: config.handPoseConfig.scoreThreshold ?? this.config.handPoseConfig.scoreThreshold,
+        flipHorizontal: config.handPoseConfig.flipHorizontal ?? this.config.handPoseConfig.flipHorizontal,
       })
     }
   }
@@ -508,10 +510,10 @@ export class GestureRecognitionService {
    * Clean up resources
    */
   dispose(): void {
-    this.stop()
+    void this.stop()
 
     // Stop camera stream
-    if (this.videoElement && this.videoElement.srcObject) {
+    if (this.videoElement?.srcObject) {
       const stream = this.videoElement.srcObject as MediaStream
       stream.getTracks().forEach((track) => track.stop())
       this.videoElement.srcObject = null

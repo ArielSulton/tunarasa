@@ -4,7 +4,7 @@ import * as schema from './schema'
 import 'dotenv/config'
 
 // Database connection string
-const connectionString = process.env.DATABASE_URL || ''
+const connectionString = process.env.DATABASE_URL ?? ''
 
 if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is required')

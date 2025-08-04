@@ -36,17 +36,31 @@ backend/dist/
 backend/*.egg-info/
 backend/.eggs/
 
-# Testing and coverage
-backend/.pytest_cache/
-backend/.coverage
+# Unit test / coverage reports
 backend/htmlcov/
 backend/.tox/
-backend/tests/
+backend/.nox/
+backend/.coverage
+backend/.coverage.*
+backend/.cache
+backend/nosetests.xml
+backend/coverage.xml
+backend/*.cover
+backend/*.py,cover
+backend/.hypothesis/
+backend/.deepeval/
+backend/.pytest_cache/
+backend/cover/
+**_cache
 
-# Virtual environments (shouldn't be in context anyway)
-backend/venv/
-backend/env/
+# Virtual environments
+backend/.venv/
+backend/.env.bak/
+backend/.venv.bak/
 backend/.env/
+backend/.ENV/
+backend/.env.*
+backend/.ENV.*
 
 # Uploads and temp files
 backend/uploads/

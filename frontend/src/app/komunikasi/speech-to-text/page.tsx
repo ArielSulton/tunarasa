@@ -131,7 +131,7 @@ export default function KomunikasiSpeechToText() {
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: data.answer || 'Maaf, saya tidak dapat memproses pertanyaan Anda saat ini.',
+        content: data.answer ?? 'Maaf, saya tidak dapat memproses pertanyaan Anda saat ini.',
         timestamp: new Date(),
         confidence: data.confidence,
       }
@@ -155,7 +155,7 @@ export default function KomunikasiSpeechToText() {
   // Send transcript as message
   const sendTranscript = useCallback(() => {
     if (transcript.trim()) {
-      sendMessage(transcript)
+      void sendMessage(transcript)
       stopListening()
     }
   }, [transcript, sendMessage, stopListening])
