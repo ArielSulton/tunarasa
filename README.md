@@ -3,7 +3,7 @@
 **Tunarasa** is a comprehensive accessibility platform designed to help hearing-impaired users access public services through advanced sign language gesture recognition and AI-powered question answering. The system combines computer vision, large language models, and retrieval-augmented generation to provide real-time, accurate assistance with enterprise-grade quality assurance.
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
-![Version](https://img.shields.io/badge/version-v1.3.0-green.svg)
+![Version](https://img.shields.io/badge/version-v1.4.0-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-60%25-blue.svg)
 ![Python](https://img.shields.io/badge/Python-40%25-green.svg)
 ![WCAG](https://img.shields.io/badge/WCAG-2.1%20AA-blue.svg)
@@ -201,7 +201,7 @@ curl http://localhost:8000/api/health
 
 Services available:
 - **Frontend**: http://localhost:5000
-- **Backend API**: http://localhost:8000/api/v1/docs#/rag/ask_question_with_rag_api_v1_rag_ask_post
+- **Backend API**: http://localhost:8000/api/v1/docs#/
 - **Grafana Dashboard**: http://localhost:3030
 - **Prometheus**: http://localhost:909
 - **Database Studio**: `bun run db:studio`

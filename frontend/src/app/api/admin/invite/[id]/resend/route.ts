@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { currentUser } from '@clerk/nextjs/server'
+import { requireSuperAdmin } from '@/lib/auth/supabase-auth'
 import { AdminInvitationEmail } from '@/components/emails/AdminInvitationEmail'
 import { db } from '@/lib/db'
-import { adminInvitations } from '@/lib/db/schema'
+import { adminInvitations, users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 // Initialize Resend with API key
@@ -14,22 +14,12 @@ const resend = new Resend(process.env.RESEND_API_KEY)
  */
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Check authentication and authorization
-    const user = await currentUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized - User not authenticated' }, { status: 401 })
-    }
-
-    // Check if user has superadmin role
-    const userRole = user.publicMetadata?.role as string
-    if (userRole !== 'superadmin') {
-      return NextResponse.json({ error: 'Forbidden - Only superadmins can resend invitations' }, { status: 403 })
-    }
+    // Check authentication and authorization - require super admin
+    const authUser = await requireSuperAdmin()
 
     const invitationId = params.id
 
-    // Get invitation details from database
+    // Get invitation details from database with inviter information
     const invitationResult = await db
       .select({
         invitationId: adminInvitations.invitationId,
@@ -40,8 +30,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         token: adminInvitations.token,
         expiresAt: adminInvitations.expiresAt,
         invitedBy: adminInvitations.invitedBy,
+        inviterName: users.fullName,
+        inviterEmail: users.email,
       })
       .from(adminInvitations)
+      .leftJoin(users, eq(adminInvitations.invitedBy, users.userId))
       .where(eq(adminInvitations.invitationId, invitationId))
       .limit(1)
 
@@ -69,8 +62,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       to: [invitation.email],
       subject: 'Reminder: Invitation to Join Tunarasa Admin Team',
       react: AdminInvitationEmail({
-        invitedByName: user.firstName ?? user.emailAddresses[0]?.emailAddress ?? 'Admin',
-        invitedByEmail: user.emailAddresses[0]?.emailAddress || '',
+        invitedByName: invitation.inviterName ?? authUser.fullName ?? 'Admin',
+        invitedByEmail: invitation.inviterEmail ?? authUser.email ?? '',
         inviteeEmail: invitation.email,
         role: invitation.role as 'admin' | 'superadmin',
         invitationUrl,
@@ -100,6 +93,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     })
   } catch (error) {
     console.error('Resend invitation error:', error)
+
+    if (error instanceof Error && error.message.includes('Admin access required')) {
+      return NextResponse.json({ error: 'Forbidden - Super admin access required' }, { status: 403 })
+    }
+
+    if (error instanceof Error && error.message.includes('Authentication required')) {
+      return NextResponse.json({ error: 'Unauthorized - Authentication required' }, { status: 401 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

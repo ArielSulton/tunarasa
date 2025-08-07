@@ -65,12 +65,14 @@ class Gender(Base):
 
 
 class User(Base):
-    """Enhanced Users table with better Clerk integration"""
+    """Enhanced Users table with Supabase integration"""
 
     __tablename__ = "users"
 
     user_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    clerk_user_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    supabase_user_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True
+    )
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     first_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     last_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -87,8 +89,8 @@ class User(Base):
         DateTime(timezone=True), nullable=True
     )
     email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    # Clerk metadata sync
-    clerk_metadata: Mapped[Optional[Dict]] = mapped_column(JSONB, nullable=True)
+    # Supabase metadata sync
+    supabase_metadata: Mapped[Optional[Dict]] = mapped_column(JSONB, nullable=True)
     # Admin invitation tracking
     invited_by: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     invited_at: Mapped[Optional[datetime]] = mapped_column(
@@ -135,7 +137,7 @@ class User(Base):
 
     # Indexes
     __table_args__ = (
-        Index("users_clerk_user_id_idx", "clerk_user_id"),
+        Index("users_supabase_user_id_idx", "supabase_user_id"),
         Index("users_email_idx", "email"),
         Index("users_role_id_idx", "role_id"),
         Index("users_gender_id_idx", "gender_id"),
@@ -363,12 +365,12 @@ class AdminInvitation(Base):
 
 
 class UserSyncLog(Base):
-    """User Sync Log table for tracking Clerk synchronization"""
+    """User Sync Log table for tracking Supabase synchronization"""
 
     __tablename__ = "user_sync_log"
 
     sync_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    clerk_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    supabase_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     event_type: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # user.created, user.updated, user.deleted
@@ -376,7 +378,7 @@ class UserSyncLog(Base):
         String(20), nullable=False, default="success"
     )  # success, failed, retry
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    clerk_payload: Mapped[Optional[Dict]] = mapped_column(JSONB, nullable=True)
+    supabase_payload: Mapped[Optional[Dict]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -386,7 +388,7 @@ class UserSyncLog(Base):
 
     # Indexes
     __table_args__ = (
-        Index("user_sync_log_clerk_user_id_idx", "clerk_user_id"),
+        Index("user_sync_log_supabase_user_id_idx", "supabase_user_id"),
         Index("user_sync_log_event_type_idx", "event_type"),
         Index("user_sync_log_sync_status_idx", "sync_status"),
         Index("user_sync_log_created_at_idx", "created_at"),
@@ -622,7 +624,9 @@ __all__ = [
 UserRole = Union[str]  # 'superadmin', 'admin', 'user'
 InvitationStatus = Union[str]  # 'pending', 'accepted', 'expired', 'cancelled'
 SyncStatus = Union[str]  # 'success', 'failed', 'retry'
-ClerkEventType = Union[str]  # 'user.created', 'user.updated', 'user.deleted'
+SupabaseEventType = Union[
+    str
+]  # 'auth.user.created', 'auth.user.updated', 'auth.user.deleted'
 ServiceMode = Union[str]  # 'full_llm_bot', 'human_cs_support'
 ConversationStatus = Union[str]  # 'active', 'waiting', 'in_progress', 'resolved'
 MessageType = Union[str]  # 'user', 'admin', 'llm_bot', 'llm_recommendation', 'system'

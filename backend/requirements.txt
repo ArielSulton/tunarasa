@@ -25,6 +25,7 @@ langchain-core
 langchain-groq
 groq
 pinecone-client
+pinecone[grpc]
 langchain-pinecone
 tiktoken
 scikit-learn

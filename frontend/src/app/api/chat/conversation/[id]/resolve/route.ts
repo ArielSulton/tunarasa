@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
+import { requireAdmin } from '@/lib/auth/supabase-auth'
 import { db } from '@/lib/db'
-import { conversations, adminQueue, users } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { conversations, adminQueue } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * Resolve Conversation API
@@ -18,29 +18,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Invalid conversation ID' }, { status: 400 })
     }
 
-    // Check authentication and admin role
-    const user = await currentUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized - User not authenticated' }, { status: 401 })
-    }
-
-    // Check if user is admin or superadmin
-    const dbUser = await db
-      .select()
-      .from(users)
-      .where(and(eq(users.clerkUserId, user.id), eq(users.isActive, true)))
-      .limit(1)
-
-    if (dbUser.length === 0) {
-      return NextResponse.json({ error: 'User not found in database' }, { status: 404 })
-    }
-
-    const userRole = dbUser[0].roleId
-    if (userRole !== 1 && userRole !== 2) {
-      // Not superadmin or admin
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
-    }
+    // Check authentication and authorization - require admin access
+    const authUser = await requireAdmin()
 
     // Check if conversation exists
     const conversation = await db
@@ -76,11 +55,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       success: true,
       message: 'Conversation resolved successfully',
       conversationId,
-      resolvedBy: user.emailAddresses[0]?.emailAddress || user.id,
+      resolvedBy: authUser.email ?? authUser.fullName ?? authUser.supabaseUserId,
       resolvedAt: new Date().toISOString(),
     })
   } catch (error) {
     console.error('Error resolving conversation:', error)
+
+    if (error instanceof Error && error.message.includes('Admin access required')) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+    }
+
+    if (error instanceof Error && error.message.includes('Authentication required')) {
+      return NextResponse.json({ error: 'Unauthorized - Authentication required' }, { status: 401 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -297,7 +297,7 @@ class UserData(BaseModel):
     """User data response"""
 
     user_id: int
-    clerk_user_id: Optional[int] = None
+    supabase_user_id: Optional[str] = None
     full_name: Optional[str] = None
     role: Optional[str] = None
     gender: Optional[str] = None

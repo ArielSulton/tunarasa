@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
+import { requireSuperAdmin } from '@/lib/auth/supabase-auth'
 import { db } from '@/lib/db'
 import { adminInvitations, users } from '@/lib/db/schema'
 import { eq, and, desc, asc, count } from 'drizzle-orm'
@@ -9,18 +9,8 @@ import { eq, and, desc, asc, count } from 'drizzle-orm'
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication and authorization
-    const user = await currentUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized - User not authenticated' }, { status: 401 })
-    }
-
-    // Check if user has superadmin role
-    const userRole = user.publicMetadata?.role as string
-    if (userRole !== 'superadmin') {
-      return NextResponse.json({ error: 'Forbidden - Only superadmins can view invitations' }, { status: 403 })
-    }
+    // Check authentication and authorization - require super admin
+    await requireSuperAdmin()
 
     // Parse query parameters
     const { searchParams } = new URL(request.url)
@@ -117,17 +107,28 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     const expiredInvitations = invitations.filter((inv) => inv.status === 'pending' && new Date(inv.expiresAt) < now)
 
+    // Transform data for frontend compatibility
+    const transformedInvitations = invitations.map((inv) => ({
+      id: inv.invitationId,
+      email: inv.email,
+      role: inv.role as 'admin' | 'superadmin',
+      invitedBy: inv.inviterName ?? 'Unknown',
+      invitedAt: new Date(inv.createdAt),
+      status: inv.status as 'pending' | 'accepted' | 'expired' | 'cancelled',
+      expiresAt: new Date(inv.expiresAt),
+      acceptedAt: inv.acceptedAt ? new Date(inv.acceptedAt) : null,
+      cancelledAt: inv.cancelledAt ? new Date(inv.cancelledAt) : null,
+      customMessage: inv.customMessage,
+      // Mark as expired if past expiry date
+      isExpired: inv.status === 'pending' && new Date(inv.expiresAt) < now,
+      // Calculate time remaining for pending invitations
+      timeRemaining: inv.status === 'pending' ? Math.max(0, new Date(inv.expiresAt).getTime() - now.getTime()) : null,
+    }))
+
     return NextResponse.json({
       success: true,
       data: {
-        invitations: invitations.map((inv) => ({
-          ...inv,
-          // Mark as expired if past expiry date
-          isExpired: inv.status === 'pending' && new Date(inv.expiresAt) < now,
-          // Calculate time remaining for pending invitations
-          timeRemaining:
-            inv.status === 'pending' ? Math.max(0, new Date(inv.expiresAt).getTime() - now.getTime()) : null,
-        })),
+        invitations: transformedInvitations,
         pagination: {
           page,
           limit,
@@ -155,6 +156,15 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('List invitations error:', error)
+
+    if (error instanceof Error && error.message.includes('Admin access required')) {
+      return NextResponse.json({ error: 'Forbidden - Super admin access required' }, { status: 403 })
+    }
+
+    if (error instanceof Error && error.message.includes('Authentication required')) {
+      return NextResponse.json({ error: 'Unauthorized - Authentication required' }, { status: 401 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -164,18 +174,8 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    // Check authentication and authorization
-    const user = await currentUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized - User not authenticated' }, { status: 401 })
-    }
-
-    // Check if user has superadmin role
-    const userRole = user.publicMetadata?.role as string
-    if (userRole !== 'superadmin') {
-      return NextResponse.json({ error: 'Forbidden - Only superadmins can manage invitations' }, { status: 403 })
-    }
+    // Check authentication and authorization - require super admin
+    await requireSuperAdmin()
 
     const body = await request.json()
     const { action, invitationIds } = body
@@ -285,6 +285,15 @@ export async function PATCH(request: NextRequest) {
     })
   } catch (error) {
     console.error('Bulk invitation operation error:', error)
+
+    if (error instanceof Error && error.message.includes('Admin access required')) {
+      return NextResponse.json({ error: 'Forbidden - Super admin access required' }, { status: 403 })
+    }
+
+    if (error instanceof Error && error.message.includes('Authentication required')) {
+      return NextResponse.json({ error: 'Unauthorized - Authentication required' }, { status: 401 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

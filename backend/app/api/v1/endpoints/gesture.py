@@ -8,10 +8,8 @@ import logging
 import re
 import time
 from datetime import datetime
-from html import escape
 from typing import Any, Dict, List, Optional
 
-import bleach
 from app.middleware.response_middleware import ResponseFactory, create_response_factory
 from app.models.api_response import ApiResponse, HealthCheckData
 from app.services.deepeval_monitoring import evaluate_llm_response
@@ -19,7 +17,7 @@ from app.services.document_manager import get_document_manager
 from app.services.langchain_service import process_question_simple
 from app.services.metrics_service import metrics_service
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/gesture", tags=["gesture"])
@@ -36,11 +34,11 @@ class GestureTextRequest(BaseModel):
     session_id: Optional[str] = Field(
         default=None,
         max_length=255,
-        regex=r"^[a-zA-Z0-9_-]+$",
+        pattern=r"^[a-zA-Z0-9_-]+$",
         description="Optional session identifier (alphanumeric, underscore, hyphen only)",
     )
     language: str = Field(
-        default="id", regex=r"^(id|en)$", description="Response language (id/en only)"
+        default="id", pattern=r"^(id|en)$", description="Response language (id/en only)"
     )
     gesture_confidence: Optional[float] = Field(
         default=None,
@@ -49,33 +47,8 @@ class GestureTextRequest(BaseModel):
         description="Original gesture recognition confidence (0.0-1.0)",
     )
 
-    @validator("text")
-    def sanitize_text(cls, v):
-        """Sanitize input text to prevent XSS and injection attacks"""
-        if not v or not v.strip():
-            raise ValueError("Text cannot be empty")
-
-        # Remove HTML tags and potential XSS vectors
-        sanitized = bleach.clean(v.strip(), strip=True)
-
-        # Additional escape for safety
-        sanitized = escape(sanitized)
-
-        # Check for suspicious patterns
-        suspicious_patterns = [
-            r"<script[^>]*>.*?</script>",
-            r"javascript:",
-            r"on\w+\s*=",
-            r"<iframe[^>]*>.*?</iframe>",
-        ]
-
-        for pattern in suspicious_patterns:
-            if re.search(pattern, sanitized, re.IGNORECASE):
-                raise ValueError("Input contains potentially malicious content")
-
-        return sanitized
-
-    @validator("session_id")
+    @field_validator("session_id")
+    @classmethod
     def validate_session_id(cls, v):
         """Additional validation for session ID"""
         if v is None:

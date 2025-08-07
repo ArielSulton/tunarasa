@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { currentUser } from '@clerk/nextjs/server'
+import { requireSuperAdmin } from '@/lib/auth/supabase-auth'
 import { AdminInvitationEmail } from '@/components/emails/AdminInvitationEmail'
 import { db } from '@/lib/db'
 import { adminInvitations, users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
+import { invitationRateLimiter, applyRateLimit } from '@/lib/security/rate-limiter'
 
 // Initialize Resend with API key
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -15,23 +16,19 @@ const resend = new Resend(process.env.RESEND_API_KEY)
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication and authorization
-    const user = await currentUser()
+    // Check authentication and authorization - require super admin
+    const authUser = await requireSuperAdmin()
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized - User not authenticated' }, { status: 401 })
-    }
+    // Apply rate limiting per user
+    const rateLimitKey = `invite:${authUser.user_id}`
+    const rateLimitResult = applyRateLimit(
+      invitationRateLimiter,
+      rateLimitKey,
+      'Too many invitation attempts. Please wait before sending more invitations.',
+    )
 
-    // Check if user has superadmin role
-    const userRole = user.publicMetadata?.role as string
-    if (userRole !== 'superadmin') {
-      return NextResponse.json({ error: 'Forbidden - Only superadmins can send invitations' }, { status: 403 })
-    }
-
-    // Get the user's database ID
-    const dbUser = await db.select().from(users).where(eq(users.clerkUserId, user.id)).limit(1)
-    if (!dbUser.length) {
-      return NextResponse.json({ error: 'User not found in database' }, { status: 404 })
+    if (rateLimitResult.isLimited) {
+      return rateLimitResult.response!
     }
 
     // Parse request body
@@ -43,8 +40,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields: email and role' }, { status: 400 })
     }
 
+    // Enhanced email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
+    }
+
     if (!['admin', 'superadmin'].includes(role)) {
       return NextResponse.json({ error: 'Invalid role. Must be admin or superadmin' }, { status: 400 })
+    }
+
+    // Security check: Only superadmins can create other superadmins
+    if (role === 'superadmin' && authUser.role_id !== 1) {
+      return NextResponse.json({ error: 'Only superadmins can invite other superadmins' }, { status: 403 })
+    }
+
+    // Check for existing user with this email
+    const existingUser = await db
+      .select({ userId: users.userId, email: users.email })
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()))
+      .limit(1)
+
+    if (existingUser.length > 0) {
+      return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 })
+    }
+
+    // Check for existing pending invitation
+    const existingInvitation = await db
+      .select({ invitationId: adminInvitations.invitationId, status: adminInvitations.status })
+      .from(adminInvitations)
+      .where(and(eq(adminInvitations.email, email.toLowerCase()), eq(adminInvitations.status, 'pending')))
+      .limit(1)
+
+    if (existingInvitation.length > 0) {
+      return NextResponse.json({ error: 'Pending invitation already exists for this email' }, { status: 409 })
     }
 
     // Generate invitation token and expiry
@@ -52,7 +82,7 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
 
     // Create invitation link
-    const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/accept-invitation?token=${invitationToken}`
+    const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invitation?token=${invitationToken}`
 
     // Send email via Resend
     const { data, error } = await resend.emails.send({
@@ -60,8 +90,8 @@ export async function POST(request: NextRequest) {
       to: [email],
       subject: 'Invitation to Join Tunarasa Admin Team',
       react: AdminInvitationEmail({
-        invitedByName: user.firstName ?? user.emailAddresses[0]?.emailAddress ?? 'Admin',
-        invitedByEmail: user.emailAddresses[0]?.emailAddress || '',
+        invitedByName: authUser.full_name ?? authUser.first_name ?? 'Admin',
+        invitedByEmail: authUser.email ?? '',
         inviteeEmail: email,
         role: role as 'admin' | 'superadmin',
         invitationUrl,
@@ -70,7 +100,7 @@ export async function POST(request: NextRequest) {
       }),
       // Fallback HTML for email clients that don't support React
       html: generateFallbackHTML({
-        invitedByName: user.firstName ?? 'Admin',
+        invitedByName: authUser.full_name ?? authUser.first_name ?? 'Admin',
         role,
         invitationUrl,
         customMessage,
@@ -87,9 +117,9 @@ export async function POST(request: NextRequest) {
     const newInvitation = await db
       .insert(adminInvitations)
       .values({
-        email,
+        email: email.toLowerCase(), // Normalize email case
         role,
-        invitedBy: dbUser[0].userId,
+        invitedBy: authUser.user_id,
         customMessage,
         token: invitationToken,
         expiresAt,
@@ -99,15 +129,27 @@ export async function POST(request: NextRequest) {
         invitationId: adminInvitations.invitationId,
       })
 
+    // Log successful invitation for security audit
+    console.log(`Admin invitation sent: ${email} (role: ${role}) by ${authUser.email} (userId: ${authUser.user_id})`)
+
     return NextResponse.json({
       message: 'Invitation sent successfully',
       invitationId: newInvitation[0].invitationId,
-      token: invitationToken,
+      token: invitationToken, // TODO: Remove in production for security
       emailId: data?.id,
       expiresAt: expiresAt.toISOString(),
     })
   } catch (error) {
     console.error('Admin invitation error:', error)
+
+    if (error instanceof Error && error.message.includes('Admin access required')) {
+      return NextResponse.json({ error: 'Forbidden - Super admin access required' }, { status: 403 })
+    }
+
+    if (error instanceof Error && error.message.includes('Authentication required')) {
+      return NextResponse.json({ error: 'Unauthorized - Authentication required' }, { status: 401 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

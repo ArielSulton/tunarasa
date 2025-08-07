@@ -13,8 +13,8 @@ class User(BaseDBModel):
     """User model matching new schema structure"""
 
     user_id: int = Field(description="Unique user identifier (serial primary key)")
-    clerk_user_id: Optional[int] = Field(
-        default=None, description="Clerk user ID for admin users"
+    supabase_user_id: Optional[str] = Field(
+        default=None, description="Supabase user ID for authenticated users"
     )
     full_name: Optional[str] = Field(
         default=None, max_length=255, description="User full name"
@@ -26,7 +26,7 @@ class User(BaseDBModel):
         json_schema_extra = {
             "example": {
                 "user_id": 1,
-                "clerk_user_id": 12345,
+                "supabase_user_id": "123e4567-e89b-12d3-a456-426614174000",
                 "full_name": "John Doe",
                 "role_id": 1,
                 "gender_id": 1,
@@ -37,7 +37,7 @@ class User(BaseDBModel):
 class UserCreate(BaseModel):
     """Schema for creating user record"""
 
-    clerk_user_id: Optional[int] = None
+    supabase_user_id: Optional[str] = None
     full_name: Optional[str] = Field(default=None, max_length=255)
     role_id: int
     gender_id: int
@@ -46,7 +46,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     """Schema for updating user"""
 
-    clerk_user_id: Optional[int] = None
+    supabase_user_id: Optional[str] = None
     full_name: Optional[str] = Field(default=None, max_length=255)
     role_id: Optional[int] = None
     gender_id: Optional[int] = None

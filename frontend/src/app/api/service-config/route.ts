@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { currentUser } from '@clerk/nextjs/server'
+import { requireAdmin, requireSuperAdmin } from '@/lib/auth/supabase-auth'
 import { db } from '@/lib/db'
-import { appSettings, users } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { appSettings } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * Service Configuration API
@@ -37,29 +37,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    // Check authentication and admin role
-    const user = await currentUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized - User not authenticated' }, { status: 401 })
-    }
-
-    // Check if user is admin or superadmin
-    const dbUser = await db
-      .select()
-      .from(users)
-      .where(and(eq(users.clerkUserId, user.id), eq(users.isActive, true)))
-      .limit(1)
-
-    if (dbUser.length === 0) {
-      return NextResponse.json({ error: 'User not found in database' }, { status: 404 })
-    }
-
-    const userRole = dbUser[0].roleId
-    if (userRole !== 1 && userRole !== 2) {
-      // Not superadmin or admin
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
-    }
+    // Check authentication and authorization - require admin access
+    const authUser = await requireAdmin()
 
     const body = await req.json()
     const { serviceMode } = body
@@ -87,7 +66,7 @@ export async function POST(req: NextRequest) {
         .update(appSettings)
         .set({
           settingValue: serviceMode,
-          updatedBy: dbUser[0].userId,
+          updatedBy: authUser.userId,
           updatedAt: new Date(),
         })
         .where(eq(appSettings.settingKey, SERVICE_MODE_KEY))
@@ -99,7 +78,7 @@ export async function POST(req: NextRequest) {
         settingType: 'string',
         description: 'Global service mode for chat system',
         isPublic: true, // Can be read by non-admin users
-        updatedBy: dbUser[0].userId,
+        updatedBy: authUser.userId,
       })
     }
 
@@ -113,11 +92,20 @@ export async function POST(req: NextRequest) {
       message: 'Service mode updated successfully',
       serviceMode,
       description: modeDescription,
-      updatedBy: user.emailAddresses[0]?.emailAddress || user.id,
+      updatedBy: authUser.email ?? authUser.fullName ?? authUser.supabaseUserId,
       updatedAt: new Date().toISOString(),
     })
   } catch (error) {
     console.error('Error updating service configuration:', error)
+
+    if (error instanceof Error && error.message.includes('Admin access required')) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+    }
+
+    if (error instanceof Error && error.message.includes('Authentication required')) {
+      return NextResponse.json({ error: 'Unauthorized - Authentication required' }, { status: 401 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -127,23 +115,8 @@ export async function POST(req: NextRequest) {
  */
 export async function PUT() {
   try {
-    // Check authentication and superadmin role
-    const user = await currentUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized - User not authenticated' }, { status: 401 })
-    }
-
-    // Check if user is superadmin
-    const dbUser = await db
-      .select()
-      .from(users)
-      .where(and(eq(users.clerkUserId, user.id), eq(users.isActive, true)))
-      .limit(1)
-
-    if (dbUser.length === 0 || dbUser[0].roleId !== 1) {
-      return NextResponse.json({ error: 'Forbidden - SuperAdmin access required' }, { status: 403 })
-    }
+    // Check authentication and authorization - require super admin
+    const authUser = await requireSuperAdmin()
 
     // Check if service mode setting already exists
     const existingSetting = await db
@@ -168,7 +141,7 @@ export async function PUT() {
       settingType: 'string',
       description: 'Global service mode for chat system',
       isPublic: true,
-      updatedBy: dbUser[0].userId,
+      updatedBy: authUser.userId,
     })
 
     return NextResponse.json({
@@ -179,6 +152,15 @@ export async function PUT() {
     })
   } catch (error) {
     console.error('Error initializing service configuration:', error)
+
+    if (error instanceof Error && error.message.includes('Admin access required')) {
+      return NextResponse.json({ error: 'Forbidden - Super admin access required' }, { status: 403 })
+    }
+
+    if (error instanceof Error && error.message.includes('Authentication required')) {
+      return NextResponse.json({ error: 'Unauthorized - Authentication required' }, { status: 401 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

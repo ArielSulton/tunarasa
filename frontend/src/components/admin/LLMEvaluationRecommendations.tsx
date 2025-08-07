@@ -37,7 +37,6 @@ export function LLMEvaluationRecommendations() {
 
   useEffect(() => {
     void fetchEvaluationData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timePeriod])
 
   const fetchEvaluationData = async () => {
@@ -47,8 +46,8 @@ export function LLMEvaluationRecommendations() {
     try {
       // Fetch evaluation summary and quality report
       const [summaryResponse, reportResponse] = await Promise.all([
-        adminApiClient.getLLMEvaluationSummary({ period: timePeriod }),
-        adminApiClient.getLLMQualityReport(),
+        adminApiClient.getLLMEvaluationSummary('30d'),
+        adminApiClient.getLLMQualityReport({ period: '30d' }),
       ])
 
       if (summaryResponse.success && summaryResponse.data) {
@@ -293,7 +292,10 @@ export function LLMEvaluationRecommendations() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Pass Rate:</span>
                         <span className="font-medium">
-                          {summary.key_metrics ? (summary.key_metrics.avg_confidence * 100).toFixed(1) : 'N/A'}%
+                          {summary.key_metrics?.avg_confidence
+                            ? (summary.key_metrics.avg_confidence * 100).toFixed(1)
+                            : 'N/A'}
+                          %
                         </span>
                       </div>
                     </div>

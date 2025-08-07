@@ -153,8 +153,8 @@ async def _check_external_services() -> Dict[str, Any]:
     # Check Pinecone
     services["pinecone"] = await _check_pinecone()
 
-    # Check Clerk
-    services["clerk"] = await _check_clerk()
+    # Check Supabase
+    services["supabase"] = await _check_supabase()
 
     return services
 
@@ -243,38 +243,39 @@ async def _check_pinecone() -> Dict[str, Any]:
         return {"status": "unhealthy", "error": str(e)}
 
 
-async def _check_clerk() -> Dict[str, Any]:
-    """Check Clerk service availability"""
+async def _check_supabase() -> Dict[str, Any]:
+    """Check Supabase service availability"""
     try:
-        if not settings.CLERK_SECRET_KEY:
+        if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
             return {"status": "not_configured"}
 
-        # Implement actual Clerk health check
+        # Implement actual Supabase health check
         import httpx
 
         try:
             async with httpx.AsyncClient() as client:
-                # Check Clerk API by fetching user count (lightweight operation)
+                # Check Supabase REST API
                 response = await client.get(
-                    "https://api.clerk.com/v1/users?limit=1",
+                    f"{settings.SUPABASE_URL}/rest/v1/",
                     headers={
-                        "Authorization": f"Bearer {settings.CLERK_SECRET_KEY}",
+                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
                         "Content-Type": "application/json",
                     },
                     timeout=5.0,
                 )
 
                 if response.status_code == 200:
-                    users_data = response.json()
                     return {
                         "status": "healthy",
-                        "total_users": users_data.get("total_count", 0),
+                        "url": settings.SUPABASE_URL,
+                        "auth_enabled": bool(settings.SUPABASE_JWT_SECRET),
                         "response_time_ms": response.elapsed.total_seconds() * 1000,
                     }
                 else:
                     return {
                         "status": "unhealthy",
-                        "error": f"Clerk API returned {response.status_code}",
+                        "error": f"Supabase API returned {response.status_code}",
                         "response_time_ms": response.elapsed.total_seconds() * 1000,
                     }
         except httpx.TimeoutException:

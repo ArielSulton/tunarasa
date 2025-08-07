@@ -21,14 +21,14 @@ class UserCRUD:
     @staticmethod
     async def create(
         db: AsyncSession,
-        clerk_user_id: Optional[int] = None,
+        supabase_user_id: Optional[str] = None,
         full_name: Optional[str] = None,
         role_id: int = 1,
         gender_id: int = 1,
     ) -> User:
         """Create a new user"""
         user = User(
-            clerk_user_id=clerk_user_id,
+            supabase_user_id=supabase_user_id,
             full_name=full_name,
             role_id=role_id,
             gender_id=gender_id,
@@ -54,12 +54,14 @@ class UserCRUD:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_by_clerk_id(db: AsyncSession, clerk_user_id: int) -> Optional[User]:
-        """Get user by Clerk ID"""
+    async def get_by_supabase_id(
+        db: AsyncSession, supabase_user_id: str
+    ) -> Optional[User]:
+        """Get user by Supabase ID"""
         stmt = (
             select(User)
             .options(selectinload(User.role), selectinload(User.gender))
-            .where(User.clerk_user_id == clerk_user_id)
+            .where(User.supabase_user_id == supabase_user_id)
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()

@@ -26,14 +26,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # FastAPI and async
 import aiofiles
-import pinecone
 from app.core.config import settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_pinecone import PineconeEmbeddings
 
 # Core libraries
-from pinecone import Index, Pinecone
+from pinecone import Pinecone, ServerlessSpec
 
 # Document processing
 from pypdf import PdfReader
@@ -412,7 +411,7 @@ class PineconeVectorService:
 
     def __init__(self):
         self.client: Optional[Pinecone] = None
-        self.index: Optional[Index] = None
+        self.index = None
         self.embeddings: Optional[PineconeEmbeddings] = None
         self.document_processor = DocumentProcessor()
         self.document_metadata_cache: Dict[str, DocumentMetadata] = {}
@@ -478,7 +477,7 @@ class PineconeVectorService:
                         name=index_name,
                         dimension=1536,  # multilingual-e5-large embedding dimension
                         metric="cosine",
-                        spec=pinecone.ServerlessSpec(cloud="aws", region="us-east-1"),
+                        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
                     )
 
                     logger.info(f"Created Pinecone index: {index_name}")

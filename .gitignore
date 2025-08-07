@@ -112,6 +112,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Runtime data
+assets/
 pids/
 *.pid
 *.seed

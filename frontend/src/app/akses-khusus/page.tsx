@@ -1,6 +1,6 @@
 'use client'
 
-import { AuthStatusWrapper } from '@/components/auth/AuthStatusWrapper'
+import { AuthStatus } from '@/components/auth/auth-components'
 import { Shield, CheckCircle, Users, Lock } from 'lucide-react'
 
 export default function AksesKhusus() {
@@ -66,7 +66,7 @@ export default function AksesKhusus() {
               <p className="text-sm text-gray-600">Pilih metode autentikasi untuk melanjutkan</p>
             </div>
 
-            <AuthStatusWrapper />
+            <AuthStatus />
 
             {/* Help Text */}
             <div className="mt-6 border-t border-gray-200 pt-6 text-center">

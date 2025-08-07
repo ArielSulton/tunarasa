@@ -1,6 +1,6 @@
 """
 Admin API endpoints for dashboard and user management
-Requires Clerk JWT authentication with admin role
+Requires Supabase JWT authentication with admin role
 """
 
 import logging
@@ -195,7 +195,7 @@ async def get_all_users(
         for user in users:
             user_dict = {
                 "user_id": user.user_id,
-                "clerk_user_id": user.clerk_user_id,
+                "supabase_user_id": user.supabase_user_id,
                 "full_name": user.full_name,
                 "role": user.role.role_name if user.role else None,
                 "gender": user.gender.gender_name if user.gender else None,
@@ -243,7 +243,7 @@ async def get_user_by_id(
 
         user_data = {
             "user_id": user.user_id,
-            "clerk_user_id": user.clerk_user_id,
+            "supabase_user_id": user.supabase_user_id,
             "full_name": user.full_name,
             "role": user.role.role_name if user.role else None,
             "gender": user.gender.gender_name if user.gender else None,
@@ -302,7 +302,7 @@ async def update_user(
 
         user_data = {
             "user_id": updated_user.user_id,
-            "clerk_user_id": updated_user.clerk_user_id,
+            "supabase_user_id": updated_user.supabase_user_id,
             "full_name": updated_user.full_name,
             "role": updated_user.role.role_name if updated_user.role else None,
             "gender": updated_user.gender.gender_name if updated_user.gender else None,

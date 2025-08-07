@@ -6,8 +6,8 @@ import logging
 import uuid
 from typing import AsyncGenerator
 
-from app.core.config import get_async_database_url, settings
-from sqlalchemy import MetaData
+from app.core.config import get_database_url, settings
+from sqlalchemy import MetaData, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
@@ -28,7 +28,7 @@ async def init_database():
     global engine, async_session_factory
 
     try:
-        database_url = get_async_database_url()
+        database_url = get_database_url()
         logger.info("Connecting to database...")
 
         # Create async engine - disable client side pooling for Supabase pooler
@@ -120,7 +120,7 @@ class DatabaseManager:
 
             async with async_session_factory() as session:
                 # Simple health check query
-                result = await session.execute("SELECT 1")
+                result = await session.execute(text("SELECT 1"))
                 result.fetchone()
 
                 return {

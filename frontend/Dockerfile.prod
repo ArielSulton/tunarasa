@@ -25,8 +25,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Next.js Standalone Mode
 ENV NEXT_PRIVATE_STANDALONE=true
 
-# Disable Clerk during build time to avoid Docker compatibility issues
-ENV NEXT_PUBLIC_ENABLE_CLERK_AUTH=false
+# Use Supabase Auth for authentication
+ENV NEXT_PUBLIC_AUTH_PROVIDER=supabase
 
 # Copy all files
 COPY --from=deps /app/node_modules ./node_modules
@@ -64,14 +64,13 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
     # Authentication & Security
     --mount=type=secret,id=SECRET_KEY,env=SECRET_KEY \
     --mount=type=secret,id=ACCESS_TOKEN_EXPIRE_MINUTES,env=ACCESS_TOKEN_EXPIRE_MINUTES \
-    --mount=type=secret,id=NEXT_PUBLIC_ENABLE_CLERK_AUTH,env=NEXT_PUBLIC_ENABLE_CLERK_AUTH \
-    --mount=type=secret,id=NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,env=NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY \
-    --mount=type=secret,id=CLERK_SECRET_KEY,env=CLERK_SECRET_KEY \
-    --mount=type=secret,id=CLERK_WEBHOOK_SIGNING_SECRET,env=CLERK_WEBHOOK_SIGNING_SECRET \
-    --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_IN_URL,env=NEXT_PUBLIC_CLERK_SIGN_IN_URL \
-    --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_UP_URL,env=NEXT_PUBLIC_CLERK_SIGN_UP_URL \
-    --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL,env=NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL \
-    --mount=type=secret,id=NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL,env=NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_ENABLE_SUPABASE_AUTH,env=NEXT_PUBLIC_ENABLE_SUPABASE_AUTH \
+    --mount=type=secret,id=SUPABASE_JWT_SECRET,env=SUPABASE_JWT_SECRET \
+    --mount=type=secret,id=SUPABASE_PROJECT_ID,env=SUPABASE_PROJECT_ID \
+    --mount=type=secret,id=NEXT_PUBLIC_SIGN_IN_URL,env=NEXT_PUBLIC_SIGN_IN_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_SIGN_UP_URL,env=NEXT_PUBLIC_SIGN_UP_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_SIGN_IN_FALLBACK_REDIRECT_URL,env=NEXT_PUBLIC_SIGN_IN_FALLBACK_REDIRECT_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_SIGN_UP_FALLBACK_REDIRECT_URL,env=NEXT_PUBLIC_SIGN_UP_FALLBACK_REDIRECT_URL \
 
     # AI Services Configuration
     --mount=type=secret,id=GROQ_API_KEY,env=GROQ_API_KEY \

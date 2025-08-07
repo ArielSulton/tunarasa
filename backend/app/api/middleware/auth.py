@@ -1,15 +1,12 @@
 """
-Authentication middleware for secure API access with Clerk JWT validation
+Authentication middleware for secure API access with Supabase JWT validation
 """
 
-import json
 import logging
 import re
 import time
-from functools import lru_cache
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, Set
 
-import httpx
 import jwt
 from app.core.config import settings
 from fastapi import Request, status
@@ -29,7 +26,7 @@ security = HTTPBearer()
 
 class AuthMiddleware(BaseHTTPMiddleware):
     """
-    Enhanced authentication middleware with security hardening
+    Enhanced authentication middleware with Supabase JWT validation
     """
 
     def __init__(self, app):
@@ -38,21 +35,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         self._jwks_cache_duration = 3600  # 1 hour
         self._revoked_tokens: Set[str] = set()  # In-memory token revocation list
         self._failed_attempts: Dict[str, list] = {}  # Rate limiting for failed attempts
-
-    def _get_clerk_domain_suffix(self) -> Optional[str]:
-        """Extract domain suffix from Clerk publishable key"""
-        if not settings.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
-            logger.error("Clerk publishable key not configured")
-            return None
-
-        pub_key = settings.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-        if pub_key.startswith("pk_test_"):
-            return pub_key.replace("pk_test_", "")
-        elif pub_key.startswith("pk_live_"):
-            return pub_key.replace("pk_live_", "")
-        else:
-            logger.error("Invalid Clerk publishable key format")
-            return None
 
     # Public endpoints that don't require authentication
     PUBLIC_ENDPOINTS = {
@@ -68,7 +50,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/summary/generate",  # Allow public access for summary generation
     }
 
-    # Admin endpoints that require Clerk authentication
+    # Admin endpoints that require Supabase authentication
     ADMIN_ENDPOINTS = {
         "/api/v1/admin/",
         "/api/v1/admin/dashboard",
@@ -83,7 +65,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         """
 
         # Skip authentication for public endpoints
-
         if request.url.path in self.PUBLIC_ENDPOINTS or request.url.path.startswith(
             "/api/v1/summary/"
         ):
@@ -121,7 +102,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     async def _validate_admin_token(self, request: Request) -> bool:
         """
-        Enhanced Clerk JWT token validation with security hardening
+        Enhanced Supabase JWT token validation with security hardening
         """
         try:
             # Rate limiting check
@@ -155,52 +136,32 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 await self._record_failed_attempt(client_ip)
                 return False
 
-            # Validate Clerk JWT token
-            if not settings.CLERK_SECRET_KEY:
-                logger.error("Clerk secret key not configured")
+            # Validate Supabase JWT token
+            if not settings.SUPABASE_JWT_SECRET:
+                logger.error("Supabase JWT secret not configured")
                 return False
 
-            # Get Clerk's public keys for JWT verification
-            jwks = await self._get_clerk_jwks()
-            if not jwks:
-                logger.error("Failed to retrieve Clerk JWKS")
+            # Decode and verify the JWT with Supabase secret
+            try:
+                decoded = jwt.decode(
+                    token,
+                    settings.SUPABASE_JWT_SECRET,
+                    algorithms=["HS256"],
+                    options={
+                        "verify_signature": True,
+                        "verify_exp": True,
+                        "verify_aud": True,
+                        "verify_iss": True,
+                        "verify_nbf": True,  # Not before validation
+                        "verify_iat": True,  # Issued at validation
+                    },
+                    audience="authenticated",
+                    issuer=f"https://{settings.SUPABASE_PROJECT_ID}.supabase.co/auth/v1",
+                )
+            except Exception as e:
+                logger.warning(f"JWT decode failed from {client_ip}: {e}")
+                await self._record_failed_attempt(client_ip)
                 return False
-
-            # Decode and verify the JWT
-            unverified_header = jwt.get_unverified_header(token)
-            key_id = unverified_header.get("kid")
-
-            if not key_id or key_id not in jwks:
-                logger.warning(f"Invalid key ID in JWT: {key_id}")
-                return False
-
-            # Get the public key for verification
-            public_key = jwks[key_id]
-
-            # Enhanced audience validation
-            expected_audience = self._get_expected_audience()
-            domain_suffix = self._get_clerk_domain_suffix()
-            if not domain_suffix:
-                logger.error("Could not extract domain suffix from Clerk key")
-                return False
-            expected_issuer = f"https://{domain_suffix}.clerk.accounts.dev"
-
-            # Verify and decode the JWT with enhanced validation
-            decoded = jwt.decode(
-                token,
-                public_key,
-                algorithms=["RS256"],
-                audience=expected_audience,
-                issuer=expected_issuer,
-                options={
-                    "verify_signature": True,
-                    "verify_exp": True,
-                    "verify_aud": True,
-                    "verify_iss": True,
-                    "verify_nbf": True,  # Not before validation
-                    "verify_iat": True,  # Issued at validation
-                },
-            )
 
             # Additional security checks
             if not self._validate_token_claims(decoded):
@@ -208,21 +169,18 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 await self._record_failed_attempt(client_ip)
                 return False
 
-            # Check if user has admin role
-            user_role = decoded.get("metadata", {}).get("role")
-            if user_role != "admin":
-                logger.warning(
-                    f"User {decoded.get('sub')} does not have admin role: {user_role}"
-                )
+            # Check if user has admin role by verifying against database
+            user_id = decoded.get("sub")
+            if not await self._validate_admin_role(user_id):
+                logger.warning(f"User {user_id} does not have admin role")
                 return False
 
             # Store user info in request state
             request.state.user = {
                 "id": decoded.get("sub"),
                 "email": decoded.get("email"),
-                "role": user_role,
-                "full_name": decoded.get("name"),
-                "clerk_user_id": decoded.get("sub"),
+                "role": "admin",  # Validated above
+                "supabase_user_id": decoded.get("sub"),
             }
 
             logger.info(f"Admin token validated for user: {decoded.get('sub')}")
@@ -245,57 +203,34 @@ class AuthMiddleware(BaseHTTPMiddleware):
             await self._record_failed_attempt(client_ip)
             return False
 
-    @lru_cache(maxsize=1)
-    def _get_cached_jwks(self, cache_key: str) -> Optional[Dict[str, Any]]:
-        """Cached JWKS with proper expiration"""
-        return getattr(self, "_jwks_cache", None)
-
-    async def _get_clerk_jwks(self) -> Optional[Dict[str, Any]]:
+    async def _validate_admin_role(self, user_id: str) -> bool:
         """
-        Fetch Clerk's JSON Web Key Set (JWKS) with enhanced caching and security
+        Validate if user has admin role by checking database
         """
         try:
-            # Check cache with time-based expiration
-            current_time = time.time()
-            if (
-                hasattr(self, "_jwks_cache")
-                and self._jwks_cache
-                and current_time - self._jwks_cache_time < self._jwks_cache_duration
-            ):
-                return self._jwks_cache
+            from app.core.database import get_session
+            from app.db.models import Role, User
+            from sqlalchemy import and_
 
-            # Get Clerk domain suffix
-            domain_suffix = self._get_clerk_domain_suffix()
-            if not domain_suffix:
-                return None
+            async with get_session() as db:
+                user = (
+                    db.query(User)
+                    .join(Role)
+                    .filter(
+                        and_(
+                            User.supabase_user_id == user_id,
+                            User.is_active == User.is_active,
+                            Role.role_name.in_(["admin", "superadmin"]),
+                        )
+                    )
+                    .first()
+                )
 
-            # Construct JWKS URL
-            jwks_url = (
-                f"https://{domain_suffix}.clerk.accounts.dev/.well-known/jwks.json"
-            )
-
-            # Fetch JWKS
-            async with httpx.AsyncClient() as client:
-                response = await client.get(jwks_url, timeout=10.0)
-                response.raise_for_status()
-                jwks_data = response.json()
-
-            # Convert JWKS to usable format
-            jwks = {}
-            for key in jwks_data.get("keys", []):
-                if key.get("kty") == "RSA" and key.get("use") == "sig":
-                    # Convert JWK to PEM format for PyJWT
-                    public_key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
-                    jwks[key["kid"]] = public_key
-
-            # Cache the JWKS with timestamp
-            self._jwks_cache = jwks
-            self._jwks_cache_time = current_time
-            return jwks
+                return user is not None
 
         except Exception as e:
-            logger.error(f"Failed to fetch Clerk JWKS: {e}")
-            return None
+            logger.error(f"Error validating admin role for user {user_id}: {e}")
+            return False
 
     def _get_client_ip(self, request: Request) -> str:
         """Extract client IP with proxy support"""
@@ -351,12 +286,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # In production, this should check a database or Redis
         token_hash = hash(token)
         return str(token_hash) in self._revoked_tokens
-
-    def _get_expected_audience(self) -> str:
-        """Get expected JWT audience"""
-        if settings.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
-            return settings.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-        return "tunarasa-app"
 
     def _validate_token_claims(self, decoded: Dict[str, Any]) -> bool:
         """Additional validation of JWT claims"""
@@ -465,7 +394,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                         "id": user.user_id if user else None,
                         "full_name": user.full_name if user else None,
                         "role_id": user.role_id if user else None,
-                        "clerk_user_id": user.clerk_user_id if user else None,
+                        "supabase_user_id": user.supabase_user_id if user else None,
                     }
                     if user
                     else None

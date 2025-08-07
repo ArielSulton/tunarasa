@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
 'use client'
 
-import { useUser } from '@clerk/nextjs'
 import { Shield, Crown, AlertTriangle } from 'lucide-react'
-import { authEnv, isClerkConfigured } from '@/config/auth'
+import { useSupabaseUser, useIsAdmin, useIsSuperAdmin } from '@/lib/hooks/use-supabase-auth'
 
 /**
  * SuperAdmin only wrapper component with role hierarchy logic
@@ -12,7 +12,7 @@ import { authEnv, isClerkConfigured } from '@/config/auth'
  * - admin: Limited access, can view data but cannot manage other admins
  *
  * Superadmin Logic:
- * 1. First user to access /akses-khusus becomes superadmin automatically
+ * 1. Users with roleId 1 are superadmins
  * 2. Superadmin can invite other admins via email (resend API)
  * 3. Only superadmin can promote/demote other users
  * 4. Superadmin has access to all admin functions plus user management
@@ -24,12 +24,14 @@ interface SuperAdminOnlyProps {
 }
 
 /**
- * Internal Clerk-enabled superadmin component
+ * SuperAdmin only wrapper component with automatic role detection
  */
-function SuperAdminOnlyWithClerk({ children, fallbackToAdmin = false }: SuperAdminOnlyProps) {
-  const { user, isLoaded } = useUser()
+export function SuperAdminOnly({ children, fallbackToAdmin = false }: SuperAdminOnlyProps) {
+  const { user, supabaseUser, loading } = useSupabaseUser()
+  const { isSuperAdmin } = useIsSuperAdmin()
+  const { isAdmin } = useIsAdmin()
 
-  if (!isLoaded) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
@@ -37,14 +39,38 @@ function SuperAdminOnlyWithClerk({ children, fallbackToAdmin = false }: SuperAdm
     )
   }
 
-  const userRole = user?.publicMetadata?.role as string
-  const isSuperAdmin = userRole === 'superadmin'
-  const isAdmin = userRole === 'admin'
+  // Check if user is authenticated with Supabase
+  if (!supabaseUser || !user) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="max-w-md text-center">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+            <AlertTriangle className="h-8 w-8 text-red-600" />
+          </div>
+          <h2 className="mb-2 text-xl font-semibold text-red-600">Authentication Required</h2>
+          <p className="mb-4 text-gray-600">You need to be signed in to access this area.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 [SuperAdminOnly] Access check:', {
+      userRoleId: user?.roleId,
+      isActive: user?.isActive,
+      isSuperAdmin,
+      isAdmin,
+      fallbackToAdmin,
+      loading,
+    })
+  }
 
   // Check access permissions
   const hasAccess = isSuperAdmin || (fallbackToAdmin && isAdmin)
 
   if (!hasAccess) {
+    console.log('🚫 [SuperAdminOnly] Access denied, showing restricted component')
     return (
       <div className="flex items-center justify-center p-8">
         <div className="max-w-md text-center">
@@ -78,46 +104,20 @@ function SuperAdminOnlyWithClerk({ children, fallbackToAdmin = false }: SuperAdm
 }
 
 /**
- * SuperAdmin only wrapper component with automatic role detection
- */
-export function SuperAdminOnly({ children, fallbackToAdmin = false }: SuperAdminOnlyProps) {
-  // Check if Clerk is configured first
-  const shouldUseClerk = authEnv.NEXT_PUBLIC_ENABLE_CLERK_AUTH && isClerkConfigured()
-
-  // If Clerk is not configured, allow access in guest mode for development/build
-  if (!shouldUseClerk) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100">
-            <Crown className="h-8 w-8 text-yellow-600" />
-          </div>
-          <h2 className="mb-2 text-xl font-semibold text-yellow-600">Development Mode</h2>
-          <p className="mb-4 text-gray-600">SuperAdmin features are in guest mode (Clerk disabled)</p>
-          {children}
-        </div>
-      </div>
-    )
-  }
-
-  // Use separate component that calls useUser hook
-  return <SuperAdminOnlyWithClerk fallbackToAdmin={fallbackToAdmin}>{children}</SuperAdminOnlyWithClerk>
-}
-
-/**
  * Role checking utility functions
  */
 export function useUserRole() {
-  const { user } = useUser()
-  const userRole = user?.publicMetadata?.role as string
+  const { user } = useSupabaseUser()
+  const { isSuperAdmin } = useIsSuperAdmin()
+  const { isAdmin } = useIsAdmin()
 
   return {
-    role: userRole,
-    isSuperAdmin: userRole === 'superadmin',
-    isAdmin: userRole === 'admin',
-    hasAdminAccess: userRole === 'superadmin' || userRole === 'admin',
-    canManageUsers: userRole === 'superadmin',
-    canInviteAdmins: userRole === 'superadmin',
+    role: user?.role?.roleName ?? 'user',
+    isSuperAdmin,
+    isAdmin: isAdmin && !isSuperAdmin, // Admin but not superadmin
+    hasAdminAccess: isAdmin ?? isSuperAdmin,
+    canManageUsers: isSuperAdmin,
+    canInviteAdmins: isSuperAdmin,
   }
 }
 

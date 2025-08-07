@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import redis
 from app.core.config import settings
 from fastapi import HTTPException, Request, status
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -93,37 +93,45 @@ class AdminValidationSettings(BaseModel):
     blocked_keywords: Optional[str] = None
     auto_moderation: bool = False
 
-    @validator("confidence_threshold", "gesture_accuracy_threshold", "alert_threshold")
+    @field_validator(
+        "confidence_threshold", "gesture_accuracy_threshold", "alert_threshold"
+    )
+    @classmethod
     def validate_threshold_range(cls, v):
         if not 0.1 <= v <= 1.0:
             raise ValueError("Threshold must be between 0.1 and 1.0")
         return v
 
-    @validator("max_login_attempts")
+    @field_validator("max_login_attempts")
+    @classmethod
     def validate_login_attempts(cls, v):
         if not 1 <= v <= 10:
             raise ValueError("Max login attempts must be between 1 and 10")
         return v
 
-    @validator("session_timeout")
+    @field_validator("session_timeout")
+    @classmethod
     def validate_session_timeout(cls, v):
         if not 5 <= v <= 720:  # 5 minutes to 12 hours
             raise ValueError("Session timeout must be between 5 and 720 minutes")
         return v
 
-    @validator("response_time_limit")
+    @field_validator("response_time_limit")
+    @classmethod
     def validate_response_time(cls, v):
         if not 1 <= v <= 30:
             raise ValueError("Response time limit must be between 1 and 30 seconds")
         return v
 
-    @validator("max_tokens_per_request")
+    @field_validator("max_tokens_per_request")
+    @classmethod
     def validate_max_tokens(cls, v):
         if not 100 <= v <= 4000:
             raise ValueError("Max tokens must be between 100 and 4000")
         return v
 
-    @validator("debounce_time")
+    @field_validator("debounce_time")
+    @classmethod
     def validate_debounce_time(cls, v):
         if not 100 <= v <= 2000:
             raise ValueError("Debounce time must be between 100 and 2000ms")

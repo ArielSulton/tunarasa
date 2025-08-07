@@ -81,7 +81,7 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
 
       if (response.success && response.data) {
         setConversations(response.data.conversations)
-        setTotalPages(response.data.total_pages)
+        setTotalPages(response.data.total_pages ?? 1)
 
         // Calculate stats
         const conversations = response.data.conversations
@@ -476,7 +476,7 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
                 <div>
                   <h4 className="mb-3 font-medium">Messages</h4>
                   <div className="max-h-96 space-y-3 overflow-y-auto">
-                    {selectedConversation.messages.map((message) => (
+                    {(selectedConversation.messages ?? []).map((message) => (
                       <div
                         key={message.message_id}
                         className={`rounded-lg p-3 ${
@@ -507,13 +507,13 @@ export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALog
                 </div>
 
                 {/* Admin Notes */}
-                {selectedConversation.notes.length > 0 && (
+                {(selectedConversation.notes ?? []).length > 0 && (
                   <>
                     <Separator />
                     <div>
                       <h4 className="mb-3 font-medium">Admin Notes</h4>
                       <div className="space-y-2">
-                        {selectedConversation.notes.map((note) => (
+                        {(selectedConversation.notes ?? []).map((note) => (
                           <div key={note.note_id} className="rounded-lg border-l-4 border-yellow-500 bg-yellow-50 p-3">
                             <p className="text-sm">{note.content}</p>
                             <p className="mt-1 text-xs text-gray-500">

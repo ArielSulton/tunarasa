@@ -13,8 +13,8 @@ from app.core.config import (
     get_allowed_hosts,
     get_cors_origins,
     settings,
-    test_database_connection,
 )
+from app.core.database import close_database, db_manager, init_database
 from app.core.logging import setup_logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -150,34 +150,49 @@ def create_application() -> FastAPI:
         env_var_name="ENABLE_METRICS",
         inprogress_name="tunarasa_requests_inprogress",
         inprogress_labels=True,
-        custom_labels={"service": "tunarasa", "version": "1.0.0"},
     )
 
     # Add custom metrics for Tunarasa-specific functionality
+    # Note: Custom labels can be added via environment variables or custom metrics
 
     # Startup and shutdown events for database
     @app.on_event("startup")
     async def startup_event():
-        """Test database connection and initialize monitoring on startup"""
+        """Initialize database connection and monitoring on startup"""
         try:
-            test_database_connection()
+            # Initialize database connection
+            await init_database()
+            print("✅ Database connection initialized successfully")
+
             # Initialize Prometheus instrumentator
             instrumentator.instrument(app).expose(
                 app, endpoint="/metrics", include_in_schema=False
             )
-            print("Prometheus instrumentator initialized successfully")
+            print("✅ Prometheus instrumentator initialized successfully")
         except Exception as e:
-            print(f"Startup initialization failed: {e}")
+            print(f"❌ Startup initialization failed: {e}")
 
     @app.on_event("shutdown")
     async def shutdown_event():
         """Application shutdown"""
+        try:
+            await close_database()
+            print("✅ Database connections closed")
+        except Exception as e:
+            print(f"❌ Shutdown error: {e}")
         print("Application shutdown complete")
 
     # Health check endpoint
     @app.get("/health")
     async def health_check():
-        return {"status": "healthy", "service": "tunarasa-backend"}
+        # Get database health status
+        db_health = await db_manager.health_check()
+
+        return {
+            "status": "healthy" if db_health["status"] == "healthy" else "degraded",
+            "service": "tunarasa-backend",
+            "database": db_health,
+        }
 
     # Metrics endpoint
     @app.get("/metrics")

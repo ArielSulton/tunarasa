@@ -1,13 +1,24 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from './schema'
-import 'dotenv/config'
 
-// Database connection string
-const connectionString = process.env.DATABASE_URL ?? ''
+// Database connection string - prioritize Docker environment
+const connectionString =
+  process.env.DATABASE_URL ?? // Docker environment
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? // Fallback to Supabase
+  ''
 
 if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is required')
+}
+
+// Debug logging for Docker environment
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 [Database] Connection string source:', {
+    hasDatabaseUrl: !!process.env.DATABASE_URL,
+    hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    connectionPreview: connectionString.substring(0, 20) + '...',
+  })
 }
 
 // Create a postgres connection
