@@ -69,7 +69,7 @@ async def generate_conversation_summary(
         messages = [
             {
                 "message_id": msg.message_id,
-                "sender_type": "user" if msg.is_user else "ai",
+                "sender_type": "user" if msg.message_type == "user" else "ai",
                 "content": msg.message_content,
                 "created_at": (
                     msg.created_at.isoformat() if hasattr(msg, "created_at") else None
@@ -101,11 +101,16 @@ async def generate_conversation_summary(
                 request.conversation_id, request.user_id, summary_data
             )
 
+            # Calculate actual expiry date (7 days from now)
+            from datetime import datetime, timedelta
+
+            expires_at = datetime.utcnow() + timedelta(days=7)
+
             qr_code_data = QRCodeResponse(
                 qr_code_base64=qr_result["qr_code_base64"],
                 access_token=qr_result["access_token"],
                 download_url=qr_result["download_url"],
-                expires_at="2025-07-25T10:30:00Z",  # 7 days from now
+                expires_at=expires_at.isoformat() + "Z",
                 summary_preview=summary_data,
             )
 
@@ -113,6 +118,11 @@ async def generate_conversation_summary(
             print(f"Download URL: {download_url}")
 
         try:
+            access_token = qr_result["access_token"]
+            print(f"Generated access token: {access_token}")
+            print(f"QR result keys: {list(qr_result.keys())}")
+            print(f"QR download URL: {qr_result['download_url']}")
+
             existing_note = await NoteCRUD.get_by_conversation(
                 db, request.conversation_id
             )
@@ -125,20 +135,22 @@ async def generate_conversation_summary(
                     ].note_id,  # Assuming we want to update the first note for the conversation
                     title=title,  # Set the title when updating
                     note_content=summary_text,
-                    url_access=qr_result[
-                        "access_token"
-                    ],  # Set url_access when updating
+                    url_access=access_token,  # Set url_access when updating
+                )
+                print(
+                    f"Updated note {existing_note[0].note_id} with access token: {access_token}"
                 )
             else:
                 # Create a new note if it doesn't exist
-                await NoteCRUD.create(
+                created_note = await NoteCRUD.create(
                     db,
                     conversation_id=request.conversation_id,
                     note_content=summary_text,
                     title=title,  # Set the title when creating a new note
-                    url_access=qr_result[
-                        "access_token"
-                    ],  # Set url_access when creating
+                    url_access=access_token,  # Set url_access when creating
+                )
+                print(
+                    f"Created new note with ID: {created_note.note_id} and access token: {access_token}"
                 )
         except Exception as e:
             logger.error(f"Failed to create or update note: {e}")
@@ -170,11 +182,29 @@ async def download_summary(
     Download conversation summary using QR code access token
     """
     try:
+        print(f"Looking for access token: {access_token}")
         # Validate access_token from database and get note
         notes = await NoteCRUD.get_by_url_access(db, access_token)
+        print(f"Found {len(notes) if notes else 0} notes with access token")
+
+        # Debug: Let's see what notes exist in the database
+        from app.db.models import Note
+        from sqlalchemy import select
+
+        stmt = select(Note)
+        result = await db.execute(stmt)
+        all_notes = result.scalars().all()
+        print(f"Total notes in database: {len(all_notes)}")
+        for note in all_notes:
+            print(
+                f"Note {note.note_id}: url_access='{note.url_access}', conversation_id={note.conversation_id}"
+            )
+
         if not notes:
+            print("No notes found with the provided access token")
             raise HTTPException(status_code=404, detail="Note not found")
         note = notes[0]  # Get first note (or adjust if you want multi)
+        print(f"Using note ID: {note.note_id}")
 
         # Prepare data
         title = (

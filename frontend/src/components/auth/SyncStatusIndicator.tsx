@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSyncStatus } from '@/lib/hooks/use-sync-status'
+import { useSyncStatus } from '@/hooks/use-sync-status'
 import { useAuth } from '@/components/auth/SupabaseAuthProvider'
 
 interface SyncStatusIndicatorProps {

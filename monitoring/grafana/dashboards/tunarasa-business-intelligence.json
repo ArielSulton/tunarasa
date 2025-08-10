@@ -1,385 +1,383 @@
 {
-  "dashboard": {
-    "id": null,
-    "title": "Tunarasa Business Intelligence Dashboard",
-    "tags": ["tunarasa", "business", "intelligence", "executive"],
-    "timezone": "browser",
-    "panels": [
-      {
-        "id": 1,
-        "title": "User Engagement Overview",
-        "type": "row",
-        "gridPos": {
-          "h": 1,
-          "w": 24,
-          "x": 0,
-          "y": 0
-        }
-      },
-      {
-        "id": 2,
-        "title": "Daily Active Users Trend",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "count(count by (session_id) (tunarasa_gesture_requests_total[1h]))",
-            "legendFormat": "Hourly Active Users"
-          },
-          {
-            "expr": "count(count by (session_id) (tunarasa_gesture_requests_total[24h]))",
-            "legendFormat": "Daily Active Users"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "short"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 1
-        }
-      },
-      {
-        "id": 3,
-        "title": "Session Duration Distribution",
-        "type": "heatmap",
-        "targets": [
-          {
-            "expr": "sum(rate(tunarasa_session_duration_seconds_bucket[5m])) by (le)",
-            "legendFormat": "{{ le }}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "opacity"
-            },
-            "unit": "s"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 1
-        }
-      },
-      {
-        "id": 4,
-        "title": "Questions per Session",
-        "type": "bargauge",
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.50, sum(rate(tunarasa_questions_per_session_bucket[5m])) by (le))",
-            "legendFormat": "P50"
-          },
-          {
-            "expr": "histogram_quantile(0.90, sum(rate(tunarasa_questions_per_session_bucket[5m])) by (le))",
-            "legendFormat": "P90"
-          },
-          {
-            "expr": "histogram_quantile(0.95, sum(rate(tunarasa_questions_per_session_bucket[5m])) by (le))",
-            "legendFormat": "P95"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "short"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 8,
-          "x": 0,
-          "y": 9
-        }
-      },
-      {
-        "id": 5,
-        "title": "Language Usage",
-        "type": "piechart",
-        "targets": [
-          {
-            "expr": "sum by (language) (tunarasa_gesture_requests_total[24h])",
-            "legendFormat": "{{ language }}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "short"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 8,
-          "x": 8,
-          "y": 9
-        }
-      },
-      {
-        "id": 6,
-        "title": "Success Rate by Language",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "(sum by (language) (tunarasa_gesture_requests_total{success=\"true\"}[24h]) / sum by (language) (tunarasa_gesture_requests_total[24h])) * 100",
-            "legendFormat": "{{ language }}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "red",
-                  "value": 0
-                },
-                {
-                  "color": "yellow",
-                  "value": 80
-                },
-                {
-                  "color": "green",
-                  "value": 95
-                }
-              ]
-            },
-            "unit": "percent"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 8,
-          "x": 16,
-          "y": 9
-        }
-      },
-      {
-        "id": 7,
-        "title": "AI Performance Metrics",
-        "type": "row",
-        "gridPos": {
-          "h": 1,
-          "w": 24,
-          "x": 0,
-          "y": 17
-        }
-      },
-      {
-        "id": 8,
-        "title": "Gesture Recognition Confidence",
-        "type": "histogram",
-        "targets": [
-          {
-            "expr": "sum(rate(tunarasa_gesture_confidence_score_bucket[5m])) by (le)",
-            "legendFormat": "{{ le }}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "percentunit"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 18
-        }
-      },
-      {
-        "id": 9,
-        "title": "AI Quality Score Distribution",
-        "type": "histogram",
-        "targets": [
-          {
-            "expr": "sum(rate(tunarasa_ai_quality_score_bucket[5m])) by (le, category)",
-            "legendFormat": "{{ category }} - {{ le }}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "percentunit"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 18
-        }
-      },
-      {
-        "id": 10,
-        "title": "Most Frequent Question Categories",
-        "type": "table",
-        "targets": [
-          {
-            "expr": "topk(10, sum by (question_category) (tunarasa_questions_total[24h]))",
-            "legendFormat": "{{ question_category }}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "short"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 26
-        }
-      },
-      {
-        "id": 11,
-        "title": "RAG System Performance",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "(sum(tunarasa_rag_retrieval_success_total) / sum(tunarasa_rag_retrieval_total)) * 100",
-            "legendFormat": "RAG Success Rate %"
-          },
-          {
-            "expr": "avg(tunarasa_rag_retrieval_latency_seconds)",
-            "legendFormat": "RAG Latency (s)"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            }
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 26
-        }
-      },
-      {
-        "id": 12,
-        "title": "Executive Summary",
-        "type": "row",
-        "gridPos": {
-          "h": 1,
-          "w": 24,
-          "x": 0,
-          "y": 34
-        }
-      },
-      {
-        "id": 13,
-        "title": "System Health Score",
-        "type": "gauge",
-        "targets": [
-          {
-            "expr": "((tunarasa:sli:availability:rate5m + (100 - tunarasa:sli:error_rate:rate5m) + (avg(tunarasa_ai_quality_score) * 100)) / 3)",
-            "legendFormat": "Health Score"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "red",
-                  "value": 0
-                },
-                {
-                  "color": "yellow",
-                  "value": 80
-                },
-                {
-                  "color": "green",
-                  "value": 95
-                }
-              ]
-            },
-            "unit": "percent",
-            "min": 0,
-            "max": 100
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 8,
-          "x": 0,
-          "y": 35
-        }
-      },
-      {
-        "id": 14,
-        "title": "Key Performance Indicators",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "count(count by (session_id) (tunarasa_gesture_requests_total[24h]))",
-            "legendFormat": "Daily Active Users"
-          },
-          {
-            "expr": "avg(tunarasa_session_duration_seconds)",
-            "legendFormat": "Avg Session Duration"
-          },
-          {
-            "expr": "sum(rate(tunarasa_gesture_requests_total[5m]))",
-            "legendFormat": "Request Rate"
-          },
-          {
-            "expr": "avg(tunarasa_ai_quality_score)",
-            "legendFormat": "AI Quality"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            }
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 16,
-          "x": 8,
-          "y": 35
-        }
+  "id": null,
+  "title": "Tunarasa Business Intelligence Dashboard",
+  "tags": ["tunarasa", "business", "intelligence", "executive"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "title": "User Engagement Overview",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
       }
-    ],
-    "time": {
-      "from": "now-24h",
-      "to": "now"
     },
-    "refresh": "1m"
-  }
+    {
+      "id": 2,
+      "title": "Daily Active Users Trend",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "count(count by (session_id) (tunarasa_gesture_requests_total[1h]))",
+          "legendFormat": "Hourly Active Users"
+        },
+        {
+          "expr": "count(count by (session_id) (tunarasa_gesture_requests_total[24h]))",
+          "legendFormat": "Daily Active Users"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "id": 3,
+      "title": "Session Duration Distribution",
+      "type": "heatmap",
+      "targets": [
+        {
+          "expr": "sum(rate(tunarasa_session_duration_seconds_bucket[5m])) by (le)",
+          "legendFormat": "{{ le }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "opacity"
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      }
+    },
+    {
+      "id": 4,
+      "title": "Questions per Session",
+      "type": "bargauge",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(tunarasa_questions_per_session_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(tunarasa_questions_per_session_bucket[5m])) by (le))",
+          "legendFormat": "P90"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(tunarasa_questions_per_session_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 9
+      }
+    },
+    {
+      "id": 5,
+      "title": "Language Usage",
+      "type": "piechart",
+      "targets": [
+        {
+          "expr": "sum by (language) (tunarasa_gesture_requests_total[24h])",
+          "legendFormat": "{{ language }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 9
+      }
+    },
+    {
+      "id": 6,
+      "title": "Success Rate by Language",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "(sum by (language) (tunarasa_gesture_requests_total{success=\"true\"}[24h]) / sum by (language) (tunarasa_gesture_requests_total[24h])) * 100",
+          "legendFormat": "{{ language }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 95
+              }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 9
+      }
+    },
+    {
+      "id": 7,
+      "title": "AI Performance Metrics",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      }
+    },
+    {
+      "id": 8,
+      "title": "Gesture Recognition Confidence",
+      "type": "histogram",
+      "targets": [
+        {
+          "expr": "sum(rate(tunarasa_gesture_confidence_score_bucket[5m])) by (le)",
+          "legendFormat": "{{ le }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      }
+    },
+    {
+      "id": 9,
+      "title": "AI Quality Score Distribution",
+      "type": "histogram",
+      "targets": [
+        {
+          "expr": "sum(rate(tunarasa_ai_quality_score_bucket[5m])) by (le, category)",
+          "legendFormat": "{{ category }} - {{ le }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      }
+    },
+    {
+      "id": 10,
+      "title": "Most Frequent Question Categories",
+      "type": "table",
+      "targets": [
+        {
+          "expr": "topk(10, sum by (question_category) (tunarasa_questions_total[24h]))",
+          "legendFormat": "{{ question_category }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      }
+    },
+    {
+      "id": 11,
+      "title": "RAG System Performance",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "(sum(tunarasa_rag_retrieval_success_total) / sum(tunarasa_rag_retrieval_total)) * 100",
+          "legendFormat": "RAG Success Rate %"
+        },
+        {
+          "expr": "avg(tunarasa_rag_retrieval_latency_seconds)",
+          "legendFormat": "RAG Latency (s)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      }
+    },
+    {
+      "id": 12,
+      "title": "Executive Summary",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      }
+    },
+    {
+      "id": 13,
+      "title": "System Health Score",
+      "type": "gauge",
+      "targets": [
+        {
+          "expr": "((tunarasa:sli:availability:rate5m + (100 - tunarasa:sli:error_rate:rate5m) + (avg(tunarasa_ai_quality_score) * 100)) / 3)",
+          "legendFormat": "Health Score"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 95
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 35
+      }
+    },
+    {
+      "id": 14,
+      "title": "Key Performance Indicators",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "count(count by (session_id) (tunarasa_gesture_requests_total[24h]))",
+          "legendFormat": "Daily Active Users"
+        },
+        {
+          "expr": "avg(tunarasa_session_duration_seconds)",
+          "legendFormat": "Avg Session Duration"
+        },
+        {
+          "expr": "sum(rate(tunarasa_gesture_requests_total[5m]))",
+          "legendFormat": "Request Rate"
+        },
+        {
+          "expr": "avg(tunarasa_ai_quality_score)",
+          "legendFormat": "AI Quality"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 35
+      }
+    }
+  ],
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "1m"
 }

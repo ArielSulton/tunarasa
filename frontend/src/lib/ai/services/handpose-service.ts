@@ -75,13 +75,19 @@ export class HandPoseService {
     try {
       console.log('🔧 HandPoseService: Starting initialization...')
 
-      // Initialize TensorFlow.js backend
-      await tf.ready()
+      // Initialize TensorFlow.js backend with timeout
+      await Promise.race([
+        tf.ready(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TensorFlow.js initialization timeout')), 30000)),
+      ])
       console.log('✅ TensorFlow.js ready with backend:', tf.getBackend())
 
-      // Load HandPose model
+      // Load HandPose model with timeout
       console.log('📥 Loading HandPose model...')
-      this.model = await handpose.load()
+      this.model = await Promise.race([
+        handpose.load(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('HandPose model loading timeout')), 30000)),
+      ])
       console.log('✅ HandPose model loaded successfully')
 
       // Store gestures for creating new GestureEstimator instances (match reference pattern)
@@ -286,7 +292,7 @@ export class HandPoseService {
     return { ...this.config }
   }
 
-  // Manual finger analysis to debug fingerpose issues
+  // Manual finger analysis to debug fingerpose issues (unused but kept for debugging)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private analyzeFingerManually(landmarks: any[]): any {
     // MediaPipe hand landmarks indices:

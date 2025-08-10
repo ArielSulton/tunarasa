@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/components/auth/SupabaseAuthProvider'
-import { useSupabaseUser, useIsAdmin } from '@/lib/hooks/use-supabase-auth'
+import { useSupabaseUser, useIsAdmin } from '@/hooks/use-supabase-auth'
 import { useState } from 'react'
 import { User, LogOut, AlertTriangle } from 'lucide-react'
 
@@ -54,10 +54,10 @@ export function AuthSignIn() {
   }
 
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center">
+    <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Card>
-          <CardHeader>
+          <CardHeader className="text-center">
             <CardTitle>Sign In</CardTitle>
             <CardDescription>Sign in to your Tunarasa admin account</CardDescription>
           </CardHeader>
@@ -167,10 +167,10 @@ export function AuthSignUp() {
   }
 
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center">
+    <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Card>
-          <CardHeader>
+          <CardHeader className="text-center">
             <CardTitle>Sign Up</CardTitle>
             <CardDescription>Create your Tunarasa admin account</CardDescription>
           </CardHeader>
@@ -237,23 +237,31 @@ export function AuthSignUp() {
 export function AuthUserButton() {
   const { signOut } = useAuth()
   const { user } = useSupabaseUser()
+  const [loading, setLoading] = useState(false)
 
   const handleSignOut = async () => {
-    await signOut()
+    setLoading(true)
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!user) return null
 
   return (
-    <div className="flex items-center space-x-2">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-medium text-white">
-        {user.fullName?.charAt(0) ?? user.email?.charAt(0) ?? <User className="h-4 w-4" />}
-      </div>
-      <Button variant="ghost" size="sm" onClick={void handleSignOut} className="flex items-center space-x-1">
-        <LogOut className="h-4 w-4" />
-        <span>Sign Out</span>
-      </Button>
-    </div>
+    <Button
+      variant="outline"
+      onClick={() => void handleSignOut()}
+      className="flex items-center space-x-2 px-6 py-2"
+      disabled={loading}
+    >
+      <LogOut className="h-4 w-4" />
+      <span>{loading ? 'Signing Out...' : 'Sign Out'}</span>
+    </Button>
   )
 }
 
@@ -284,28 +292,58 @@ export function AuthSignUpButton() {
  */
 export function AuthStatus() {
   const { user, loading } = useSupabaseUser()
+  const { signOut } = useAuth()
+  const [signOutLoading, setSignOutLoading] = useState(false)
+
+  const handleSignOut = async () => {
+    setSignOutLoading(true)
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    } finally {
+      setSignOutLoading(false)
+    }
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-center space-x-2">
         <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />
+        <span className="text-muted-foreground text-sm">Loading...</span>
       </div>
     )
   }
 
   if (!user) {
     return (
-      <div className="flex items-center space-x-2">
-        <AuthSignInButton />
-        <AuthSignUpButton />
+      <div className="flex flex-col items-center space-y-4">
+        <div className="flex items-center space-x-2">
+          <AuthSignInButton />
+          <AuthSignUpButton />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center space-x-2">
-      <span className="text-muted-foreground text-sm">{user.fullName ?? user.firstName ?? user.email}</span>
-      <AuthUserButton />
+    <div className="flex flex-col items-center space-y-4">
+      <div className="text-center">
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-lg font-medium text-white">
+          {user.fullName?.charAt(0) ?? user.email?.charAt(0) ?? <User className="h-8 w-8" />}
+        </div>
+        <p className="mb-1 font-medium text-gray-900">{user.fullName ?? user.firstName ?? 'Admin User'}</p>
+        <p className="mb-4 text-sm text-gray-600">{user.email}</p>
+      </div>
+      <Button
+        variant="outline"
+        onClick={() => void handleSignOut()}
+        className="flex items-center space-x-2 px-6 py-2"
+        disabled={signOutLoading}
+      >
+        <LogOut className="h-4 w-4" />
+        <span>{signOutLoading ? 'Signing Out...' : 'Sign Out'}</span>
+      </Button>
     </div>
   )
 }

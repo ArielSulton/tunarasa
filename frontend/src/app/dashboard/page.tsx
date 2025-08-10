@@ -31,6 +31,12 @@ import {
   AlertCircle,
   Loader2,
   Activity,
+  MessageSquare,
+  Search,
+  Filter,
+  Bot,
+  User,
+  Clock,
 } from 'lucide-react'
 import { SuperAdminOnly, useUserRole } from '@/components/auth/SuperAdminOnly'
 import { AdminOnly } from '@/components/auth/AdminOnly'
@@ -62,6 +68,60 @@ interface PendingInvitation {
   customMessage?: string
 }
 
+interface QALog {
+  id: string
+  conversationId: number
+  question: string
+  answer: string
+  confidence?: number
+  responseTime?: number
+  gestureInput?: string
+  contextUsed?: string
+  evaluationScore?: number
+  serviceMode: 'full_llm_bot' | 'bot_with_admin_validation'
+  respondedBy: 'llm' | 'admin'
+  llmRecommendationUsed: boolean
+  createdAt: string | Date
+  conversation: {
+    sessionId: string
+    status: string
+    serviceMode: string
+  }
+  admin?: {
+    id: number
+    email: string
+    fullName: string
+  } | null
+}
+
+interface QALogsResponse {
+  qaLogs: QALog[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  }
+  statistics: {
+    totalLogs: number
+    averageConfidence: number
+    averageResponseTime: number
+    llmResponses: number
+    adminResponses: number
+  }
+  filters: {
+    serviceMode?: string
+    respondedBy?: string
+    searchQuery?: string
+    dateFrom?: string
+    dateTo?: string
+    minConfidence?: string
+    maxConfidence?: string
+  }
+}
+
 function DashboardContent() {
   const { role: _role } = useUserRole()
   const [admins, setAdmins] = useState<AdminUser[]>([])
@@ -77,6 +137,32 @@ function DashboardContent() {
   const [invitationStatus, setInvitationStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [statusMessage, setStatusMessage] = useState('')
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+
+  // QA Logs state
+  const [qaLogs, setQaLogs] = useState<QALog[]>([])
+  const [qaLogsLoading, setQaLogsLoading] = useState(false)
+  const [qaLogsPage, setQaLogsPage] = useState(1)
+  const [qaLogsPagination, setQaLogsPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  })
+  const [qaLogsStatistics, setQaLogsStatistics] = useState({
+    totalLogs: 0,
+    averageConfidence: 0,
+    averageResponseTime: 0,
+    llmResponses: 0,
+    adminResponses: 0,
+  })
+  const [qaLogsFilters, setQaLogsFilters] = useState({
+    serviceMode: '',
+    respondedBy: '',
+    searchQuery: '',
+  })
+  const [showQaLogs, setShowQaLogs] = useState(false)
 
   // Fetch admin users and invitations
   const fetchAdminData = useCallback(async () => {
@@ -110,9 +196,51 @@ function DashboardContent() {
     }
   }, [])
 
+  // Fetch QA logs
+  const fetchQaLogs = useCallback(
+    async (page: number = 1) => {
+      try {
+        setQaLogsLoading(true)
+
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: '20',
+        })
+
+        if (qaLogsFilters.serviceMode) params.append('serviceMode', qaLogsFilters.serviceMode)
+        if (qaLogsFilters.respondedBy) params.append('respondedBy', qaLogsFilters.respondedBy)
+        if (qaLogsFilters.searchQuery) params.append('search', qaLogsFilters.searchQuery)
+
+        const response = await fetch(`/api/admin/qa-logs?${params.toString()}`)
+        if (response.ok) {
+          const data: { success: boolean; data: QALogsResponse } = await response.json()
+          if (data.success && data.data) {
+            setQaLogs(data.data.qaLogs)
+            setQaLogsPagination(data.data.pagination)
+            setQaLogsStatistics(data.data.statistics)
+            setQaLogsPage(page)
+          }
+        } else {
+          console.error('Failed to fetch QA logs:', response.statusText)
+        }
+      } catch (error) {
+        console.error('Error fetching QA logs:', error)
+      } finally {
+        setQaLogsLoading(false)
+      }
+    },
+    [qaLogsFilters],
+  )
+
   useEffect(() => {
     void fetchAdminData()
   }, [fetchAdminData])
+
+  useEffect(() => {
+    if (showQaLogs) {
+      void fetchQaLogs(1)
+    }
+  }, [showQaLogs, fetchQaLogs])
 
   const handleSendInvitation = async () => {
     if (!inviteEmail) return
@@ -138,7 +266,7 @@ function DashboardContent() {
         throw new Error(errorData.error ?? 'Failed to send invitation')
       }
 
-      const _result = await response.json()
+      await response.json()
 
       setInvitationStatus('success')
       setStatusMessage(`Invitation sent successfully to ${inviteEmail}`)
@@ -234,17 +362,14 @@ function DashboardContent() {
     )
   }
 
-  const formatDate = (date: string | Date | null) => {
-    if (!date) return 'Never'
-    try {
-      return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
-    } catch {
-      return 'Invalid date'
-    }
+  const formatDate = (date: string | Date) => {
+    return new Intl.DateTimeFormat('id-ID', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(date))
   }
 
   const formatLastActive = (date: string | Date | null) => {
@@ -490,6 +615,253 @@ function DashboardContent() {
               </div>
             )}
           </CardContent>
+        </Card>
+
+        {/* QA Logs Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="text-primary h-5 w-5" />
+                  QA Logs & System Monitoring
+                </CardTitle>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  Question & Answer logs from the communication system with performance metrics
+                </p>
+              </div>
+              <Button
+                variant={showQaLogs ? 'secondary' : 'outline'}
+                onClick={() => setShowQaLogs(!showQaLogs)}
+                className="flex items-center gap-2"
+              >
+                {showQaLogs ? 'Hide QA Logs' : 'View QA Logs'}
+              </Button>
+            </div>
+          </CardHeader>
+
+          {showQaLogs && (
+            <CardContent className="space-y-6">
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-600">{qaLogsStatistics.totalLogs}</div>
+                    <p className="text-muted-foreground text-xs">Total Logs</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-green-600">{qaLogsStatistics.averageConfidence}%</div>
+                    <p className="text-muted-foreground text-xs">Avg Confidence</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-orange-600">{qaLogsStatistics.averageResponseTime}ms</div>
+                    <p className="text-muted-foreground text-xs">Avg Response</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Bot className="h-4 w-4 text-purple-600" />
+                      <div className="text-2xl font-bold text-purple-600">{qaLogsStatistics.llmResponses}</div>
+                    </div>
+                    <p className="text-muted-foreground text-xs">LLM Responses</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <User className="h-4 w-4 text-indigo-600" />
+                      <div className="text-2xl font-bold text-indigo-600">{qaLogsStatistics.adminResponses}</div>
+                    </div>
+                    <p className="text-muted-foreground text-xs">Admin Responses</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Filters */}
+              <div className="bg-muted/50 flex flex-wrap items-center gap-4 rounded-lg border p-4">
+                <div className="flex items-center gap-2">
+                  <Search className="text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search questions/answers..."
+                    value={qaLogsFilters.searchQuery}
+                    onChange={(e) => setQaLogsFilters({ ...qaLogsFilters, searchQuery: e.target.value })}
+                    className="w-64"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Filter className="text-muted-foreground h-4 w-4" />
+                  <Select
+                    value={qaLogsFilters.serviceMode}
+                    onValueChange={(value) => setQaLogsFilters({ ...qaLogsFilters, serviceMode: value })}
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="All Service Modes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Service Modes</SelectItem>
+                      <SelectItem value="full_llm_bot">Full LLM Bot</SelectItem>
+                      <SelectItem value="bot_with_admin_validation">Bot + Admin Validation</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="text-muted-foreground h-4 w-4" />
+                  <Select
+                    value={qaLogsFilters.respondedBy}
+                    onValueChange={(value) => setQaLogsFilters({ ...qaLogsFilters, respondedBy: value })}
+                  >
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All Responses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Responses</SelectItem>
+                      <SelectItem value="llm">LLM Only</SelectItem>
+                      <SelectItem value="admin">Admin Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => void fetchQaLogs(1)}
+                  disabled={qaLogsLoading}
+                  className="flex items-center gap-2"
+                >
+                  {qaLogsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Apply Filters
+                </Button>
+              </div>
+
+              {/* QA Logs Table */}
+              {qaLogsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="text-primary h-8 w-8 animate-spin" />
+                  <span className="text-muted-foreground ml-3">Loading QA logs...</span>
+                </div>
+              ) : qaLogs.length === 0 ? (
+                <div className="py-12 text-center">
+                  <MessageSquare className="text-muted-foreground/40 mx-auto mb-4 h-12 w-12" />
+                  <h3 className="mb-2 text-lg font-semibold">No QA logs found</h3>
+                  <p className="text-muted-foreground">
+                    {Object.values(qaLogsFilters).some(Boolean)
+                      ? 'No logs match your current filters. Try adjusting the search criteria.'
+                      : 'No question & answer logs have been recorded yet.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[300px]">Question</TableHead>
+                          <TableHead className="w-[300px]">Answer</TableHead>
+                          <TableHead className="w-[100px]">Confidence</TableHead>
+                          <TableHead className="w-[100px]">Response Time</TableHead>
+                          <TableHead className="w-[120px]">Service Mode</TableHead>
+                          <TableHead className="w-[100px]">Responded By</TableHead>
+                          <TableHead className="w-[140px]">Timestamp</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {qaLogs.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell>
+                              <div className="max-w-[280px] truncate text-sm">{log.question}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="max-w-[280px] truncate text-sm">{log.answer}</div>
+                            </TableCell>
+                            <TableCell>
+                              {log.confidence !== null && log.confidence !== undefined ? (
+                                <Badge
+                                  variant={
+                                    log.confidence >= 80 ? 'default' : log.confidence >= 60 ? 'secondary' : 'outline'
+                                  }
+                                  className="font-mono text-xs"
+                                >
+                                  {log.confidence}%
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">N/A</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {log.responseTime ? (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="text-muted-foreground h-3 w-3" />
+                                  <span className="font-mono text-xs">{log.responseTime}ms</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">N/A</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {log.serviceMode === 'full_llm_bot' ? 'Full LLM' : 'LLM + Admin'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {log.respondedBy === 'llm' ? (
+                                  <>
+                                    <Bot className="h-3 w-3 text-purple-600" />
+                                    <span className="text-xs text-purple-600">LLM</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <User className="h-3 w-3 text-indigo-600" />
+                                    <span className="text-xs text-indigo-600">Admin</span>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-muted-foreground text-xs">{formatDate(log.createdAt)}</div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Pagination */}
+                  {qaLogsPagination.totalPages > 1 && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-muted-foreground text-sm">
+                        Showing {qaLogs.length} of {qaLogsPagination.total} logs
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={!qaLogsPagination.hasPrevPage || qaLogsLoading}
+                          onClick={() => void fetchQaLogs(qaLogsPage - 1)}
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-muted-foreground text-sm">
+                          Page {qaLogsPagination.page} of {qaLogsPagination.totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={!qaLogsPagination.hasNextPage || qaLogsLoading}
+                          onClick={() => void fetchQaLogs(qaLogsPage + 1)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          )}
         </Card>
       </div>
     </div>

@@ -314,6 +314,7 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
     // Optimized auth state change handler
     const {
       data: { subscription },
+      // eslint-disable-next-line @typescript-eslint/require-await
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (process.env.NODE_ENV === 'development') {
         console.log('🔄 Auth state change:', event)

@@ -148,6 +148,8 @@ temp/
 # Documentation
 /readme/*/
 CLAUDE.md
+GEMINI.md
+QWEN.md
 
 # Reference
 reference/

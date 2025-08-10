@@ -25,7 +25,10 @@ class QRCodeService:
     """Service for generating QR codes for conversation summaries"""
 
     def __init__(self):
-        self.base_url = "https://tunarasa.app"  # Production URL
+        from app.core.config import settings
+
+        # Use settings for base URL, fallback to localhost for development
+        self.base_url = settings.NEXT_PUBLIC_BACKEND_URL or "http://localhost:8000"
 
     def generate_conversation_summary_qr(
         self, conversation_id: int, user_id: int, summary_data: Dict[str, Any]
@@ -168,7 +171,7 @@ class QRCodeService:
             img.save(buffer, format="PNG")
             img_base64 = base64.b64encode(buffer.getvalue()).decode()
 
-            return f"data:image/png;base64,{img_base64}"
+            return img_base64  # Return just the base64 string, frontend will add the data URL prefix
 
         except Exception as e:
             logger.error(f"Failed to create QR code: {e}")

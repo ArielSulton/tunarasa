@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Bot, Users, Settings, RefreshCw, CheckCircle, AlertTriangle, Info, Loader2 } from 'lucide-react'
-import { useServiceConfig } from '@/lib/hooks/use-service-config'
+import { useServiceConfig } from '@/hooks/use-service-config'
 import type { ServiceMode } from '@/lib/db/schema'
 
 interface ServiceModeToggleProps {
@@ -29,7 +29,7 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
     if (success) {
       setMessage({
         type: 'success',
-        text: `Service mode changed to ${newMode === 'full_llm_bot' ? 'Full LLM Bot' : 'Human CS Support'} successfully!`,
+        text: `Service mode changed to ${newMode === 'full_llm_bot' ? 'Full LLM Bot' : 'Bot + Admin Validation'} successfully!`,
       })
     } else {
       setMessage({
@@ -121,7 +121,7 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
               <Badge
                 className={serviceMode === 'full_llm_bot' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}
               >
-                {serviceMode === 'full_llm_bot' ? 'LLM Bot' : 'Human CS'}
+                {serviceMode === 'full_llm_bot' ? 'LLM Bot' : 'Admin Validation'}
               </Badge>
             </div>
           </div>
@@ -156,14 +156,14 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
                 </CardContent>
               </Card>
 
-              {/* Human CS Support Mode */}
+              {/* Bot + Admin Validation Mode */}
               <Card
                 className={`cursor-pointer transition-all ${
-                  serviceMode === 'human_cs_support'
+                  serviceMode === 'bot_with_admin_validation'
                     ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
                     : 'border-gray-200 hover:border-green-300'
                 }`}
-                onClick={() => !updating && void handleModeChange('human_cs_support')}
+                onClick={() => !updating && void handleModeChange('bot_with_admin_validation')}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
@@ -171,9 +171,11 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
                       <Users className="h-5 w-5 text-green-600" />
                     </div>
                     <div className="flex-1">
-                      <h5 className="font-medium text-gray-900">Human CS Support</h5>
-                      <p className="mt-1 text-sm text-gray-600">Users are routed to admin queue for human assistance</p>
-                      {serviceMode === 'human_cs_support' && (
+                      <h5 className="font-medium text-gray-900">Bot + Admin Validation</h5>
+                      <p className="mt-1 text-sm text-gray-600">
+                        AI generates responses but admin must approve before sending to user
+                      </p>
+                      {serviceMode === 'bot_with_admin_validation' && (
                         <Badge className="mt-2 bg-green-100 text-green-800">Active</Badge>
                       )}
                     </div>
@@ -205,8 +207,8 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
             <div className="flex gap-3">
               <Users className="mt-0.5 h-4 w-4 text-green-600" />
               <div>
-                <span className="font-medium">Human CS Support:</span> User questions are routed to admin queue for
-                human review and response. Admins receive LLM suggestions to assist with replies.
+                <span className="font-medium">Bot + Admin Validation:</span> AI automatically generates responses but
+                admin must validate and approve them before they are sent to users.
               </div>
             </div>
           </div>

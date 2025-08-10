@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm'
  *
  * Manages global service mode settings:
  * - full_llm_bot: Direct LLM responses (default)
- * - human_cs_support: Route to admin queue for human CS support
+ * - bot_with_admin_validation: LLM generates responses but admin must approve before sending to user
  */
 
 const SERVICE_MODE_KEY = 'service_mode'
@@ -27,7 +27,7 @@ export async function GET() {
       description:
         serviceMode === 'full_llm_bot'
           ? 'Users receive direct LLM responses'
-          : 'Users are routed to human customer support queue',
+          : 'LLM generates responses but admin must approve before sending to user',
     })
   } catch (error) {
     console.error('Error fetching service configuration:', error)
@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
     const { serviceMode } = body
 
     // Validate service mode
-    if (!serviceMode || !['full_llm_bot', 'human_cs_support'].includes(serviceMode)) {
+    if (!serviceMode || !['full_llm_bot', 'bot_with_admin_validation'].includes(serviceMode)) {
       return NextResponse.json(
         {
-          error: 'Invalid service mode. Must be "full_llm_bot" or "human_cs_support"',
+          error: 'Invalid service mode. Must be "full_llm_bot" or "bot_with_admin_validation"',
         },
         { status: 400 },
       )
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         .update(appSettings)
         .set({
           settingValue: serviceMode,
-          updatedBy: authUser.userId,
+          updatedBy: authUser.user_id,
           updatedAt: new Date(),
         })
         .where(eq(appSettings.settingKey, SERVICE_MODE_KEY))
@@ -78,21 +78,21 @@ export async function POST(req: NextRequest) {
         settingType: 'string',
         description: 'Global service mode for chat system',
         isPublic: true, // Can be read by non-admin users
-        updatedBy: authUser.userId,
+        updatedBy: authUser.user_id,
       })
     }
 
     const modeDescription =
       serviceMode === 'full_llm_bot'
         ? 'Users will receive direct LLM responses'
-        : 'Users will be routed to human customer support queue'
+        : 'LLM generates responses but admin must approve before sending to user'
 
     return NextResponse.json({
       success: true,
       message: 'Service mode updated successfully',
       serviceMode,
       description: modeDescription,
-      updatedBy: authUser.email ?? authUser.fullName ?? authUser.supabaseUserId,
+      updatedBy: authUser.email ?? authUser.full_name ?? authUser.supabase_user_id,
       updatedAt: new Date().toISOString(),
     })
   } catch (error) {
@@ -141,7 +141,7 @@ export async function PUT() {
       settingType: 'string',
       description: 'Global service mode for chat system',
       isPublic: true,
-      updatedBy: authUser.userId,
+      updatedBy: authUser.user_id,
     })
 
     return NextResponse.json({

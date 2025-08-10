@@ -2,7 +2,7 @@
 'use client'
 
 import { Shield, Crown, AlertTriangle } from 'lucide-react'
-import { useSupabaseUser, useIsAdmin, useIsSuperAdmin } from '@/lib/hooks/use-supabase-auth'
+import { useSupabaseUser, useIsAdmin, useIsSuperAdmin } from '@/hooks/use-supabase-auth'
 
 /**
  * SuperAdmin only wrapper component with role hierarchy logic

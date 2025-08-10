@@ -107,17 +107,23 @@ export const useGestureRecognition = (options: UseGestureRecognitionOptions = {}
       try {
         setIsLoading(true)
         setError(null)
+        setStatus('Starting initialization...')
 
         videoElementRef.current = videoElement
         canvasElementRef.current = canvasElement
 
-        await gestureServiceRef.current.initialize(videoElement, canvasElement)
+        // Add timeout to prevent indefinite loading
+        await Promise.race([
+          gestureServiceRef.current.initialize(videoElement, canvasElement),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Initialization timeout - please refresh and try again')), 60000),
+          ),
+        ])
 
         // Small delay to ensure all async initialization is complete
         await new Promise((resolve) => setTimeout(resolve, 100))
 
         // Check if the service actually initialized successfully
-        // (force update to clear cache)
         console.log('🔍 Service reference check:', gestureServiceRef.current)
         console.log('🔍 Service instance ID:', gestureServiceRef.current?.constructor.name)
         const serviceStatus = gestureServiceRef.current.getStatus()
@@ -135,8 +141,11 @@ export const useGestureRecognition = (options: UseGestureRecognitionOptions = {}
           setStatus('Initialization failed - gesture recognition disabled')
         }
       } catch (error) {
-        setError(error as Error)
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error('Initialization failed:', errorMessage)
+        setError(new Error(`Initialization failed: ${errorMessage}`))
         setIsInitialized(false)
+        setStatus('Initialization failed - please refresh page')
         throw error
       } finally {
         setIsLoading(false)

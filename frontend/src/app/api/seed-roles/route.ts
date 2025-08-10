@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export function GET() {
   return NextResponse.json({
     message: 'Role seeding endpoint',
     usage: 'Send a POST request to seed default roles',

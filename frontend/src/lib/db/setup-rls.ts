@@ -43,7 +43,7 @@ export async function setupIndividualPolicies(db: PostgresJsDatabase<typeof sche
     { name: 'Admin Invitations Policies', sql: schema.adminInvitationsPolicies },
     { name: 'Conversations Policies', sql: schema.conversationsPolicies },
     { name: 'Messages Policies', sql: schema.messagesPolicies },
-    { name: 'Sessions Policies', sql: schema.sessionsPolicies },
+    // { name: 'Sessions Policies', sql: schema.sessionsPolicies }, // Removed as sessions table was removed
     { name: 'QA Logs Policies', sql: schema.qaLogsPolicies },
     { name: 'Notes Policies', sql: schema.notesPolicies },
     { name: 'App Settings Policies', sql: schema.appSettingsPolicies },

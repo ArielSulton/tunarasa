@@ -6,6 +6,7 @@ Handles request timing, IDs, and response enhancement
 import logging
 import time
 import uuid
+from datetime import datetime
 from typing import Any, Callable, Dict
 
 from app.models.api_response import (
@@ -153,14 +154,13 @@ class ResponseFactory:
             success=True,
             data=data,
             metadata={
-                "timestamp": time.time(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "request_id": self.request_id,
                 "processing_time_ms": (time.time() - self.start_time) * 1000,
             },
         )
 
-        if message:
-            response.metadata["message"] = message
+        # Note: ResponseMetadata doesn't have a message field, message is handled elsewhere
 
         return response
 

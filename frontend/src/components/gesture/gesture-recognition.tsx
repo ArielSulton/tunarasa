@@ -230,13 +230,19 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
                     <p className="mb-2 text-lg font-medium">Memuat TensorFlow.js...</p>
                     <p className="text-sm opacity-75">Sedang mempersiapkan deteksi gesture</p>
                   </>
+                ) : isLoading ? (
+                  <>
+                    <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-green-600 border-t-transparent"></div>
+                    <p className="mb-2 text-lg font-medium">Memulai Deteksi...</p>
+                    <p className="text-sm opacity-75">Sedang mengaktifkan kamera dan AI</p>
+                  </>
                 ) : (
                   <>
                     <Hand className="mx-auto mb-4 h-16 w-16 opacity-50" />
                     <p className="mb-2 text-lg font-medium">Deteksi Gesture SIBI</p>
                     <p className="mb-4 text-sm opacity-75">Menggunakan TensorFlow.js untuk deteksi handpose</p>
                     <Button
-                      onClick={void toggleCamera}
+                      onClick={() => void toggleCamera()}
                       className="bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
                       disabled={!isInitialized || isLoading}
                     >
@@ -263,7 +269,7 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
           {/* Controls overlay */}
           {isRunning && (
             <div className="absolute top-4 right-4 flex flex-col space-y-2">
-              <Button onClick={void toggleCamera} size="sm" className="bg-red-600 text-white hover:bg-red-700">
+              <Button onClick={() => void toggleCamera()} size="sm" className="bg-red-600 text-white hover:bg-red-700">
                 <Pause className="h-4 w-4" />
               </Button>
             </div>

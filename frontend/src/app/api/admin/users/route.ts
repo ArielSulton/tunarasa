@@ -264,7 +264,7 @@ export async function PATCH(request: NextRequest) {
 
       case 'update_role':
         // Only superadmin can change roles
-        if (currentUser.role !== 'superadmin') {
+        if (currentUser.role?.role_name !== 'superadmin') {
           return NextResponse.json(
             { error: 'Forbidden - Superadmin access required for role changes' },
             { status: 403 },

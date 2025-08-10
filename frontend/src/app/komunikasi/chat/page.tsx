@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Send, User, Bot, MessageCircle } from 'lucide-react'
+import { getRagApiUrl } from '@/lib/utils/backend'
 
 interface ChatMessage {
   id: string
@@ -36,7 +37,7 @@ export default function KomunikasiChat() {
 
     try {
       // Call backend RAG Q&A API
-      const response = await fetch('http://localhost:8000/api/v1/rag/ask', {
+      const response = await fetch(getRagApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

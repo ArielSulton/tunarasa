@@ -238,6 +238,7 @@ export class InvitationSecurityValidator {
   /**
    * Log security audit entry (implement with your preferred logging solution)
    */
+  // eslint-disable-next-line @typescript-eslint/require-await
   static async logSecurityEvent(auditLog: SecurityAuditLog): Promise<void> {
     try {
       // In production, you would send this to your security logging system

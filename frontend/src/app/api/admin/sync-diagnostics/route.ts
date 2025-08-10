@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     const userData = userResults[0]
 
-    if (!userData?.is_active || ![1, 2].includes(userData.role_id)) {
+    if (!userData?.is_active || ![1, 2].includes(userData.role_id ?? 0)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       executedBy: {
         userId: user.id,
         email: user.email,
-        role: userData.role_id === 1 ? 'superadmin' : 'admin',
+        role: (userData.role_id ?? 0) === 1 ? 'superadmin' : 'admin',
       },
     })
   } catch (error) {
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     const adminData = adminResults[0]
 
-    if (!adminData?.is_active || ![1, 2].includes(adminData.role_id)) {
+    if (!adminData?.is_active || ![1, 2].includes(adminData.role_id ?? 0)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 

@@ -4,7 +4,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Shield, Crown, AlertTriangle, Loader2 } from 'lucide-react'
-import { useSupabaseUser, useIsAdmin, useIsSuperAdmin } from '@/lib/hooks/use-supabase-auth'
+import { useSupabaseUser, useIsAdmin, useIsSuperAdmin } from '@/hooks/use-supabase-auth'
 import { Button } from '@/components/ui/button'
 
 /**
@@ -38,28 +38,40 @@ export function AdminOnly({ children, requireSuperAdmin = false, fallback }: Adm
   const router = useRouter()
 
   // Redirect to unauthorized page for non-admin users
+  // Add delay to allow for database sync completion
   useEffect(() => {
-    if (!loading && supabaseUser && user) {
+    if (!loading && supabaseUser) {
+      // If we have supabase user but no local user data, wait for sync
+      if (!user) {
+        console.log('🔄 [AdminOnly] Waiting for user sync completion...')
+        return
+      }
+
       const hasAccess = requireSuperAdmin ? isSuperAdmin : isAdmin || isSuperAdmin
 
       if (!hasAccess) {
-        console.log('🚫 [AdminOnly] Access denied, redirecting to unauthorized')
-        console.log('- User role ID:', user.roleId)
-        console.log('- Is admin:', isAdmin)
-        console.log('- Is super admin:', isSuperAdmin)
-        console.log('- Requires super admin:', requireSuperAdmin)
-        router.push('/unauthorized')
+        // Add a small delay to handle race conditions with database sync
+        const redirectTimer = setTimeout(() => {
+          console.log('🚫 [AdminOnly] Access denied after sync wait, redirecting to unauthorized')
+          console.log('- User role ID:', user.roleId)
+          console.log('- Is admin:', isAdmin)
+          console.log('- Is super admin:', isSuperAdmin)
+          console.log('- Requires super admin:', requireSuperAdmin)
+          router.push('/unauthorized')
+        }, 1500) // Wait 1.5 seconds for potential sync completion
+
+        return () => clearTimeout(redirectTimer)
       }
     }
   }, [loading, user, supabaseUser, isAdmin, isSuperAdmin, requireSuperAdmin, router])
 
-  // Show loading state
-  if (loading) {
+  // Show loading state or when user data is syncing
+  if (loading || (supabaseUser && !user)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-600">Verifying access permissions...</p>
+          <p className="text-gray-600">{loading ? 'Verifying access permissions...' : 'Syncing user data...'}</p>
         </div>
       </div>
     )

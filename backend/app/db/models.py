@@ -160,7 +160,7 @@ class Conversation(Base):
     session_id: Mapped[str] = mapped_column(String(255), nullable=False)
     user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
-    # Service mode: 'full_llm_bot' or 'human_cs_support'
+    # Service mode: 'full_llm_bot' or 'bot_with_admin_validation'
     service_mode: Mapped[str] = mapped_column(
         String(20), nullable=False, default="full_llm_bot"
     )
@@ -244,7 +244,9 @@ class Message(Base):
         Integer, ForeignKey("users.user_id"), nullable=True
     )
     # For LLM recommendations (parent message they're responding to)
-    parent_message_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    parent_message_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("messages.message_id"), nullable=True
+    )
     # Message metadata
     confidence: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True
@@ -370,6 +372,9 @@ class UserSyncLog(Base):
     __tablename__ = "user_sync_log"
 
     sync_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.user_id"), nullable=True
+    )  # Add foreign key to users table
     supabase_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     event_type: Mapped[str] = mapped_column(
         String(50), nullable=False
@@ -384,7 +389,7 @@ class UserSyncLog(Base):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="sync_logs")
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="sync_logs")
 
     # Indexes
     __table_args__ = (
@@ -627,7 +632,7 @@ SyncStatus = Union[str]  # 'success', 'failed', 'retry'
 SupabaseEventType = Union[
     str
 ]  # 'auth.user.created', 'auth.user.updated', 'auth.user.deleted'
-ServiceMode = Union[str]  # 'full_llm_bot', 'human_cs_support'
+ServiceMode = Union[str]  # 'full_llm_bot', 'bot_with_admin_validation'
 ConversationStatus = Union[str]  # 'active', 'waiting', 'in_progress', 'resolved'
 MessageType = Union[str]  # 'user', 'admin', 'llm_bot', 'llm_recommendation', 'system'
 Priority = Union[str]  # 'low', 'normal', 'high', 'urgent'

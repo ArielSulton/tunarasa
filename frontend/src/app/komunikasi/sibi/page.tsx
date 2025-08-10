@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import GestureRecognition from '@/components/gesture/gesture-recognition'
 import { /* MessageCircle, Send, */ User, Bot, Hand } from 'lucide-react'
+import { getRagApiUrl } from '@/lib/utils/backend'
 
 interface ChatMessage {
   id: string
@@ -53,7 +54,7 @@ export default function KomunikasiSIBI() {
 
     try {
       // Call backend RAG Q&A API
-      const response = await fetch('http://localhost:8000/api/v1/rag/ask', {
+      const response = await fetch(getRagApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

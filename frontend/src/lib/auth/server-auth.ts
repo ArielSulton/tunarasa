@@ -81,11 +81,11 @@ export async function getServerUser(): Promise<{
       userId: userData.user_id,
       supabaseUserId: userData.supabase_user_id,
       email: userData.email,
-      firstName: userData.first_name,
-      lastName: userData.last_name,
-      fullName: userData.full_name,
-      imageUrl: userData.image_url,
-      roleId: userData.role_id,
+      firstName: userData.first_name ?? undefined,
+      lastName: userData.last_name ?? undefined,
+      fullName: userData.full_name ?? undefined,
+      imageUrl: userData.image_url ?? undefined,
+      roleId: userData.role_id ?? 0,
       isActive: userData.is_active,
       role: userData.role_name
         ? {

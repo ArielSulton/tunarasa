@@ -7,12 +7,13 @@ import { eq } from 'drizzle-orm'
 /**
  * Handle invitation management - resend, cancel, etc.
  */
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication and authorization - require super admin
     await requireSuperAdmin()
 
-    const invitationId = params.id
+    const { id } = await params
+    const invitationId = id
 
     // Delete invitation from database (soft delete by updating status to 'cancelled')
     const deletedInvitation = await db

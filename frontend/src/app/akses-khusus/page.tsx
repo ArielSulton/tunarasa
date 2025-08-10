@@ -66,7 +66,9 @@ export default function AksesKhusus() {
               <p className="text-sm text-gray-600">Pilih metode autentikasi untuk melanjutkan</p>
             </div>
 
-            <AuthStatus />
+            <div className="flex justify-center">
+              <AuthStatus />
+            </div>
 
             {/* Help Text */}
             <div className="mt-6 border-t border-gray-200 pt-6 text-center">

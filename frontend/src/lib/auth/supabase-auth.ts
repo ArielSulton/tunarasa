@@ -103,7 +103,7 @@ export async function getCurrentUserWithRole() {
 export async function isCurrentUserAdmin(): Promise<boolean> {
   try {
     const userData = await getCurrentUserWithRole()
-    return userData?.is_active && [1, 2].includes(userData.role_id)
+    return !!(userData?.is_active && [1, 2].includes(userData.role_id ?? 0))
   } catch (error) {
     console.error('Error checking admin status:', error)
     return false
@@ -116,7 +116,7 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
 export async function isCurrentUserSuperAdmin(): Promise<boolean> {
   try {
     const userData = await getCurrentUserWithRole()
-    return userData?.is_active && userData.role_id === 1
+    return !!(userData?.is_active && (userData.role_id ?? 0) === 1)
   } catch (error) {
     console.error('Error checking super admin status:', error)
     return false
@@ -149,18 +149,18 @@ export async function requireAdmin() {
         }
       : null,
     hasData: !!userData,
-    isActive: userData?.is_active,
-    hasValidRole: userData ? [1, 2].includes(userData.role_id) : false,
+    isActive: userData?.is_active ?? false,
+    hasValidRole: userData ? [1, 2].includes(userData.role_id ?? 0) : false,
   })
 
-  if (!userData?.is_active || ![1, 2].includes(userData.role_id)) {
+  if (!userData?.is_active || ![1, 2].includes(userData.role_id ?? 0)) {
     console.error('❌ [requireAdmin] Access denied:', {
       userData,
       reason: !userData
         ? 'No user data'
         : !userData.is_active
           ? 'User inactive'
-          : ![1, 2].includes(userData.role_id)
+          : ![1, 2].includes(userData.role_id ?? 0)
             ? `Invalid role: ${userData.role_id}`
             : 'Unknown',
     })
@@ -176,7 +176,7 @@ export async function requireAdmin() {
  */
 export async function requireSuperAdmin() {
   const userData = await getCurrentUserWithRole()
-  if (!userData?.is_active || userData.role_id !== 1) {
+  if (!userData?.is_active || (userData.role_id ?? 0) !== 1) {
     throw new Error('Super admin access required')
   }
   return userData
@@ -202,7 +202,7 @@ export async function validateApiAuth(request: NextRequest) {
 export async function validateApiAdminAuth(request: NextRequest) {
   try {
     const userData = await getCurrentUserWithRole()
-    const isAdmin = userData?.is_active && [1, 2].includes(userData.role_id)
+    const isAdmin = userData?.is_active && [1, 2].includes(userData.role_id ?? 0)
     return {
       user: userData?.supabaseUser ?? null,
       userData,

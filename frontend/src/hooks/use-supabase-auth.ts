@@ -27,15 +27,17 @@ export function useSupabaseUser() {
   const { user, loading: authLoading } = useAuth()
   const [userData, setUserData] = useState<UserWithRole | null>(null)
   const [loading, setLoading] = useState(true)
+  const [_retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (!user || authLoading) {
       setLoading(authLoading)
       setUserData(null)
+      setRetryCount(0)
       return
     }
 
-    async function fetchUserData() {
+    async function fetchUserData(attempt = 0) {
       try {
         // Use API endpoint instead of direct Supabase client query
         const response = await fetch('/api/admin/users/me', {
@@ -74,15 +76,29 @@ export function useSupabaseUser() {
           console.log('🔍 [useSupabaseUser] No user data returned from API')
           setUserData(null)
         }
-      } catch (error) {
-        console.error('❌ [useSupabaseUser] Error fetching user data:', error)
-        setUserData(null)
-      } finally {
+
+        // Success path - stop loading
         setLoading(false)
+      } catch (error) {
+        console.error(`❌ [useSupabaseUser] Error fetching user data (attempt ${attempt + 1}):`, error)
+
+        // Retry once after a short delay for database sync scenarios
+        if (attempt === 0) {
+          console.log('🔄 [useSupabaseUser] Retrying user data fetch in 2 seconds...')
+          setTimeout(() => {
+            setRetryCount(1)
+            void fetchUserData(1)
+          }, 2000)
+          // Don't set loading to false, we're retrying
+        } else {
+          console.log('❌ [useSupabaseUser] Max retry attempts reached, setting user data to null')
+          setUserData(null)
+          setLoading(false)
+        }
       }
     }
 
-    void fetchUserData()
+    void fetchUserData(0)
   }, [user, authLoading])
 
   return {

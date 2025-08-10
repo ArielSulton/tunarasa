@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Mic, MicOff, Send, User, Bot, Volume2 } from 'lucide-react'
+import { getRagApiUrl } from '@/lib/utils/backend'
 
 interface ChatMessage {
   id: string
@@ -108,7 +109,7 @@ export default function KomunikasiSpeechToText() {
 
     try {
       // Call backend RAG Q&A API
-      const response = await fetch('http://localhost:8000/api/v1/rag/ask', {
+      const response = await fetch(getRagApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

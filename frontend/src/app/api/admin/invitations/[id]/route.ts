@@ -7,12 +7,13 @@ import { eq } from 'drizzle-orm'
 /**
  * Get single invitation details
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication and authorization - require super admin
     await requireSuperAdmin()
 
-    const invitationId = params.id
+    const { id } = await params
+    const invitationId = id
 
     // Get invitation details with inviter information
     const invitationResult = await db
@@ -95,12 +96,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 /**
  * Update invitation details (status, custom message, etc.)
  */
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication and authorization - require super admin
     await requireSuperAdmin()
 
-    const invitationId = params.id
+    const { id } = await params
+    const invitationId = id
     const body = await request.json()
     const { customMessage, status } = body
 
@@ -172,12 +174,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 /**
  * Delete invitation permanently
  */
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication and authorization - require super admin
     await requireSuperAdmin()
 
-    const invitationId = params.id
+    const { id } = await params
+    const invitationId = id
 
     // Hard delete invitation
     const deletedInvitation = await db

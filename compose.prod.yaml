@@ -352,8 +352,9 @@ services:
     networks:
       - tunarasa-net
     volumes:
-      - ./monitoring/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - ./monitoring/prometheus/configs/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerting:/etc/prometheus/alerting:ro
+      - ./monitoring/prometheus/recording-rules:/etc/prometheus/recording-rules:ro
       - prometheus_data_prod:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'

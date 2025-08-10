@@ -57,7 +57,7 @@ export class GestureRecognitionService {
     processingOptions: {
       enableSmoothing: true,
       smoothingWindow: SIBI_CONFIG.SMOOTHING_WINDOW,
-      debounceTime: SIBI_CONFIG.DEBOUNCE_TIME,
+      debounceTime: 150, // Increased from 100ms to 150ms for better performance
       autoStart: false,
     },
   }
@@ -214,16 +214,23 @@ export class GestureRecognitionService {
       }
 
       try {
-        // Apply debouncing
+        // Apply debouncing - increased for performance
         const now = Date.now()
-        if (now - this.lastProcessingTime < (this.config.processingOptions?.debounceTime ?? 100)) {
+        const debounceTime = this.config.processingOptions?.debounceTime ?? 150
+        if (now - this.lastProcessingTime < debounceTime) {
           this.animationFrameId = requestAnimationFrame(() => void processFrame())
           return
         }
         this.lastProcessingTime = now
 
-        // Detect hands
-        const handDetections = await this.handPose.detectHands(this.videoElement)
+        // Use setTimeout to prevent blocking the main thread
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        // Detect hands with timeout to prevent freeze
+        const handDetections = await Promise.race([
+          this.handPose.detectHands(this.videoElement),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Hand detection timeout')), 2000)),
+        ])
 
         if (handDetections.length > 0) {
           // Take the most confident hand detection
@@ -231,8 +238,14 @@ export class GestureRecognitionService {
             current.confidence > best.confidence ? current : best,
           )
 
-          // Recognize gesture using fingerpose
-          const gestureResult = await this.handPose.recognizeGesture(bestResult.landmarks)
+          // Use setTimeout to prevent blocking during gesture recognition
+          await new Promise((resolve) => setTimeout(resolve, 0))
+
+          // Recognize gesture using fingerpose with timeout
+          const gestureResult = await Promise.race([
+            this.handPose.recognizeGesture(bestResult.landmarks),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gesture recognition timeout')), 1000)),
+          ])
 
           // Create recognition result
           const recognitionResult: GestureRecognitionResult = {
@@ -243,8 +256,8 @@ export class GestureRecognitionService {
             processingTime: gestureResult.processingTime,
           }
 
-          // Draw hand landmarks on canvas
-          this.drawHandsOnCanvas(handDetections)
+          // Draw hand landmarks on canvas (non-blocking)
+          requestAnimationFrame(() => this.drawHandsOnCanvas(handDetections))
 
           // Apply smoothing if enabled
           if (this.config.processingOptions.enableSmoothing) {
@@ -256,27 +269,31 @@ export class GestureRecognitionService {
             this.emitResult(recognitionResult)
           }
         } else {
-          // Clear canvas if no hands detected
-          this.clearCanvas()
+          // Clear canvas if no hands detected (non-blocking)
+          requestAnimationFrame(() => this.clearCanvas())
         }
       } catch (error) {
         // Handle specific errors differently
         const errorMessage = error instanceof Error ? error.message : String(error)
         if (
           errorMessage.includes('Video element not ready') ||
-          errorMessage.includes('Video dimensions not available')
+          errorMessage.includes('Video dimensions not available') ||
+          errorMessage.includes('timeout')
         ) {
-          // Silently skip frame if video not ready
-          return
+          // Silently skip frame if video not ready or timeout
+          console.warn('Skipping frame:', errorMessage)
         } else {
           console.error('Error processing frame:', error)
         }
         // Don't propagate error, continue processing
       }
 
-      // Schedule next frame
+      // Schedule next frame with reduced frequency
       if (this.isRunning) {
-        this.animationFrameId = requestAnimationFrame(() => void processFrame)
+        // Use setTimeout instead of requestAnimationFrame for less aggressive processing
+        setTimeout(() => {
+          this.animationFrameId = requestAnimationFrame(() => void processFrame())
+        }, 50) // 20 FPS instead of 60 FPS
       }
     }
 

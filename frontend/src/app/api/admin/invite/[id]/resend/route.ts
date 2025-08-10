@@ -12,12 +12,13 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 /**
  * Resend admin invitation email
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication and authorization - require super admin
     const authUser = await requireSuperAdmin()
 
-    const invitationId = params.id
+    const { id } = await params
+    const invitationId = id
 
     // Get invitation details from database with inviter information
     const invitationResult = await db
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       to: [invitation.email],
       subject: 'Reminder: Invitation to Join Tunarasa Admin Team',
       react: AdminInvitationEmail({
-        invitedByName: invitation.inviterName ?? authUser.fullName ?? 'Admin',
+        invitedByName: invitation.inviterName ?? authUser.full_name ?? 'Admin',
         invitedByEmail: invitation.inviterEmail ?? authUser.email ?? '',
         inviteeEmail: invitation.email,
         role: invitation.role as 'admin' | 'superadmin',

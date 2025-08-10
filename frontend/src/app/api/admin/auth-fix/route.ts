@@ -87,7 +87,7 @@ export async function GET(_request: NextRequest) {
             }
           : null,
       },
-      recommendations: [],
+      recommendations: [] as string[],
     }
 
     // Generate recommendations

@@ -455,7 +455,7 @@ async def get_conversation_details(
                 {
                     "message_id": msg.message_id,
                     "content": msg.message_content,
-                    "is_user": msg.is_user,
+                    "is_user": msg.message_type == "user",
                     "created_at": msg.created_at.isoformat(),
                 }
                 for msg in (conversation.messages or [])

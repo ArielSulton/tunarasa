@@ -48,6 +48,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/rag/ask",  # Allow public access for gesture recognition Q&A
         "/api/v1/question/ask",  # Allow public access for question answering
         "/api/v1/summary/generate",  # Allow public access for summary generation
+        "/api/v1/conversation/save",  # Allow public access for conversation saving
+        "/api/v1/gesture/ask",  # Allow public access for gesture recognition
+        "/api/v1/public-session/",  # Allow public access for session tracking (no auth required)
     }
 
     # Admin endpoints that require Supabase authentication

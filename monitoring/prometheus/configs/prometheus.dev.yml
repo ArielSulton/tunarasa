@@ -6,8 +6,8 @@ global:
     environment: 'development'
 
 rule_files:
-  - "deepeval_rules.yml"
-  - "sli_slo_rules.yml"
+  - "../alerting/rules/*.yml"
+  - "../recording-rules/*.yml"
 
 scrape_configs:
   # Tunarasa Backend Metrics (FastAPI with Prometheus Instrumentator)

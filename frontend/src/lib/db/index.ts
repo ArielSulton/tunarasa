@@ -21,8 +21,15 @@ if (process.env.NODE_ENV === 'development') {
   })
 }
 
-// Create a postgres connection
-export const client = postgres(connectionString)
+// Create a postgres connection with enhanced resilience
+export const client = postgres(connectionString, {
+  max: 10, // Maximum connections in pool
+  idle_timeout: 20, // Close idle connections after 20 seconds
+  connect_timeout: 60, // Wait up to 60 seconds for initial connection
+  prepare: false, // Disable prepared statements for better compatibility
+  onnotice: process.env.NODE_ENV === 'development' ? console.log : undefined, // Log notices in dev
+  // retry_delay: (attempt: number) => Math.min(1000 * 2 ** attempt, 10000), // Exponential backoff max 10s - disabled as not supported in this postgres version
+})
 
 // Create drizzle instance
 export const db = drizzle(client, { schema })

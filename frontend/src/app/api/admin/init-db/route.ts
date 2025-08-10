@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         })
 
       case 'init-first-admin':
-        const adminResult = await initializeFirstSuperAdmin(authUser.supabaseUserId, force)
+        const adminResult = await initializeFirstSuperAdmin(authUser.supabase_user_id, force)
         return NextResponse.json(adminResult)
 
       case 'setup-rls':
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
         await initializeDefaultRoles()
         const gendersInit = await initializeDefaultGenders()
-        const adminInit = await initializeFirstSuperAdmin(authUser.supabaseUserId, force)
+        const adminInit = await initializeFirstSuperAdmin(authUser.supabase_user_id, force)
 
         // Apply RLS policies
         console.log('🔒 Applying RLS policies...')

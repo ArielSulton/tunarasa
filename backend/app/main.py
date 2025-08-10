@@ -16,70 +16,11 @@ from app.core.config import (
 )
 from app.core.database import close_database, db_manager, init_database
 from app.core.logging import setup_logging
-from fastapi import FastAPI, Request
+from app.services.metrics_service import metrics_service
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from prometheus_client import Counter, Histogram, generate_latest
-from prometheus_fastapi_instrumentator import Instrumentator
-
-# Initialize metrics with global variables to prevent re-creation
-_metrics_initialized = False
-REQUEST_COUNT = None
-REQUEST_DURATION = None
-
-if not _metrics_initialized:
-    try:
-        # Clear any existing metrics with the same name
-        from prometheus_client import REGISTRY
-
-        collectors_to_remove = []
-        for collector in list(REGISTRY._collector_to_names.keys()):
-            if hasattr(collector, "_name") and collector._name in [
-                "tunarasa_http_requests_total",
-                "tunarasa_http_request_duration_seconds",
-            ]:
-                collectors_to_remove.append(collector)
-
-        for collector in collectors_to_remove:
-            REGISTRY.unregister(collector)
-
-        # Now create new metrics
-        REQUEST_COUNT = Counter(
-            "tunarasa_http_requests_total",
-            "Total HTTP requests",
-            ["method", "endpoint", "status_code"],
-        )
-        REQUEST_DURATION = Histogram(
-            "tunarasa_http_request_duration_seconds",
-            "HTTP request duration",
-            ["method", "endpoint"],
-        )
-        _metrics_initialized = True
-    except Exception as e:
-        # Fallback: create dummy metrics that don't interfere
-        print(f"Warning: Could not initialize Prometheus metrics: {e}")
-
-        class DummyMetric:
-            def labels(self, *args, **kwargs):
-                return self
-
-            def inc(self, *args, **kwargs):
-                pass
-
-            def observe(self, *args, **kwargs):
-                pass
-
-            def time(self):
-                return self
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *args):
-                pass
-
-        REQUEST_COUNT = DummyMetric()
-        REQUEST_DURATION = DummyMetric()
+from prometheus_client import generate_latest
 
 # Setup logging
 setup_logging()
@@ -116,44 +57,31 @@ def create_application() -> FastAPI:
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(AuthMiddleware)
 
-    # Metrics middleware
+    # Metrics middleware - using real metrics service
     @app.middleware("http")
     async def metrics_middleware(request: Request, call_next):
         start_time = time.time()
 
         response = await call_next(request)
 
-        # Record metrics
-        duration = time.time() - start_time
-        REQUEST_COUNT.labels(
-            method=request.method,
-            endpoint=request.url.path,
-            status_code=response.status_code,
-        ).inc()
-
-        REQUEST_DURATION.labels(
-            method=request.method, endpoint=request.url.path
-        ).observe(duration)
+        # Record metrics using metrics service
+        try:
+            duration = time.time() - start_time
+            metrics_service.record_http_request(
+                method=request.method,
+                endpoint=request.url.path,
+                status_code=response.status_code,
+                duration=duration,
+            )
+        except Exception as e:
+            print(f"⚠️  [Metrics] Error: {e}")
 
         return response
 
     # Include API router
     app.include_router(api_router, prefix="/api/v1")
 
-    # Initialize Prometheus FastAPI Instrumentator
-    instrumentator = Instrumentator(
-        should_group_status_codes=False,
-        should_ignore_untemplated=True,
-        should_respect_env_var=True,
-        should_instrument_requests_inprogress=True,
-        excluded_handlers=[".*admin.*", "/metrics", "/health"],
-        env_var_name="ENABLE_METRICS",
-        inprogress_name="tunarasa_requests_inprogress",
-        inprogress_labels=True,
-    )
-
-    # Add custom metrics for Tunarasa-specific functionality
-    # Note: Custom labels can be added via environment variables or custom metrics
+    # Note: Metrics service is initialized via import at module level
 
     # Startup and shutdown events for database
     @app.on_event("startup")
@@ -164,11 +92,8 @@ def create_application() -> FastAPI:
             await init_database()
             print("✅ Database connection initialized successfully")
 
-            # Initialize Prometheus instrumentator
-            instrumentator.instrument(app).expose(
-                app, endpoint="/metrics", include_in_schema=False
-            )
-            print("✅ Prometheus instrumentator initialized successfully")
+            # Metrics service is already initialized via import
+            print("✅ Prometheus metrics service ready")
         except Exception as e:
             print(f"❌ Startup initialization failed: {e}")
 
@@ -197,7 +122,10 @@ def create_application() -> FastAPI:
     # Metrics endpoint
     @app.get("/metrics")
     async def metrics():
-        return generate_latest()
+        metrics_data = generate_latest()
+        return Response(
+            content=metrics_data, media_type="text/plain; version=0.0.4; charset=utf-8"
+        )
 
     return app
 

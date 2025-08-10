@@ -1,297 +1,295 @@
 {
-  "dashboard": {
-    "id": null,
-    "title": "Tunarasa Overview Dashboard",
-    "tags": ["tunarasa", "overview"],
-    "timezone": "browser",
-    "panels": [
-      {
-        "id": 1,
-        "title": "HTTP Requests Rate",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "sum(rate(tunarasa_http_requests_total[5m]))",
-            "legendFormat": "Requests/sec"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "reqps"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 0,
-          "y": 0
+  "id": null,
+  "title": "Tunarasa Overview Dashboard",
+  "tags": ["tunarasa", "overview"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP Requests Rate",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(rate(tunarasa_http_requests_total[5m]))",
+          "legendFormat": "Requests/sec"
         }
-      },
-      {
-        "id": 2,
-        "title": "Error Rate",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "sum(rate(tunarasa_http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(tunarasa_http_requests_total[5m]))",
-            "legendFormat": "Error Rate"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "yellow",
-                  "value": 0.05
-                },
-                {
-                  "color": "red",
-                  "value": 0.1
-                }
-              ]
-            },
-            "unit": "percentunit"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 6,
-          "y": 0
-        }
-      },
-      {
-        "id": 3,
-        "title": "Response Time (95th percentile)",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.95, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
-            "legendFormat": "95th percentile"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "yellow",
-                  "value": 1
-                },
-                {
-                  "color": "red",
-                  "value": 2
-                }
-              ]
-            },
-            "unit": "s"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 12,
-          "y": 0
-        }
-      },
-      {
-        "id": 4,
-        "title": "Active Users",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "tunarasa_active_sessions_total",
-            "legendFormat": "Active Sessions"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            }
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 18,
-          "y": 0
-        }
-      },
-      {
-        "id": 5,
-        "title": "HTTP Requests by Status Code",
-        "type": "timeseries",
-        "targets": [
-          {
-            "expr": "sum by (status_code) (rate(tunarasa_http_requests_total[5m]))",
-            "legendFormat": "{{status_code}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "reqps"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 8
-        }
-      },
-      {
-        "id": 6,
-        "title": "Response Time Distribution",
-        "type": "timeseries",
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.50, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
-            "legendFormat": "50th percentile"
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
           },
-          {
-            "expr": "histogram_quantile(0.95, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
-            "legendFormat": "95th percentile"
-          },
-          {
-            "expr": "histogram_quantile(0.99, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
-            "legendFormat": "99th percentile"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "s"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 8
+          "unit": "reqps"
         }
       },
-      {
-        "id": 7,
-        "title": "Gesture Recognition Metrics",
-        "type": "timeseries",
-        "targets": [
-          {
-            "expr": "tunarasa_gesture_recognition_accuracy",
-            "legendFormat": "Recognition Accuracy"
-          },
-          {
-            "expr": "rate(tunarasa_gesture_recognitions_total[5m])",
-            "legendFormat": "Recognitions/sec"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            }
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 16
-        }
-      },
-      {
-        "id": 8,
-        "title": "AI Service Metrics",
-        "type": "timeseries",
-        "targets": [
-          {
-            "expr": "rate(tunarasa_ai_requests_total[5m])",
-            "legendFormat": "AI Requests/sec"
-          },
-          {
-            "expr": "rate(tunarasa_ai_request_errors_total[5m])",
-            "legendFormat": "AI Errors/sec"
-          },
-          {
-            "expr": "tunarasa_ai_response_confidence_avg",
-            "legendFormat": "Avg Confidence"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            }
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 16
-        }
-      },
-      {
-        "id": 9,
-        "title": "System Resources",
-        "type": "timeseries",
-        "targets": [
-          {
-            "expr": "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-            "legendFormat": "CPU Usage %"
-          },
-          {
-            "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
-            "legendFormat": "Memory Usage %"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "percent"
-          }
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 24,
-          "x": 0,
-          "y": 24
-        }
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 0
       }
-    ],
-    "time": {
-      "from": "now-1h",
-      "to": "now"
     },
-    "refresh": "5s",
-    "schemaVersion": 30,
-    "version": 1
-  }
+    {
+      "id": 2,
+      "title": "Error Rate",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(rate(tunarasa_http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(tunarasa_http_requests_total[5m]))",
+          "legendFormat": "Error Rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.05
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      }
+    },
+    {
+      "id": 3,
+      "title": "Response Time (95th percentile)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "95th percentile"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "id": 4,
+      "title": "Active Users",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "tunarasa_active_sessions_total",
+          "legendFormat": "Active Sessions"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      }
+    },
+    {
+      "id": 5,
+      "title": "HTTP Requests by Status Code",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (status_code) (rate(tunarasa_http_requests_total[5m]))",
+          "legendFormat": "{{status_code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "id": 6,
+      "title": "Response Time Distribution",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "50th percentile"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "95th percentile"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(tunarasa_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "99th percentile"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      }
+    },
+    {
+      "id": 7,
+      "title": "Gesture Recognition Metrics",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "tunarasa_gesture_recognition_accuracy",
+          "legendFormat": "Recognition Accuracy"
+        },
+        {
+          "expr": "rate(tunarasa_gesture_recognitions_total[5m])",
+          "legendFormat": "Recognitions/sec"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      }
+    },
+    {
+      "id": 8,
+      "title": "AI Service Metrics",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(tunarasa_ai_requests_total[5m])",
+          "legendFormat": "AI Requests/sec"
+        },
+        {
+          "expr": "rate(tunarasa_ai_request_errors_total[5m])",
+          "legendFormat": "AI Errors/sec"
+        },
+        {
+          "expr": "tunarasa_ai_response_confidence_avg",
+          "legendFormat": "Avg Confidence"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      }
+    },
+    {
+      "id": 9,
+      "title": "System Resources",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "CPU Usage %"
+        },
+        {
+          "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
+          "legendFormat": "Memory Usage %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      }
+    }
+  ],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "5s",
+  "schemaVersion": 30,
+  "version": 1
 }

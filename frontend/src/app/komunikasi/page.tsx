@@ -1,43 +1,39 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { GestureRecognition } from '@/components/gesture/gesture-recognition'
 import { SpeechToText } from '@/components/speech/SpeechToText'
-import { useServiceMode } from '@/lib/hooks/use-service-config'
-import { Send, User, Bot, MessageCircle, Mic, HandMetal, RotateCcw, Clock, Users, AlertCircle } from 'lucide-react'
+import { useServiceConfig } from '@/hooks/use-service-config'
+import { ConversationEnhancements } from '@/components/komunikasi/ConversationEnhancements'
+import { AdminConversationPanel } from '@/components/admin/AdminConversationPanel'
+import { ModeSwitcher } from '@/components/komunikasi/ModeSwitcher'
+import { useUserRole } from '@/components/auth/SuperAdminOnly'
+import { User, Bot, MessageCircle, Mic, HandMetal, RotateCcw, Clock, Users, AlertCircle } from 'lucide-react'
+import { getRagApiUrl } from '@/lib/utils/backend'
 
-interface ChatMessage {
+import { ChatMessage, ConversationStatus } from '@/types'
+
+interface BackendMessage {
   id: string
-  type: 'user' | 'assistant' | 'admin' | 'system'
+  type: 'user' | 'assistant' | 'admin' | 'system' | 'llm_recommendation'
   content: string
-  timestamp: Date
-  confidence?: number
+  timestamp: string
   adminName?: string
-  status?: 'sending' | 'sent' | 'delivered' | 'read'
-}
-
-interface ConversationStatus {
-  id: string
-  status: 'active' | 'waiting' | 'in_progress' | 'resolved'
-  assignedAdmin?: string
-  queuePosition?: number
-  estimatedWaitTime?: number
+  confidence?: number
 }
 
 type CommunicationMode = 'sibi' | 'speech'
 
-export default function Komunikasi() {
-  const { serviceMode, loading: serviceModeLoading } = useServiceMode()
+function UserKomunikasiPage() {
+  const { serviceMode, loading: serviceModeLoading, refreshConfig } = useServiceConfig()
   const [mode, setMode] = useState<CommunicationMode>('sibi')
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [inputMessage, setInputMessage] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [currentQuestion, setCurrentQuestion] = useState('')
   const [resetKey, setResetKey] = useState(0)
@@ -46,8 +42,10 @@ export default function Komunikasi() {
     status: 'active',
   })
   const [sessionId] = useState(() => `chat-session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
+  const [conversationEnded, setConversationEnded] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatScrollAreaRef = useRef<HTMLDivElement>(null)
 
-  // Handle gesture recognition
   const handleLetterDetected = useCallback((letter: string) => {
     console.log('Letter detected:', letter)
   }, [])
@@ -57,20 +55,18 @@ export default function Komunikasi() {
     console.log('Word formed:', word)
   }, [])
 
-  // Handle speech-to-text
   const handleSpeechResult = useCallback((text: string) => {
     console.log('🗣️ handleSpeechResult called with:', text)
     setCurrentQuestion(text)
     console.log('🗣️ currentQuestion updated to:', text)
   }, [])
 
-  // Send message to chat (dual-mode support)
   const sendMessage = useCallback(
     async (content: string) => {
       if (!content.trim()) return
 
       const userMessage: ChatMessage = {
-        id: Date.now().toString(),
+        id: `temp-${Date.now()}`,
         type: 'user',
         content: content.trim(),
         timestamp: new Date(),
@@ -80,10 +76,15 @@ export default function Komunikasi() {
       setMessages((prev) => [...prev, userMessage])
       setIsProcessing(true)
 
+      // Reset conversation status to allow continued conversation
+      if (conversationStatus.status === 'resolved') {
+        console.log('🔄 [User] Resetting conversation status from resolved to waiting for new message')
+        setConversationStatus((prev) => ({ ...prev, status: 'waiting' }))
+      }
+
       try {
         if (serviceMode === 'full_llm_bot') {
-          // Full LLM Bot Mode - Direct LLM response
-          const response = await fetch('http://localhost:8000/api/v1/rag/ask', {
+          const response = await fetch(getRagApiUrl(), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -106,18 +107,15 @@ export default function Komunikasi() {
           const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
+
             content: data.answer ?? 'Maaf, saya tidak dapat memproses pertanyaan Anda saat ini.',
             timestamp: new Date(),
+
             confidence: data.confidence,
           }
 
-          setMessages((prev) => [
-            ...prev.slice(0, -1), // Remove sending message
-            { ...userMessage, status: 'delivered' }, // Update user message status
-            assistantMessage,
-          ])
-        } else {
-          // Human CS Support Mode - Route to admin queue
+          setMessages((prev) => [...prev.slice(0, -1), { ...userMessage, status: 'delivered' }, assistantMessage])
+        } else if (serviceMode === 'bot_with_admin_validation') {
           const response = await fetch('/api/chat/send-message', {
             method: 'POST',
             headers: {
@@ -126,7 +124,7 @@ export default function Komunikasi() {
             body: JSON.stringify({
               message: content.trim(),
               sessionId,
-              serviceMode: 'human_cs_support',
+              serviceMode: 'bot_with_admin_validation',
               inputMethod: mode === 'sibi' ? 'gesture' : 'speech',
             }),
           })
@@ -137,29 +135,24 @@ export default function Komunikasi() {
 
           const data = await response.json()
 
-          // Update conversation status
           setConversationStatus({
             id: data.conversationId,
-            status: data.status,
-            queuePosition: data.queuePosition,
-            estimatedWaitTime: data.estimatedWaitTime,
+            status: 'waiting',
           })
 
-          // Update message status
           setMessages((prev) => [...prev.slice(0, -1), { ...userMessage, status: 'delivered' }])
 
-          // Add system message about queue status
           const systemMessage: ChatMessage = {
             id: (Date.now() + 2).toString(),
             type: 'system',
             content:
-              data.queuePosition > 0
-                ? `Pesan Anda telah diterima dan berada di posisi ${data.queuePosition} dalam antrian. Estimasi waktu tunggu: ${data.estimatedWaitTime} menit.`
-                : 'Pesan Anda telah diterima dan sedang diproses oleh admin.',
+              'Pesan Anda telah diterima. AI sedang memproses jawaban dan menunggu persetujuan admin sebelum dikirim kepada Anda.',
             timestamp: new Date(),
           }
 
           setMessages((prev) => [...prev, systemMessage])
+        } else {
+          throw new Error(`Unknown service mode: ${String(serviceMode)}`)
         }
       } catch (error) {
         console.error('Error sending message:', error)
@@ -175,10 +168,40 @@ export default function Komunikasi() {
         setIsProcessing(false)
       }
     },
-    [serviceMode, sessionId, mode],
+    [serviceMode, sessionId, mode, conversationStatus.status],
   )
 
-  // Start conversation with detected input
+  const scrollToBottom = useCallback(() => {
+    if (messages.length === 0) return
+
+    try {
+      if (chatScrollAreaRef.current) {
+        const scrollContainer = chatScrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
+        if (scrollContainer) {
+          const isAtBottom =
+            scrollContainer.scrollTop >= scrollContainer.scrollHeight - scrollContainer.clientHeight - 50
+          if (!isAtBottom) {
+            scrollContainer.scrollTo({
+              top: scrollContainer.scrollHeight,
+              behavior: 'smooth',
+            })
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Scroll error:', error)
+    }
+  }, [messages.length])
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const timer = setTimeout(() => {
+        scrollToBottom()
+      }, 150)
+      return () => clearTimeout(timer)
+    }
+  }, [messages, scrollToBottom])
+
   const startConversation = useCallback(() => {
     if (currentQuestion.trim()) {
       void sendMessage(currentQuestion)
@@ -186,21 +209,36 @@ export default function Komunikasi() {
     }
   }, [currentQuestion, sendMessage])
 
-  // Send typed message
-  const sendTypedMessage = useCallback(() => {
-    if (inputMessage.trim()) {
-      void sendMessage(inputMessage)
-      setInputMessage('')
-    }
-  }, [inputMessage, sendMessage])
-
   const endConversation = useCallback(() => {
+    if (messages.length > 0) {
+      setConversationEnded(true)
+      // Auto-generate QR code when conversation is ended
+      setTimeout(() => {
+        const generateButton = document.querySelector('[data-generate-summary]') as HTMLButtonElement
+        if (generateButton && !generateButton.disabled) {
+          generateButton.click()
+        }
+      }, 100)
+    } else {
+      setMessages([])
+      setCurrentQuestion('')
+      setConversationEnded(false)
+    }
+  }, [messages])
+
+  const startNewConversation = useCallback(() => {
     setMessages([])
     setCurrentQuestion('')
-    setInputMessage('')
+    setConversationEnded(false)
+    setConversationStatus({ id: '', status: 'active' })
   }, [])
 
-  // Reset detected input and internal states
+  const handleTypoCorrection = useCallback((original: string, corrected: string) => {
+    if (corrected !== original) {
+      setCurrentQuestion(corrected)
+    }
+  }, [])
+
   const resetDetectedInput = useCallback(() => {
     console.log('🗑️ Reset all detected input states for mode:', mode)
     setCurrentQuestion('')
@@ -209,18 +247,77 @@ export default function Komunikasi() {
     setResetKey((prev) => prev + 1)
   }, [mode])
 
-  // Poll for updates when in human CS support mode
   useEffect(() => {
-    if (serviceMode === 'human_cs_support' && conversationStatus.id && conversationStatus.status !== 'resolved') {
+    if (serviceMode === 'bot_with_admin_validation' && conversationStatus.id && !conversationEnded) {
       const pollForUpdates = async () => {
         try {
-          const response = await fetch(`/api/chat/conversation/${conversationStatus.id}/messages`)
+          const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null
+          let lastMessageId: number | null = null
+          if (lastMessage && !lastMessage.id.startsWith('temp-')) {
+            const parsed = parseInt(lastMessage.id)
+            // Only use valid database IDs (not timestamps or temp IDs)
+            if (
+              !isNaN(parsed) &&
+              parsed > 0 &&
+              parsed < 2147483647 &&
+              !lastMessage.id.startsWith('user-') &&
+              !lastMessage.id.startsWith('bot-')
+            ) {
+              lastMessageId = parsed
+            }
+          }
+
+          const url = lastMessageId
+            ? `/api/chat/conversation/${conversationStatus.id}/messages?lastMessageId=${lastMessageId}`
+            : `/api/chat/conversation/${conversationStatus.id}/messages`
+
+          const response = await fetch(url)
           if (response.ok) {
             const data = await response.json()
+
             if (data.newMessages && data.newMessages.length > 0) {
-              setMessages((prev) => [...prev, ...data.newMessages])
+              console.log(
+                '🔧 [DEBUG] User polling - raw new messages received:',
+                data.newMessages.map((msg: BackendMessage) => ({
+                  id: msg.id,
+                  type: msg.type,
+                  contentPreview: msg.content?.substring(0, 50) + '...',
+                  adminName: msg.adminName,
+                })),
+              )
+
+              const formattedMessages: ChatMessage[] = data.newMessages
+                .filter((msg: BackendMessage) => {
+                  const shouldInclude = msg.type !== 'llm_recommendation'
+                  console.log(`🔧 [DEBUG] User polling - message ${msg.id} type=${msg.type} included=${shouldInclude}`)
+                  return shouldInclude
+                })
+                .map((msg: BackendMessage) => ({
+                  id: msg.id,
+                  type: msg.type === 'admin' ? 'admin' : msg.type,
+                  content: msg.content,
+                  timestamp: new Date(msg.timestamp),
+                  adminName: msg.adminName,
+                  confidence: msg.confidence,
+                }))
+              setMessages((prev) => [...prev, ...formattedMessages])
             }
-            if (data.status !== conversationStatus.status) {
+
+            if (!lastMessageId && data.messages && data.messages.length > 0) {
+              const formattedMessages: ChatMessage[] = (data.messages as BackendMessage[])
+                .filter((msg) => msg.type !== 'llm_recommendation')
+                .map((msg) => ({
+                  id: msg.id,
+                  type: msg.type === 'admin' ? 'admin' : msg.type,
+                  content: msg.content,
+                  timestamp: new Date(msg.timestamp),
+                  adminName: msg.adminName,
+                  confidence: msg.confidence,
+                }))
+              setMessages(formattedMessages)
+            }
+
+            if (data.status && data.status !== conversationStatus.status) {
               setConversationStatus((prev) => ({ ...prev, status: data.status }))
             }
           }
@@ -231,11 +328,11 @@ export default function Komunikasi() {
 
       const interval = setInterval(() => {
         void pollForUpdates()
-      }, 3000) // Poll every 3 seconds
+      }, 3000)
 
       return () => clearInterval(interval)
     }
-  }, [serviceMode, conversationStatus.id, conversationStatus.status])
+  }, [serviceMode, conversationStatus.id, conversationStatus.status, conversationEnded, messages])
 
   const getServiceModeDisplay = () => {
     if (serviceModeLoading) return { text: 'Loading...', color: 'bg-gray-100 text-gray-800' }
@@ -248,8 +345,7 @@ export default function Komunikasi() {
   const serviceModeDisplay = getServiceModeDisplay()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
-      {/* Header */}
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-blue-50 to-blue-100">
       <section className="py-8">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -261,20 +357,18 @@ export default function Komunikasi() {
                 </span>{' '}
                 hambatan
               </h1>
-              <Badge className={serviceModeDisplay.color}>{serviceModeDisplay.text}</Badge>
+              <Badge className={serviceModeDisplay.color}>
+                {serviceModeLoading && (
+                  <div className="mr-1 inline-block h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></div>
+                )}
+                {serviceModeDisplay.text}
+              </Badge>
             </div>
-            {serviceMode === 'human_cs_support' && conversationStatus.status === 'waiting' && (
+            {serviceMode === 'bot_with_admin_validation' && conversationStatus.status === 'waiting' && (
               <Alert className="mx-auto max-w-md border-orange-200 bg-orange-50">
                 <Clock className="h-4 w-4 text-orange-600" />
                 <AlertDescription className="text-center text-orange-800">
-                  {conversationStatus.queuePosition ? (
-                    <>
-                      Posisi antrian: {conversationStatus.queuePosition} | Estimasi:{' '}
-                      {conversationStatus.estimatedWaitTime} menit
-                    </>
-                  ) : (
-                    'Menunggu respons dari admin...'
-                  )}
+                  Menunggu persetujuan admin...
                 </AlertDescription>
               </Alert>
             )}
@@ -282,11 +376,9 @@ export default function Komunikasi() {
         </div>
       </section>
 
-      {/* Main Interface */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 transition-all duration-300 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          {/* Left Panel - Communication Input */}
-          <div className="">
+          <div>
             <Card className="overflow-hidden border-2 border-gray-300">
               <CardHeader className="border-b border-blue-100">
                 <div className="flex items-center justify-between">
@@ -367,7 +459,7 @@ export default function Komunikasi() {
                           <RotateCcw className="h-3 w-3 text-gray-600" />
                         </button>
                       </div>
-                      <p className="font-medium text-gray-900">{currentQuestion}</p>
+                      <p className="font-medium break-words text-gray-900">{currentQuestion}</p>
                     </div>
                   )}
 
@@ -375,56 +467,50 @@ export default function Komunikasi() {
                   <div className="space-y-2">
                     <Button
                       onClick={startConversation}
-                      disabled={!currentQuestion.trim() || isProcessing || conversationStatus.status === 'resolved'}
+                      disabled={!currentQuestion.trim() || isProcessing || conversationEnded}
                       className="w-full bg-blue-600 text-white hover:bg-blue-700"
                     >
                       {serviceMode === 'full_llm_bot' ? 'Tanya AI Bot →' : 'Kirim ke Admin →'}
                     </Button>
-
-                    {/* Debug button for speech-to-text */}
-                    {mode === 'speech' && (
-                      <Button
-                        onClick={() => handleSpeechResult('Test speech input')}
-                        variant="outline"
-                        className="w-full text-xs"
-                      >
-                        🔧 Test Speech Callback
-                      </Button>
-                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Right Panel - Chat Conversation */}
-          <div className="">
+          <div>
             <Card className="border-2 border-gray-300">
               <CardHeader className="border-b">
-                <CardTitle className="flex items-center gap-2 text-gray-800">
-                  <MessageCircle className="h-5 w-5" />
-                  Percakapan
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-gray-800">
+                    <MessageCircle className="h-5 w-5" />
+                    Percakapan
+                  </CardTitle>
+                  <ModeSwitcher
+                    onModeChange={() => {
+                      console.log('Service mode changed, refreshing config...')
+                      void refreshConfig()
+                    }}
+                  />
+                </div>
               </CardHeader>
-
               <CardContent className="p-0">
-                <div className="flex h-[500px] flex-col">
-                  {/* Messages Area */}
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-4">
+                <div className="flex h-[600px] flex-col">
+                  <ScrollArea
+                    ref={chatScrollAreaRef}
+                    className="flex-1 overflow-y-auto"
+                    style={{ height: '480px', maxHeight: '480px', minHeight: '480px' }}
+                  >
+                    <div className="space-y-4 p-4">
                       {messages.length === 0 ? (
-                        <div className="py-8 text-center text-gray-500">
+                        <div className="py-12 text-center text-gray-500">
                           <div className="mb-4">
-                            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-lg bg-gray-200">
-                              <span className="text-2xl">💭</span>
+                            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-lg bg-gray-100">
+                              <MessageCircle className="h-8 w-8 text-gray-400" />
                             </div>
                           </div>
-                          <p className="mb-2 font-medium">Akses Catatan Percakapan Anda</p>
-                          <div className="mt-4 rounded-lg bg-gray-100 p-4">
-                            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-600">
-                              <span className="text-xl text-white">📄</span>
-                            </div>
-                          </div>
+                          <p className="font-medium">Mulai percakapan Anda</p>
+                          <p className="mt-1 text-sm">Gunakan bahasa isyarat atau suara untuk bertanya</p>
                         </div>
                       ) : (
                         messages.map((message) => (
@@ -480,7 +566,7 @@ export default function Komunikasi() {
                                         : 'bg-gray-100 text-gray-800'
                                   }`}
                                 >
-                                  <p className="text-sm">{message.content}</p>
+                                  <p className="text-sm break-words">{message.content}</p>
                                   <div className="mt-1 flex items-center justify-between text-xs opacity-70">
                                     <div className="flex items-center gap-2">
                                       <span>{message.timestamp.toLocaleTimeString()}</span>
@@ -522,16 +608,32 @@ export default function Komunikasi() {
                           </div>
                         </div>
                       )}
+                      {conversationEnded && messages.length > 0 && (
+                        <div className="flex justify-center py-4">
+                          <div className="w-full max-w-sm">
+                            <ConversationEnhancements
+                              sessionId={sessionId}
+                              messages={messages}
+                              onTypoCorrection={handleTypoCorrection}
+                              disabled={isProcessing || conversationEnded}
+                              inline={true}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} className="h-0" aria-hidden="true" />
                     </div>
                   </ScrollArea>
-
-                  {/* Input Area - for manual text input */}
-                  <div className="border-t p-4">
-                    {/* Service mode indicator */}
+                  <div className="border-t bg-white p-4">
                     <div className="mb-3 flex items-center justify-between text-xs text-gray-500">
                       <span className="flex items-center gap-2">
                         Mode:{' '}
-                        {serviceMode === 'full_llm_bot' ? (
+                        {serviceModeLoading ? (
+                          <div className="flex items-center gap-1">
+                            <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></div>
+                            Loading...
+                          </div>
+                        ) : serviceMode === 'full_llm_bot' ? (
                           <>
                             <Bot className="h-3 w-3" /> AI Bot
                           </>
@@ -555,46 +657,63 @@ export default function Komunikasi() {
                         </Badge>
                       )}
                     </div>
-
-                    <div className="mb-3 flex gap-2">
-                      <Input
-                        placeholder={
-                          serviceMode === 'full_llm_bot'
-                            ? 'Atau ketik pertanyaan manual...'
-                            : 'Ketik pesan untuk admin...'
-                        }
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && sendTypedMessage()}
-                        className="flex-1"
-                        disabled={conversationStatus.status === 'resolved'}
-                      />
-                      <Button
-                        onClick={sendTypedMessage}
-                        disabled={!inputMessage.trim() || isProcessing || conversationStatus.status === 'resolved'}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
+                    <div className="mb-3 text-center text-sm text-gray-500">
+                      <p>Gunakan bahasa isyarat atau suara untuk berkomunikasi</p>
                     </div>
-
                     {messages.length > 0 && (
-                      <Button
-                        onClick={endConversation}
-                        variant="outline"
-                        className="w-full"
-                        disabled={conversationStatus.status === 'in_progress'}
-                      >
-                        {conversationStatus.status === 'in_progress' ? 'Sedang diproses admin...' : 'Akhiri percakapan'}
-                      </Button>
+                      <div className="space-y-2">
+                        <Button
+                          onClick={endConversation}
+                          variant="outline"
+                          className="w-full"
+                          disabled={conversationStatus.status === 'in_progress'}
+                        >
+                          {conversationStatus.status === 'in_progress'
+                            ? 'Sedang diproses admin...'
+                            : 'Akhiri percakapan'}
+                        </Button>
+                        {conversationEnded && (
+                          <Button
+                            onClick={startNewConversation}
+                            className="w-full bg-green-600 text-white hover:bg-green-700"
+                          >
+                            <MessageCircle className="mr-2 h-4 w-4" />
+                            Mulai Percakapan Baru
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {messages.length > 0 && !conversationEnded && (
+            <div className="lg:col-span-2">
+              <ConversationEnhancements
+                sessionId={sessionId}
+                messages={messages}
+                onTypoCorrection={handleTypoCorrection}
+                disabled={isProcessing || conversationEnded}
+                typoOnly={true}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
+}
+
+export default function Komunikasi() {
+  const { role } = useUserRole()
+
+  // Admin gets the admin panel as their main page
+  if (role === 'admin' || role === 'superadmin') {
+    return <AdminConversationPanel isVisible={true} onVisibilityChange={() => {}} />
+  }
+
+  // Regular users get the user interface
+  return <UserKomunikasiPage />
 }

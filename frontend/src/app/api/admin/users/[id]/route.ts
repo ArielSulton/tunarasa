@@ -11,9 +11,10 @@ const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, proces
   },
 })
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const userId = params.id
+    const { id } = await params
+    const userId = id
 
     console.log(`🔍 [Diagnostic] Checking user: ${userId}`)
 
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       })),
 
       // Issues detected
-      issues_detected: [],
+      issues_detected: [] as string[],
     }
 
     // Detect potential issues
@@ -165,9 +166,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const userId = params.id
+    const { id } = await params
+    const userId = id
     const { action } = await request.json()
 
     console.log(`🔧 [Diagnostic] Action: ${action} for user: ${userId}`)

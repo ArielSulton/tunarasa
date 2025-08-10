@@ -55,7 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       success: true,
       message: 'Conversation resolved successfully',
       conversationId,
-      resolvedBy: authUser.email ?? authUser.fullName ?? authUser.supabaseUserId,
+      resolvedBy: authUser.email ?? authUser.full_name ?? authUser.supabase_user_id,
       resolvedAt: new Date().toISOString(),
     })
   } catch (error) {

@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminOnly } from '@/components/auth/auth-components'
 import { ServiceModeToggle } from '@/components/admin/ServiceModeToggle'
 import { SpeechToText } from '@/components/speech/SpeechToText'
-import { useServiceMode } from '@/lib/hooks/use-service-config'
+import { useServiceMode } from '@/hooks/use-service-config'
+import { useSupabaseUser } from '@/hooks/use-supabase-auth'
 import {
   Send,
   User,
@@ -30,6 +31,7 @@ import {
   TrendingUp,
   AlertCircle,
 } from 'lucide-react'
+import { getRagApiUrl } from '@/lib/utils/backend'
 
 interface ChatMessage {
   id: string
@@ -77,6 +79,7 @@ interface LLMRecommendation {
 
 export default function AdminKomunikasi() {
   const { serviceMode } = useServiceMode()
+  const { user: adminUser } = useSupabaseUser()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -162,7 +165,7 @@ export default function AdminKomunikasi() {
   const getLLMRecommendations = useCallback(async (userMessage: string) => {
     setLoadingRecommendations(true)
     try {
-      const response = await fetch('http://localhost:8000/api/v1/rag/ask', {
+      const response = await fetch(getRagApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -197,7 +200,7 @@ export default function AdminKomunikasi() {
   // Load data on mount and when service mode changes
   useEffect(() => {
     void loadAdminStats()
-    if (serviceMode === 'human_cs_support') {
+    if (serviceMode === 'bot_with_admin_validation') {
       void loadConversations()
       const interval = setInterval(() => {
         void loadConversations()
@@ -235,6 +238,13 @@ export default function AdminKomunikasi() {
   // Send admin response to specific conversation
   const sendAdminResponse = useCallback(
     async (content: string) => {
+      // Check if admin user is available
+      if (!adminUser?.userId) {
+        console.error('Admin user ID not available')
+        // In a real app, you might want to show an error message to the user
+        return
+      }
+
       if (!content.trim() || !selectedConversation) return
 
       setIsProcessing(true)
@@ -247,7 +257,7 @@ export default function AdminKomunikasi() {
           },
           body: JSON.stringify({
             message: content.trim(),
-            adminId: 1, // In real app, get from current user
+            adminId: adminUser.userId,
           }),
         })
 
@@ -268,14 +278,20 @@ export default function AdminKomunikasi() {
 
           // Refresh conversation list
           void loadConversations()
+        } else {
+          // Handle error response
+          const errorData = await response.json().catch(() => ({}))
+          console.error('Failed to send admin response:', response.status, errorData)
+          // In a real app, you might want to show an error message to the user
         }
       } catch (error) {
         console.error('Error sending admin response:', error)
+        // In a real app, you might want to show an error message to the user
       } finally {
         setIsProcessing(false)
       }
     },
-    [selectedConversation, loadConversations],
+    [adminUser, selectedConversation, loadConversations],
   )
 
   // Send admin message to system/broadcast
@@ -307,7 +323,7 @@ export default function AdminKomunikasi() {
           setMessages((prev) => [...prev, systemResponse])
         } else {
           // Regular admin query
-          const response = await fetch('http://localhost:8000/api/v1/rag/ask', {
+          const response = await fetch(getRagApiUrl(), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -425,7 +441,7 @@ export default function AdminKomunikasi() {
                 Panel <span className="text-purple-600">Administrator</span>
               </h1>
               <p className="text-gray-600">
-                {serviceMode === 'human_cs_support'
+                {serviceMode === 'bot_with_admin_validation'
                   ? 'Customer Support Dashboard - Manage user conversations'
                   : 'System Monitoring Dashboard'}
               </p>
@@ -434,7 +450,7 @@ export default function AdminKomunikasi() {
         </section>
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {serviceMode !== 'human_cs_support' ? (
+          {serviceMode !== 'bot_with_admin_validation' ? (
             <div className="space-y-8">
               <ServiceModeToggle />
 

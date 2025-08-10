@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY ./app ./app
 
+# Create directories for assets and deepeval
+RUN mkdir -p /app/assets /app/.deepeval
+
 # Create non-root user
 RUN groupadd -r tunarasa && useradd -r -g tunarasa tunarasa
 RUN chown -R tunarasa:tunarasa /app
