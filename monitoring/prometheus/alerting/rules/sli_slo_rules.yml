@@ -1,0 +1,200 @@
+# SLI/SLO Alert Rules for Tunarasa
+# Converted from infrastructure/advanced-monitoring.yaml
+
+groups:
+  - name: sli_slo_alerts
+    rules:
+      # Service Level Indicators (SLI) Recording Rules
+      - record: tunarasa:sli:availability:rate5m
+        expr: |
+          (
+            sum(rate(http_requests_total{status!~"5.."}[5m])) /
+            sum(rate(http_requests_total[5m]))
+          ) * 100
+
+      - record: tunarasa:sli:latency:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      - record: tunarasa:sli:error_rate:rate5m
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) /
+            sum(rate(http_requests_total[5m]))
+          ) * 100
+
+      - record: tunarasa:sli:throughput:rate5m
+        expr: |
+          sum(rate(http_requests_total[5m]))
+
+  - name: slo_availability_alerts
+    rules:
+      # Critical SLO: 99.9% Availability
+      - alert: SLOAvailabilityCritical
+        expr: tunarasa:sli:availability:rate5m < 99.9
+        for: 2m
+        labels:
+          severity: critical
+          slo_type: availability
+          slo_target: "99.9"
+        annotations:
+          summary: "Service availability below critical SLO"
+          description: "Service availability is {{ $value }}%, below critical SLO of 99.9%"
+
+      # Gesture Processing SLO: 99.5%
+      - alert: SLOGestureProcessingCritical
+        expr: |
+          (
+            sum(rate(tunarasa_gesture_requests_total{success="true"}[5m])) /
+            sum(rate(tunarasa_gesture_requests_total[5m]))
+          ) * 100 < 99.5
+        for: 5m
+        labels:
+          severity: critical
+          slo_type: gesture_processing
+          slo_target: "99.5"
+        annotations:
+          summary: "Gesture processing success rate below SLO"
+          description: "Gesture processing success rate is {{ $value }}%, below SLO of 99.5%"
+
+  - name: slo_latency_alerts
+    rules:
+      # API Latency SLO: 99.5% under 500ms
+      - alert: SLOLatencyCritical
+        expr: tunarasa:sli:latency:p95 > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          slo_type: latency
+          slo_target: "500ms"
+        annotations:
+          summary: "API latency above SLO threshold"
+          description: "95th percentile latency is {{ $value }}s, above SLO of 500ms"
+
+  - name: business_metrics_alerts
+    rules:
+      # Daily Active Users
+      - alert: LowDailyActiveUsers
+        expr: |
+          count(
+            count by (session_id) (
+              tunarasa_gesture_requests_total[24h]
+            )
+          ) < 10
+        for: 1h
+        labels:
+          severity: warning
+          metric_type: business
+        annotations:
+          summary: "Low daily active users"
+          description: "Daily active users: {{ $value }}, below warning threshold of 10"
+
+      # Session Duration
+      - alert: LowSessionDuration
+        expr: avg(tunarasa_session_duration_seconds) < 60
+        for: 10m
+        labels:
+          severity: warning
+          metric_type: business
+        annotations:
+          summary: "Low average session duration"
+          description: "Average session duration: {{ $value }}s, below warning threshold of 60s"
+
+      # Gesture Recognition Accuracy
+      - alert: LowGestureAccuracy
+        expr: avg(tunarasa_gesture_confidence_score) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          metric_type: ai_quality
+        annotations:
+          summary: "Low gesture recognition accuracy"
+          description: "Average gesture confidence: {{ $value }}, below warning threshold of 0.8"
+
+      # AI Response Quality
+      - alert: LowAIResponseQuality
+        expr: avg(tunarasa_ai_quality_score) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          metric_type: ai_quality
+        annotations:
+          summary: "Low AI response quality"
+          description: "Average AI quality score: {{ $value }}, below warning threshold of 0.8"
+
+      # RAG Retrieval Success Rate
+      - alert: LowRAGRetrievalSuccess
+        expr: |
+          (
+            sum(tunarasa_rag_retrieval_success_total) /
+            sum(tunarasa_rag_retrieval_total)
+          ) * 100 < 90
+        for: 5m
+        labels:
+          severity: warning
+          metric_type: ai_quality
+        annotations:
+          summary: "Low RAG retrieval success rate"
+          description: "RAG retrieval success rate: {{ $value }}%, below warning threshold of 90%"
+
+  - name: infrastructure_alerts
+    rules:
+      # Database Connection Pool
+      - alert: DatabaseConnectionPoolHigh
+        expr: |
+          (
+            sum(tunarasa_db_connections_active) /
+            sum(tunarasa_db_connections_max)
+          ) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          metric_type: infrastructure
+        annotations:
+          summary: "High database connection pool usage"
+          description: "Database connection pool usage: {{ $value }}%, above warning threshold of 80%"
+
+      - alert: DatabaseConnectionPoolCritical
+        expr: |
+          (
+            sum(tunarasa_db_connections_active) /
+            sum(tunarasa_db_connections_max)
+          ) * 100 > 95
+        for: 1m
+        labels:
+          severity: critical
+          metric_type: infrastructure
+        annotations:
+          summary: "Critical database connection pool usage"
+          description: "Database connection pool usage: {{ $value }}%, above critical threshold of 95%"
+
+      # Redis Memory Usage
+      - alert: RedisMemoryUsageHigh
+        expr: |
+          (
+            redis_memory_used_bytes /
+            redis_memory_max_bytes
+          ) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          metric_type: infrastructure
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage: {{ $value }}%, above warning threshold of 80%"
+
+      - alert: RedisMemoryUsageCritical
+        expr: |
+          (
+            redis_memory_used_bytes /
+            redis_memory_max_bytes
+          ) * 100 > 90
+        for: 1m
+        labels:
+          severity: critical
+          metric_type: infrastructure
+        annotations:
+          summary: "Critical Redis memory usage"
+          description: "Redis memory usage: {{ $value }}%, above critical threshold of 90%"

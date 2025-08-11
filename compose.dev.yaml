@@ -121,8 +121,8 @@ services:
       - SITE_NAME=${SITE_NAME}
 
       # Frontend Configuration (Next.js)
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - BACKEND_URL=${BACKEND_URL}
       - NEXT_TELEMETRY_DISABLED=1

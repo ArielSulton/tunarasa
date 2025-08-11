@@ -155,7 +155,7 @@ export interface LLMQualityReport {
 }
 
 class AdminApiClient {
-  private baseUrl: string
+  private readonly baseUrl: string
 
   constructor() {
     this.baseUrl = process.env.NEXT_PUBLIC_API_URL ?? '/api'

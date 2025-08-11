@@ -1,0 +1,78 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'tunarasa-dev'
+    environment: 'development'
+
+rule_files:
+  - "deepeval_rules.yml"
+  - "sli_slo_rules.yml"
+
+scrape_configs:
+  # Tunarasa Backend Metrics (FastAPI with Prometheus Instrumentator)
+  - job_name: 'tunarasa-backend'
+    static_configs:
+      - targets: ['backend:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'tunarasa-backend'
+      - source_labels: []
+        target_label: service
+        replacement: 'tunarasa'
+      - source_labels: []
+        target_label: component
+        replacement: 'backend'
+    metric_relabel_configs:
+      # Relabel Tunarasa-specific metrics
+      - source_labels: [__name__]
+        regex: 'tunarasa_(.+)'
+        target_label: metric_type
+        replacement: '${1}'
+      # Label AI/LLM metrics
+      - source_labels: [__name__]
+        regex: 'tunarasa_(ai|deepeval|llm)_(.+)'
+        target_label: ai_component
+        replacement: '${1}_${2}'
+      # Label gesture recognition metrics
+      - source_labels: [__name__]
+        regex: 'tunarasa_gesture_(.+)'
+        target_label: gesture_component
+        replacement: '${1}'
+
+  # Tunarasa DeepEval and System Monitoring (Real Endpoints)
+  - job_name: 'tunarasa-monitoring'
+    static_configs:
+      - targets: ['backend:8000']
+    metrics_path: '/api/v1/monitoring/prometheus-metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    honor_labels: true
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'tunarasa_deepeval_(.+)'
+        target_label: deepeval_metric
+        replacement: '${1}'
+      - source_labels: [metric_type]
+        target_label: evaluation_category
+      - source_labels: [__name__]
+        regex: 'tunarasa_(gesture|ai)_(.+)'
+        target_label: service_component
+        replacement: '${1}_${2}'
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+
+  # Grafana Metrics
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
