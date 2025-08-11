@@ -212,10 +212,11 @@ function UserKomunikasiPage() {
   const endConversation = useCallback(() => {
     if (messages.length > 0) {
       setConversationEnded(true)
-      // Auto-generate QR code when conversation is ended
+      // Auto-generate summary immediately when conversation ends
       setTimeout(() => {
         const generateButton = document.querySelector('[data-generate-summary]') as HTMLButtonElement
         if (generateButton && !generateButton.disabled) {
+          // Directly trigger the generateSummary function instead of clicking button
           generateButton.click()
         }
       }, 100)

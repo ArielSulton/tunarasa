@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -52,6 +52,7 @@ export function ConversationEnhancements({
   } | null>(null)
   const [isCorrecting, setIsCorrecting] = useState(false)
   const [lastInputText, setLastInputText] = useState('')
+  const [autoGenerateTriggered, setAutoGenerateTriggered] = useState(false)
 
   // Generate conversation summary with QR code
   const generateSummary = useCallback(async () => {
@@ -141,6 +142,17 @@ export function ConversationEnhancements({
       setIsGeneratingSummary(false)
     }
   }, [sessionId, messages])
+
+  // Auto-generate summary when inline mode and has messages (conversation ended)
+  useEffect(() => {
+    if (inline && messages.length > 0 && !autoGenerateTriggered && !summaryData && !isGeneratingSummary) {
+      setAutoGenerateTriggered(true)
+      // Delay to ensure component is fully mounted
+      setTimeout(() => {
+        void generateSummary()
+      }, 500)
+    }
+  }, [inline, messages.length, autoGenerateTriggered, summaryData, isGeneratingSummary, generateSummary])
 
   // Download PDF summary
   const downloadPDF = useCallback(async () => {
@@ -292,30 +304,27 @@ export function ConversationEnhancements({
 
               {!summaryData ? (
                 <div className="space-y-3 text-center">
-                  <Button
+                  {isGeneratingSummary ? (
+                    <div className="flex items-center justify-center gap-2 py-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-green-600" />
+                      <span className="text-sm text-green-700">Membuat ringkasan...</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-green-600">Ringkasan akan dibuat secara otomatis</div>
+                  )}
+                  {/* Hidden button for compatibility with existing code */}
+                  <button
                     onClick={() => void generateSummary()}
                     disabled={disabled || isGeneratingSummary || messages.length === 0}
-                    className="bg-green-600 hover:bg-green-700"
-                    size="sm"
                     data-generate-summary
+                    className="sr-only"
+                    aria-hidden="true"
                   >
-                    {isGeneratingSummary ? (
-                      <>
-                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                        Membuat...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-3 w-3" />
-                        Buat QR & Ringkasan
-                      </>
-                    )}
-                  </Button>
+                    Generate Summary
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3 text-center">
-                  <div className="text-xs text-green-700">✅ Ringkasan berhasil dibuat!</div>
-
                   {/* QR Code Display - Compact */}
                   {summaryData.qr_code && (
                     <div className="space-y-2">
@@ -334,7 +343,7 @@ export function ConversationEnhancements({
                   {/* Download Actions - Compact */}
                   <Button
                     onClick={() => void downloadPDF()}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="hidden bg-blue-600 hover:bg-blue-700"
                     disabled={!summaryData.qr_code}
                     size="sm"
                   >
