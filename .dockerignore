@@ -97,11 +97,13 @@ compose.prod.yaml
 *.swo
 
 # Documentation and project files
-CLAUDE.md
-README.md
-/readme/
 **/LICENSE
 **/CHANGELOG*
+/readme/
+README.md
+CLAUDE.md
+GEMINI.md
+QWEN.md
 
 # Reference
 reference/

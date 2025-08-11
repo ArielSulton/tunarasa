@@ -112,6 +112,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Runtime data
+assets/
 pids/
 *.pid
 *.seed
@@ -147,6 +148,8 @@ temp/
 # Documentation
 /readme/*/
 CLAUDE.md
+GEMINI.md
+QWEN.md
 
 # Reference
 reference/
