@@ -3,47 +3,47 @@ import { Card, CardContent } from '@/components/ui/card'
 
 const techDetails = [
   {
-    category: 'Frontend Technologies',
+    category: 'Teknologi Frontend',
     items: [
-      { name: 'Next.js 15', description: 'React framework with App Router for modern web development' },
-      { name: 'React 19', description: 'Latest React with improved concurrent features' },
-      { name: 'TypeScript', description: 'Type-safe JavaScript for better development experience' },
-      { name: 'Tailwind CSS', description: 'Utility-first CSS framework for rapid UI development' },
+      { name: 'Next.js 15', description: 'Framework React dengan App Router untuk pengembangan web modern' },
+      { name: 'React 19', description: 'React terbaru dengan fitur concurrent yang ditingkatkan' },
+      { name: 'TypeScript', description: 'JavaScript dengan tipe data untuk pengalaman pengembangan yang lebih baik' },
+      { name: 'Tailwind CSS', description: 'Framework CSS utility-first untuk pengembangan UI yang cepat' },
     ],
   },
   {
     category: 'AI & Machine Learning',
     items: [
-      { name: 'TensorFlow.js', description: 'Machine learning library for browser-based gesture recognition' },
-      { name: 'MediaPipe', description: "Google's framework for hand tracking and pose estimation" },
-      { name: 'LLaMA via Groq', description: 'Large language model for intelligent Q&A responses' },
-      { name: 'LangChain', description: 'Framework for building LLM-powered applications' },
+      { name: 'TensorFlow.js', description: 'Library machine learning untuk pengenalan gesture berbasis browser' },
+      { name: 'MediaPipe', description: 'Framework Google untuk pelacakan tangan dan estimasi pose' },
+      { name: 'LLaMA via Groq', description: 'Large language model untuk respons Q&A yang cerdas' },
+      { name: 'LangChain', description: 'Framework untuk membangun aplikasi bertenaga LLM' },
     ],
   },
   {
-    category: 'Backend Infrastructure',
+    category: 'Infrastruktur Backend',
     items: [
-      { name: 'FastAPI', description: 'High-performance Python API framework with async support' },
-      { name: 'PostgreSQL', description: 'Robust relational database for data persistence' },
-      { name: 'Pinecone', description: 'Vector database for semantic search and RAG functionality' },
-      { name: 'Docker', description: 'Containerization for consistent deployment environments' },
+      { name: 'FastAPI', description: 'Framework API Python berperforma tinggi dengan dukungan async' },
+      { name: 'PostgreSQL', description: 'Database relasional yang robust untuk persistensi data' },
+      { name: 'Pinecone', description: 'Vector database untuk pencarian semantik dan fungsionalitas RAG' },
+      { name: 'Docker', description: 'Containerisasi untuk lingkungan deployment yang konsisten' },
     ],
   },
   {
-    category: 'Accessibility Features',
+    category: 'Fitur Aksesibilitas',
     items: [
-      { name: 'SIBI Support', description: 'Indonesian Sign Language (Sistem Isyarat Bahasa Indonesia)' },
-      { name: 'Real-time Recognition', description: 'Sub-second gesture recognition with high accuracy' },
-      { name: 'WCAG 2.1 AA', description: 'Web Content Accessibility Guidelines compliance' },
-      { name: 'Screen Reader Support', description: 'Full compatibility with assistive technologies' },
+      { name: 'Dukungan SIBI', description: 'Sistem Isyarat Bahasa Indonesia (Indonesian Sign Language)' },
+      { name: 'Pengenalan Real-time', description: 'Pengenalan gesture sub-detik dengan akurasi tinggi' },
+      { name: 'WCAG 2.1 AA', description: 'Kepatuhan terhadap Web Content Accessibility Guidelines' },
+      { name: 'Dukungan Screen Reader', description: 'Kompatibilitas penuh dengan teknologi bantuan' },
     ],
   },
 ]
 
 const statistics = [
-  { label: 'Gesture Recognition Accuracy', value: '95.9%', color: 'text-green-600' },
-  { label: 'Average Response Time', value: '<2s', color: 'text-blue-600' },
-  { label: 'SIBI Letters Supported', value: '26', color: 'text-orange-600' },
+  { label: 'Akurasi Pengenalan Gesture', value: '>85%', color: 'text-green-600' },
+  { label: 'Rata-rata Waktu Respons', value: '<2s', color: 'text-blue-600' },
+  { label: 'Huruf SIBI yang Didukung', value: '26', color: 'text-orange-600' },
 ]
 
 export default function Tentang() {
@@ -194,7 +194,7 @@ export default function Tentang() {
                   <p className="text-sm text-gray-600">Lisensi</p>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-purple-600">Indonesia</div>
+                  <div className="text-2xl font-bold text-red-600">Indonesia</div>
                   <p className="text-sm text-gray-600">Dikembangkan di</p>
                 </div>
               </div>

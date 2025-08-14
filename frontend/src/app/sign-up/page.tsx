@@ -38,14 +38,14 @@ export default function SignUpPage() {
     // Form validation
     if (password !== confirmPassword) {
       console.log('❌ Passwords do not match')
-      setError('Passwords do not match')
+      setError('Kata sandi tidak cocok')
       setLoading(false)
       return
     }
 
     if (password.length < 6) {
       console.log('❌ Password too short')
-      setError('Password must be at least 6 characters long')
+      setError('Kata sandi harus minimal 6 karakter')
       setLoading(false)
       return
     }
@@ -60,11 +60,12 @@ export default function SignUpPage() {
         // Provide more helpful error messages
         let userFriendlyError = result.error.message
         if (result.error.message.includes('Email rate limit exceeded')) {
-          userFriendlyError = 'Too many signup attempts. Please wait a few minutes before trying again.'
+          userFriendlyError =
+            'Terlalu banyak percobaan pendaftaran. Silakan tunggu beberapa menit sebelum mencoba lagi.'
         } else if (result.error.message.includes('User already registered')) {
-          userFriendlyError = 'An account with this email already exists. Please try signing in instead.'
+          userFriendlyError = 'Akun dengan email ini sudah ada. Silakan coba masuk sebagai gantinya.'
         } else if (result.error.message.includes('Invalid email')) {
-          userFriendlyError = 'Please enter a valid email address.'
+          userFriendlyError = 'Silakan masukkan alamat email yang valid.'
         }
 
         setError(userFriendlyError)
@@ -88,11 +89,9 @@ export default function SignUpPage() {
 
       // Check if it's a network error
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        setError(
-          'Network error: Cannot reach Supabase. Please check your internet connection and Supabase configuration.',
-        )
+        setError('Kesalahan jaringan: Tidak dapat terhubung ke server. Silakan periksa koneksi internet Anda.')
       } else {
-        setError('An unexpected error occurred. Please try again.')
+        setError('Terjadi kesalahan yang tidak terduga. Silakan coba lagi.')
       }
     } finally {
       setLoading(false)
@@ -103,8 +102,8 @@ export default function SignUpPage() {
     <div className="bg-background flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-          <CardDescription>Enter your information to create a new account</CardDescription>
+          <CardTitle className="text-2xl font-bold">Buat Akun</CardTitle>
+          <CardDescription>Masukkan informasi Anda untuk membuat akun baru</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
@@ -119,7 +118,7 @@ export default function SignUpPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Masukkan email Anda"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -128,11 +127,11 @@ export default function SignUpPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Kata Sandi</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password (min. 6 characters)"
+                placeholder="Masukkan kata sandi Anda (min. 6 karakter)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -142,11 +141,11 @@ export default function SignUpPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">Konfirmasi Kata Sandi</Label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="Confirm your password"
+                placeholder="Konfirmasi kata sandi Anda"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -157,13 +156,13 @@ export default function SignUpPage() {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Account
+              Buat Akun
             </Button>
 
             <div className="text-center text-sm">
-              Already have an account?{' '}
+              Sudah punya akun?{' '}
               <Link href="/sign-in" className="text-primary hover:underline">
-                Sign in
+                Masuk
               </Link>
             </div>
           </form>

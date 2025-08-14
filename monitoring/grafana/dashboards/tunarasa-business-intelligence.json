@@ -21,11 +21,11 @@
       "type": "graph",
       "targets": [
         {
-          "expr": "count(count by (session_id) (tunarasa_gesture_requests_total[1h]))",
+          "expr": "count(count by (session_id) (increase(tunarasa_gesture_requests_total[1h])))",
           "legendFormat": "Hourly Active Users"
         },
         {
-          "expr": "count(count by (session_id) (tunarasa_gesture_requests_total[24h]))",
+          "expr": "count(count by (session_id) (increase(tunarasa_gesture_requests_total[24h])))",
           "legendFormat": "Daily Active Users"
         }
       ],
@@ -108,7 +108,7 @@
       "type": "piechart",
       "targets": [
         {
-          "expr": "sum by (language) (tunarasa_gesture_requests_total[24h])",
+          "expr": "sum by (language) (increase(tunarasa_gesture_requests_total[24h]))",
           "legendFormat": "{{ language }}"
         }
       ],
@@ -133,7 +133,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "(sum by (language) (tunarasa_gesture_requests_total{success=\"true\"}[24h]) / sum by (language) (tunarasa_gesture_requests_total[24h])) * 100",
+          "expr": "(sum by (language) (increase(tunarasa_gesture_requests_total{success=\"true\"}[24h])) / sum by (language) (increase(tunarasa_gesture_requests_total[24h]))) * 100",
           "legendFormat": "{{ language }}"
         }
       ],
@@ -236,7 +236,7 @@
       "type": "table",
       "targets": [
         {
-          "expr": "topk(10, sum by (question_category) (tunarasa_questions_total[24h]))",
+          "expr": "topk(10, sum by (question_category) (increase(tunarasa_questions_total[24h])))",
           "legendFormat": "{{ question_category }}"
         }
       ],
@@ -344,7 +344,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "count(count by (session_id) (tunarasa_gesture_requests_total[24h]))",
+          "expr": "count(count by (session_id) (increase(tunarasa_gesture_requests_total[24h])))",
           "legendFormat": "Daily Active Users"
         },
         {
@@ -375,6 +375,28 @@
       }
     }
   ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
   "time": {
     "from": "now-24h",
     "to": "now"

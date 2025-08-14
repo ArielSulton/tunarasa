@@ -1,7 +1,7 @@
 """
 SQLAlchemy models matching the Drizzle schema
 Complete 14-table synchronized schema with frontend
-Includes: roles, genders, users, adminInvitations, userSyncLog, conversations, messages, notes, sessions, qaLogs, appSettings, adminQueue
+Includes: roles, users, adminInvitations, userSyncLog, conversations, messages, notes, sessions, qaLogs, appSettings, adminQueue
 """
 
 import uuid
@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Union
 
 from app.core.database import Base
+from app.models.institution import Institution, RagFile
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -47,23 +48,6 @@ class Role(Base):
     )
 
 
-class Gender(Base):
-    """Genders table - gender definitions"""
-
-    __tablename__ = "genders"
-
-    gender_id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
-    gender_name: Mapped[str] = mapped_column(String(50), nullable=False)
-
-    # Relationships
-    users: Mapped[List["User"]] = relationship("User", back_populates="gender")
-
-    # Indexes
-    __table_args__ = (Index("genders_gender_name_idx", "gender_name"),)
-
-
 class User(Base):
     """Enhanced Users table with Supabase integration"""
 
@@ -81,9 +65,6 @@ class User(Base):
     role_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("roles.role_id"), default=3, nullable=True
     )  # Default to regular user
-    gender_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("genders.gender_id"), nullable=True
-    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_sign_in_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -111,7 +92,6 @@ class User(Base):
 
     # Relationships
     role: Mapped[Optional["Role"]] = relationship("Role", back_populates="users")
-    gender: Mapped[Optional["Gender"]] = relationship("Gender", back_populates="users")
     # Admin-only sessions (authenticated users)
     admin_sessions: Mapped[List["Session"]] = relationship(
         "Session", back_populates="user", cascade="all, delete-orphan"
@@ -140,7 +120,6 @@ class User(Base):
         Index("users_supabase_user_id_idx", "supabase_user_id"),
         Index("users_email_idx", "email"),
         Index("users_role_id_idx", "role_id"),
-        Index("users_gender_id_idx", "gender_id"),
         Index("users_is_active_idx", "is_active"),
         Index("users_created_at_idx", "created_at"),
         Index("users_invited_by_idx", "invited_by"),
@@ -468,6 +447,10 @@ class QaLog(Base):
         ForeignKey("conversations.conversation_id", ondelete="CASCADE"),
         nullable=True,
     )
+    # Institution ID for FAQ clustering and recommendations
+    institution_id: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1
+    )  # Default to institution 1 for existing data
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     confidence: Mapped[Optional[int]] = mapped_column(
@@ -510,12 +493,16 @@ class QaLog(Base):
     __table_args__ = (
         Index("qa_logs_session_id_idx", "session_id"),
         Index("qa_logs_conversation_id_idx", "conversation_id"),
+        Index("qa_logs_institution_id_idx", "institution_id"),
         Index("qa_logs_service_mode_idx", "service_mode"),
         Index("qa_logs_responded_by_idx", "responded_by"),
         Index("qa_logs_admin_id_idx", "admin_id"),
         Index("qa_logs_created_at_idx", "created_at"),
         Index("qa_logs_confidence_idx", "confidence"),
         Index("qa_logs_evaluation_score_idx", "evaluation_score"),
+        # Composite indexes for FAQ recommendation queries
+        Index("qa_logs_institution_created_idx", "institution_id", "created_at"),
+        Index("qa_logs_institution_question_idx", "institution_id", "question"),
     )
 
 
@@ -609,8 +596,10 @@ __all__ = [
     "Base",
     # Core tables
     "Role",
-    "Gender",
     "User",
+    # Institution management
+    "Institution",
+    "RagFile",
     # Admin management
     "AdminInvitation",
     "UserSyncLog",

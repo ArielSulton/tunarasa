@@ -333,7 +333,7 @@ export function ConversationEnhancements({
                         <img
                           src={`data:image/png;base64,${summaryData.qr_code.qr_code_base64}`}
                           alt="Summary QR Code"
-                          className="h-20 w-20 rounded border shadow"
+                          className="h-32 w-32 rounded border shadow"
                         />
                       </div>
                       <p className="text-xs text-green-700">Pindai QR untuk akses ringkasan</p>
@@ -433,7 +433,7 @@ export function ConversationEnhancements({
                         <img
                           src={`data:image/png;base64,${summaryData.qr_code.qr_code_base64}`}
                           alt="Summary QR Code"
-                          className="h-32 w-32 rounded-lg border shadow"
+                          className="h-40 w-40 rounded-lg border shadow"
                         />
                       </div>
                       <p className="text-sm font-medium">Pindai untuk mengakses ringkasan</p>

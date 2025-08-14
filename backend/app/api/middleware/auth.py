@@ -51,6 +51,20 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/conversation/save",  # Allow public access for conversation saving
         "/api/v1/gesture/ask",  # Allow public access for gesture recognition
         "/api/v1/public-session/",  # Allow public access for session tracking (no auth required)
+        # FAQ and Clustering endpoints - public access for frontend integration
+        "/api/v1/faq/recommendations/",  # FAQ recommendations for institutions
+        "/api/v1/faq/health",  # FAQ service health check
+        "/api/v1/faq/dummy-categories",  # Get dummy FAQ categories
+        "/api/v1/faq/institutions/",  # Institution question counts (public read-only)
+        "/api/v1/faq-clustering/health",  # FAQ clustering service health
+        "/api/v1/institutions/public/institutions",  # Public institution data
+        "/api/v1/institutions/public/institutions/",  # Public institution data with trailing slash
+        "/api/v1/institutions/health",  # Institution service health check
+        # QA Logging endpoints - public access for logging interactions
+        "/api/v1/qa-log/log",  # Log QA interactions
+        "/api/v1/qa-log/admin-validation",  # Log admin validation QA
+        "/api/v1/qa-log/gesture",  # Log gesture-based QA
+        "/api/v1/qa-log/health",  # QA logging service health
     }
 
     # Admin endpoints that require Supabase authentication
@@ -60,6 +74,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/admin/users",
         "/api/v1/admin/conversations",
         "/api/v1/admin/metrics",
+        # FAQ Admin endpoints - require authentication for management operations
+        "/api/v1/faq/refresh/",  # Force refresh FAQ recommendations (admin only)
+        "/api/v1/faq/metrics/",  # FAQ metrics for admin dashboard
+        "/api/v1/faq-clustering/cluster",  # Direct clustering operations (admin only)
+        "/api/v1/admin/faq/",  # All admin FAQ management endpoints
+        "/api/v1/qa-log/institution/",  # QA logs by institution (admin only for analytics)
     }
 
     async def dispatch(self, request: Request, call_next):
@@ -411,3 +431,23 @@ class AuthMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.error(f"Error validating user session: {e}")
             return False
+
+
+def get_current_admin_user():
+    """
+    Dependency function to get current admin user from request state
+    Used with FastAPI Depends() for admin endpoints
+    """
+    from fastapi import HTTPException, Request
+
+    def _get_admin_user(request: Request):
+        if not hasattr(request.state, "user") or not request.state.user:
+            raise HTTPException(status_code=401, detail="Admin authentication required")
+
+        user = request.state.user
+        if user.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin privileges required")
+
+        return user
+
+    return _get_admin_user

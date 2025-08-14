@@ -17,7 +17,17 @@ import { getBackendUrl } from '@/lib/utils/backend'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { message, sessionId, serviceMode, inputMethod = 'text' } = body
+    const { message, sessionId, serviceMode, inputMethod = 'text', institution_id, institution_slug } = body
+
+    // Debug log untuk melihat data yang diterima
+    console.log('🔍 [SendMessage] Received request data:', {
+      message: message?.substring(0, 50) + '...',
+      sessionId,
+      serviceMode,
+      inputMethod,
+      institution_id,
+      institution_slug,
+    })
 
     if (!message || !sessionId) {
       return NextResponse.json(
@@ -66,6 +76,7 @@ export async function POST(req: NextRequest) {
             serviceMode: 'bot_with_admin_validation',
             status: 'waiting',
             lastMessageAt: new Date(),
+            institutionId: institution_id ?? null, // Use the institution from request
           })
           .returning()
 
@@ -120,9 +131,12 @@ export async function POST(req: NextRequest) {
           language: 'id',
           max_sources: 3,
           similarity_threshold: 0.7,
+          institution_id: institution_id ?? 1, // Pass institution ID to backend
+          institution_slug: institution_slug ?? null, // Pass institution slug to backend
         }
 
-        console.log('🤖 [SendMessage] Request body:', JSON.stringify(requestBody, null, 2))
+        console.log('🤖 [SendMessage] Request body to RAG backend:', JSON.stringify(requestBody, null, 2))
+        console.log('🏢 [SendMessage] Institution info:', { institution_id, institution_slug })
 
         const llmApiResponse = await fetch(ragUrl, {
           method: 'POST',
@@ -167,6 +181,38 @@ export async function POST(req: NextRequest) {
           updatedAt: new Date(),
         })
         .where(eq(conversations.conversationId, conversationId))
+
+      // Log QA interaction (NEW: Fix for empty qa_logs table)
+      try {
+        const backendQaLogUrl = `${backendUrl}/api/v1/qa-log/admin-validation`
+        console.log('📝 [SendMessage] Logging QA to backend:', backendQaLogUrl)
+
+        const qaLogResponse = await fetch(backendQaLogUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+            question: message,
+            answer: llmResponse,
+            service_mode: 'bot_with_admin_validation',
+            responded_by: 'llm', // Will be updated when admin approves
+            conversation_id: conversationId,
+            institution_id: institution_id ?? 1, // Use institution from request or default
+            llm_recommendation_used: false,
+            confidence: 75, // Default confidence for pending approval
+          }),
+        })
+
+        if (qaLogResponse.ok) {
+          console.log('📝 [SendMessage] QA interaction logged successfully')
+        } else {
+          console.warn('⚠️ [SendMessage] Failed to log QA interaction:', qaLogResponse.statusText)
+        }
+      } catch (error) {
+        console.warn('⚠️ [SendMessage] Error logging QA interaction:', error)
+      }
 
       return NextResponse.json({
         success: true,

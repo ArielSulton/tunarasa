@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from app.core.config import settings
 from app.middleware.response_middleware import ResponseFactory, create_response_factory
 from app.models.api_response import ApiResponse, HealthCheckData
 from app.services.deepeval_monitoring import evaluate_llm_response
@@ -382,7 +383,7 @@ async def process_gesture_text(
 
         # Record AI request metrics
         metrics_service.record_ai_request(
-            model="llama3-70b-8192",  # From backend analysis
+            model=settings.LLM_MODEL,
             request_type="gesture_qa",
             duration=processing_time,
             confidence=ai_confidence,
@@ -413,7 +414,7 @@ async def process_gesture_text(
                 llm_response=ai_answer,
                 context_documents=[source.get("content", "") for source in sources],
                 response_time=processing_time,
-                model_used="llama3-70b-8192",
+                model_used=settings.LLM_MODEL,
                 confidence_score=ai_confidence,
                 session_id=session_id,
                 user_id=None,  # Anonymous gesture user

@@ -20,7 +20,6 @@ class User(BaseDBModel):
         default=None, max_length=255, description="User full name"
     )
     role_id: int = Field(description="Foreign key to roles table")
-    gender_id: int = Field(description="Foreign key to genders table")
 
     class Config:
         json_schema_extra = {
@@ -29,7 +28,6 @@ class User(BaseDBModel):
                 "supabase_user_id": "123e4567-e89b-12d3-a456-426614174000",
                 "full_name": "John Doe",
                 "role_id": 1,
-                "gender_id": 1,
             }
         }
 
@@ -40,7 +38,6 @@ class UserCreate(BaseModel):
     supabase_user_id: Optional[str] = None
     full_name: Optional[str] = Field(default=None, max_length=255)
     role_id: int
-    gender_id: int
 
 
 class UserUpdate(BaseModel):
@@ -49,4 +46,3 @@ class UserUpdate(BaseModel):
     supabase_user_id: Optional[str] = None
     full_name: Optional[str] = Field(default=None, max_length=255)
     role_id: Optional[int] = None
-    gender_id: Optional[int] = None

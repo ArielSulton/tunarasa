@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.sql import distinct
 
-from .models import Conversation, Gender, Message, Note, Role, User
+from .models import Conversation, Message, Note, Role, User
 
 
 class UserCRUD:
@@ -24,14 +24,12 @@ class UserCRUD:
         supabase_user_id: Optional[str] = None,
         full_name: Optional[str] = None,
         role_id: int = 1,
-        gender_id: int = 1,
     ) -> User:
         """Create a new user"""
         user = User(
             supabase_user_id=supabase_user_id,
             full_name=full_name,
             role_id=role_id,
-            gender_id=gender_id,
         )
         db.add(user)
         await db.commit()
@@ -45,7 +43,6 @@ class UserCRUD:
             select(User)
             .options(
                 selectinload(User.role),
-                selectinload(User.gender),
                 selectinload(User.conversations),
             )
             .where(User.user_id == user_id)
@@ -60,7 +57,7 @@ class UserCRUD:
         """Get user by Supabase ID"""
         stmt = (
             select(User)
-            .options(selectinload(User.role), selectinload(User.gender))
+            .options(selectinload(User.role))
             .where(User.supabase_user_id == supabase_user_id)
         )
         result = await db.execute(stmt)
@@ -69,12 +66,7 @@ class UserCRUD:
     @staticmethod
     async def get_all(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[User]:
         """Get all users with pagination - optimized with joins"""
-        stmt = (
-            select(User)
-            .options(joinedload(User.role), joinedload(User.gender))
-            .offset(skip)
-            .limit(limit)
-        )
+        stmt = select(User).options(joinedload(User.role)).offset(skip).limit(limit)
         result = await db.execute(stmt)
         return result.unique().scalars().all()
 
@@ -94,7 +86,7 @@ class UserCRUD:
             )
             .outerjoin(Conversation, User.user_id == Conversation.user_id)
             .outerjoin(Message, Conversation.conversation_id == Message.conversation_id)
-            .options(joinedload(User.role), joinedload(User.gender))
+            .options(joinedload(User.role))
             .group_by(User.user_id)
             .offset(skip)
             .limit(limit)
@@ -410,33 +402,6 @@ class RoleCRUD:
     async def get_by_name(db: AsyncSession, role_name: str) -> Optional[Role]:
         """Get role by name"""
         stmt = select(Role).where(Role.role_name == role_name)
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
-
-
-class GenderCRUD:
-    """CRUD operations for Gender model"""
-
-    @staticmethod
-    async def create(db: AsyncSession, gender_name: str) -> Gender:
-        """Create a new gender"""
-        gender = Gender(gender_name=gender_name)
-        db.add(gender)
-        await db.commit()
-        await db.refresh(gender)
-        return gender
-
-    @staticmethod
-    async def get_all(db: AsyncSession) -> List[Gender]:
-        """Get all genders"""
-        stmt = select(Gender)
-        result = await db.execute(stmt)
-        return result.scalars().all()
-
-    @staticmethod
-    async def get_by_name(db: AsyncSession, gender_name: str) -> Optional[Gender]:
-        """Get gender by name"""
-        stmt = select(Gender).where(Gender.gender_name == gender_name)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 

@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/auth/supabase-auth'
 import { db } from '@/lib/db'
-import { users, roles, genders } from '@/lib/db/schema'
+import { users, roles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { initializeDefaultRoles } from '@/lib/services/role-management'
+import { seedDefaultInstitutions } from '@/lib/services/institutions-management'
 import { setupRLSPolicies, verifyRLSPolicies } from '@/lib/db/setup-rls'
 
 /**
  * Database Initialization API Endpoint
  *
- * Initializes the database with default roles and genders.
+ * Initializes the database with default roles.
  * Creates the first superadmin user if no users exist.
  * Sets up Row Level Security (RLS) policies to fix user sign-up issues.
  *
  * Available POST actions:
  * - init-roles: Initialize default roles
- * - init-genders: Initialize default genders
+ * - init-institutions: Initialize default dukcapil institution
  * - init-first-admin: Set up first superadmin
  * - setup-rls: Apply RLS policies (FIXES USER SIGN-UP ISSUE)
  * - verify-rls: Verify RLS policies are correctly applied
- * - full-init: Complete initialization including RLS setup
+ * - full-init: Complete initialization including RLS setup and institutions
  *
  * This endpoint can only be accessed by authenticated superadmin users.
  */
@@ -41,12 +42,12 @@ export async function POST(request: NextRequest) {
           created: true,
         })
 
-      case 'init-genders':
-        const gendersCreated = await initializeDefaultGenders()
+      case 'init-institutions':
+        await seedDefaultInstitutions()
         return NextResponse.json({
           success: true,
-          message: gendersCreated ? 'Default genders created successfully' : 'Default genders already exist',
-          created: gendersCreated,
+          message: 'Default dukcapil institution initialization completed',
+          created: true,
         })
 
       case 'init-first-admin':
@@ -86,11 +87,11 @@ export async function POST(request: NextRequest) {
         })
 
       case 'full-init':
-        // Initialize everything including RLS policies
+        // Initialize everything including RLS policies and institutions
         console.log('🚀 Starting full database initialization...')
 
         await initializeDefaultRoles()
-        const gendersInit = await initializeDefaultGenders()
+        await seedDefaultInstitutions()
         const adminInit = await initializeFirstSuperAdmin(authUser.supabase_user_id, force)
 
         // Apply RLS policies
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
 
         const results = {
           roles: true,
-          genders: gendersInit,
+          institutions: true,
           admin: adminInit,
           rls: {
             setup: rlsSetup.success,
@@ -112,8 +113,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           message: rlsSetup.success
-            ? 'Database initialization completed successfully - User sign-up should now work!'
-            : 'Database initialization completed with RLS setup issues',
+            ? 'Database initialization completed successfully - User sign-up should now work and dukcapil institution is ready!'
+            : 'Database initialization completed with RLS setup issues, but institutions are initialized',
           results,
         })
 
@@ -141,11 +142,7 @@ export async function GET() {
     await requireSuperAdmin()
 
     // Get database status
-    const [rolesCount, gendersCount, usersCount] = await Promise.all([
-      db.select().from(roles),
-      db.select().from(genders),
-      db.select().from(users),
-    ])
+    const [rolesCount, usersCount] = await Promise.all([db.select().from(roles), db.select().from(users)])
 
     const hasSuperAdmin = usersCount.some((u) => u.roleId === 1)
 
@@ -165,10 +162,6 @@ export async function GET() {
           count: rolesCount.length,
           initialized: rolesCount.length > 0,
         },
-        genders: {
-          count: gendersCount.length,
-          initialized: gendersCount.length > 0,
-        },
         users: {
           count: usersCount.length,
           hasSuperAdmin,
@@ -179,7 +172,7 @@ export async function GET() {
           signUpReady: hasUserInsertPolicy,
           totalPolicies: rlsStatus.success && 'policies' in rlsStatus ? (rlsStatus.policies?.length ?? 0) : 0,
         },
-        needsInitialization: rolesCount.length === 0 || gendersCount.length === 0 || !hasSuperAdmin,
+        needsInitialization: rolesCount.length === 0 || !hasSuperAdmin,
         needsRLSSetup: !hasUserInsertPolicy,
       },
     })
@@ -195,44 +188,6 @@ export async function GET() {
     }
 
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-/**
- * Initialize default genders
- */
-async function initializeDefaultGenders(): Promise<boolean> {
-  try {
-    const existingGenders = await db.select().from(genders)
-
-    if (existingGenders.length === 0) {
-      await db.insert(genders).values([
-        {
-          genderId: 1,
-          genderName: 'Male',
-        },
-        {
-          genderId: 2,
-          genderName: 'Female',
-        },
-        {
-          genderId: 3,
-          genderName: 'Non-binary',
-        },
-        {
-          genderId: 4,
-          genderName: 'Prefer not to say',
-        },
-      ])
-
-      console.log('Default genders initialized successfully')
-      return true
-    }
-
-    return false
-  } catch (error) {
-    console.error('Error initializing default genders:', error)
-    return false
   }
 }
 

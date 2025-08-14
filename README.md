@@ -3,10 +3,12 @@
 **Tunarasa** is a comprehensive accessibility platform designed to help hearing-impaired users access public services through advanced sign language gesture recognition and AI-powered question answering. The system combines computer vision, large language models, and retrieval-augmented generation to provide real-time, accurate assistance with enterprise-grade quality assurance.
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
-![Version](https://img.shields.io/badge/version-v1.6.0-green.svg)
+![Version](https://img.shields.io/badge/version-v1.7.0-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-70%25-blue.svg)
 ![Python](https://img.shields.io/badge/Python-30%25-green.svg)
 ![WCAG](https://img.shields.io/badge/WCAG-2.1%20AA-blue.svg)
+![Next.js](https://img.shields.io/badge/Next.js-15.4.5-black.svg)
+![React](https://img.shields.io/badge/React-19.1.1-blue.svg)
 
 ## 🎯 Key Features & Capabilities
 
@@ -15,27 +17,33 @@
 - **AI-Powered Q&A**: LangChain + LLaMA 3 via ChatGroq for intelligent response generation
 - **Knowledge Retrieval**: Pinecone vector database for document-based context retrieval
 - **Quality Assessment**: DeepEval integration for LLM response validation
+- **FAQ Clustering & Recommendations**: Advanced clustering system for related question suggestions
+- **Institution-Aware Responses**: Context-aware answers based on selected government institutions
 
 ### 👨‍💼 **Enterprise Administration**
 - **Admin Monitoring**: Comprehensive validation and analytics system with business intelligence
-- **Role-Based Access**: Multi-tier authentication with Clerk integration
+- **Role-Based Access**: Multi-tier authentication with Supabase Auth integration
 - **Quality Assurance**: Advanced pre-commit hooks with automated code quality enforcement
 - **Real-time Analytics**: SLI/SLO monitoring with Prometheus + Grafana dashboards
+- **Institution Management**: Complete CRUD system for government institution data
+- **QA Logging & Analytics**: Detailed conversation tracking and performance metrics
 
 ### ♿ **Accessibility Excellence**
 - **WCAG 2.1 AA Compliant**: Complete accessibility framework optimized for hearing-impaired users
 - **Multi-Modal Communication**: SIBI gesture recognition, Speech-to-Text, and admin interfaces
 - **Professional UI/UX**: Tunarasa-UI design system with responsive layouts
 - **Performance Optimized**: <500ms gesture recognition, <3s complete Q&A cycle
+- **Institution Selector**: User-friendly interface for selecting relevant government services
+- **Enhanced Chat Interface**: Improved conversation flow with FAQ recommendations
 
 ## 🏗️ Architecture Overview
 
 ```
-User Device → Gesture Recognition → Text Processing → RAG System → LLM → Response + QR Code
-     ↓              ↓                  ↓              ↓        ↓           ↓
-Frontend → MediaPipe/TensorFlow.js → Next.js API → Pinecone → ChatGroq → Admin Dashboard
-     ↓              ↓                  ↓              ↓        ↓           ↓
-Session → Performance Monitoring → FastAPI Backend → Vector DB → Metrics → Grafana
+User Device → Institution Selection → Gesture Recognition → Text Processing → RAG System → LLM → Response + QR Code
+     ↓              ↓                      ↓                  ↓              ↓        ↓           ↓
+Frontend → Institution Selector → MediaPipe/TensorFlow.js → Next.js API → Pinecone → ChatGroq → Admin Dashboard
+     ↓              ↓                      ↓                  ↓              ↓        ↓           ↓
+Session → QA Logging → Performance Monitoring → FastAPI Backend → Vector DB → Metrics → FAQ Clustering → Grafana
 ```
 
 ### Microservices Design
@@ -45,42 +53,48 @@ Session → Performance Monitoring → FastAPI Backend → Vector DB → Metrics
 │                         TUNARASA PLATFORM                       │
 ├─────────────────────────────────────────────────────────────────┤
 │  Frontend (Next.js 15)                                          │
-│  • Gesture Recognition UI • Admin Dashboard • Accessibility     │
+│  • Institution Selector • Gesture Recognition • Admin Dashboard │
+│  • FAQ Recommendations • Chat Interface • Accessibility         │
 ├─────────────────────────────────────────────────────────────────┤
 │  Backend (FastAPI)                                              │
-│  • AI/LLM Service • Gesture Processing • Admin API              │
+│  • AI/LLM Service • Institution Management • FAQ Clustering     │
+│  • Gesture Processing • QA Logging • Admin API                  │
 ├─────────────────────────────────────────────────────────────────┤
 │  Data Layer                                                     │
 │  • Supabase PostgreSQL • Pinecone Vector DB • Redis Cache       │
 ├─────────────────────────────────────────────────────────────────┤
 │  Monitoring Stack                                               │
-│  • Prometheus • Grafana • DeepEval                              │
+│  • Prometheus • Grafana • DeepEval • FAQ Analytics              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## 🛠️ Technology Stack
 
-### Frontend (Next.js 15)
-- **Framework**: Next.js 15 with App Router, React 19, TypeScript 5.8+
-- **UI Components**: Shadcn UI v2, Radix UI primitives, Tailwind CSS v4
-- **State Management**: React Hook Form with Zod validation
-- **Computer Vision**: MediaPipe Hands, TensorFlow.js
-- **Package Manager**: Bun (latest)
-- **Database ORM**: Drizzle ORM with TypeScript
+### Frontend (Next.js 15.4.5)
+- **Framework**: Next.js 15.4.5 with App Router, React 19.1.1, TypeScript 5.8+
+- **UI Components**: Shadcn UI v2, 45+ Radix UI primitives, Tailwind CSS v4
+- **State Management**: React Hook Form with Zod validation, TanStack Table
+- **Computer Vision**: MediaPipe Hands, TensorFlow.js 4.21.0, FingerPose
+- **Package Manager**: Bun (latest) with Turbopack
+- **Database ORM**: Drizzle ORM 0.44.2 with TypeScript
+- **Additional Features**: Speech-to-Text Recognition, DND Kit, Recharts 2.15.4
 
 ### Backend (FastAPI)
-- **API Framework**: FastAPI with Python 3.11+, Pydantic v2
-- **AI Integration**: LangChain + ChatGroq (LLaMA 3 via Groq)
-- **Vector Database**: Pinecone for document embeddings and RAG
-- **Authentication**: JWT with role-based access control
-- **Monitoring**: Prometheus FastAPI Instrumentator + DeepEval
-- **Development**: Pre-commit hooks, Black, Ruff, MyPy
+- **API Framework**: FastAPI with Python 3.11+, Pydantic v2, Uvicorn
+- **AI Integration**: LangChain ecosystem (Core, Community, Groq), ChatGroq (LLaMA 3)
+- **Vector Database**: Pinecone with gRPC for document embeddings and RAG
+- **Machine Learning**: Scikit-learn for FAQ clustering, NumPy, Pandas
+- **Authentication**: JWT with PyJWT, role-based access control
+- **Document Processing**: PyPDF, python-docx, Markdown support
+- **Monitoring**: Prometheus FastAPI Instrumentator + DeepEval + Redis
+- **Development**: Pre-commit hooks, Black, Ruff, isort, MyPy, pytest-asyncio
+- **Additional Features**: QR Code generation, PDF reports with ReportLab
 
 ### Data & Infrastructure
 - **Primary Database**: PostgreSQL with SQLAlchemy 2.0
 - **Vector Store**: Pinecone for semantic search
 - **Caching**: Redis for sessions and API responses
-- **Admin Auth**: Clerk with custom role management
+- **Admin Auth**: Supabase Auth with custom role management
 - **Email Service**: Resend API for notifications
 - **Monitoring**: Prometheus + Grafana + DeepEval
 - **Deployment**: Docker + Docker Compose (dev/prod)
@@ -89,53 +103,66 @@ Session → Performance Monitoring → FastAPI Backend → Vector DB → Metrics
 
 ```
 tunarasa/
-├── backend/                    # FastAPI Application
+├── backend/                        # FastAPI Application
 │   ├── app/
-│   │   ├── api/                # API routes with versioning
-│   │   │   ├── middleware/     # Custom middleware (auth, rate limiting)
-│   │   │   └── v1/endpoints/   # API endpoint modules (gesture, rag, admin)
-│   │   ├── core/               # Core configuration & database
-│   │   ├── models/             # SQLAlchemy & Pydantic models
-│   │   ├── services/           # Business logic services
-│   │   └── main.py             # FastAPI application entry
-│   ├── tests/                  # Comprehensive test suite
-│   ├── .pre-commit-config.yaml # Code quality automation
-│   ├── Dockerfile              # Production container
-│   └── requirements.txt        # Python dependencies
+│   │   ├── api/                    # API routes with versioning
+│   │   │   ├── middleware/         # Custom middleware (auth, rate limiting)
+│   │   │   └── v1/endpoints/       # API endpoint modules
+│   │   ├── core/                   # Core configuration & database
+│   │   ├── models/                 # SQLAlchemy & Pydantic models
+│   │   ├── services/               # Business logic services
+│   │   └── main.py                 # FastAPI application entry
+│   ├── tests/                      # Comprehensive test suite
+│   ├── .pre-commit-config.yaml     # Code quality automation
+│   ├── documents/                  # Document storage for RAG system
+│   ├── Dockerfile                  # Production container
+│   └── requirements.txt            # Python dependencies
 │
-├── frontend/                   # Next.js Application
+├── frontend/                       # Next.js Application
 │   ├── src/
-│   │   ├── app/                # App Router pages & API routes
-│   │   │   ├── api/            # Next.js API routes (proxy layer)
-│   │   │   ├── dashboard/      # Admin dashboard pages
-│   │   │   └── komunikasi/     # Communication interface
-│   │   ├── components/         # React components
-│   │   │   ├── ui/             # 40+ Shadcn UI components
-│   │   │   ├── gesture/        # Gesture recognition components
-│   │   │   ├── admin/          # Admin dashboard components
-│   │   │   ├── auth/           # Authentication components
-│   │   │   └── emails/         # Email templates
-│   │   ├── lib/                # Utilities and configurations
-│   │   │   ├── ai/             # AI service integrations
-│   │   │   ├── api/            # API client utilities
-│   │   │   ├── db/             # Drizzle ORM schema
-│   │   │   └── services/       # Frontend service layer
-│   │   └── hooks/              # Custom React hooks
-│   ├── public/                 # Static assets & ML models
-│   ├── drizzle/                # Database migrations
-│   ├── package.json            # Bun dependencies
-│   └── Dockerfile.{dev,prod}   # Container configurations
+│   │   ├── app/                    # App Router pages & API routes
+│   │   │   ├── api/                # Next.js API routes (proxy layer)
+│   │   │   │   ├── admin/          # Admin-specific API endpoints
+│   │   │   │   ├── institutions/   # Institution selection API
+│   │   │   │   ├── public/         # Public API endpoints
+│   │   │   │   └── setup/          # System setup APIs
+│   │   │   ├── dashboard/          # Admin dashboard pages
+│   │   │   ├── komunikasi/         # Communication interface
+│   │   │   │   └── [slug]/         # Dynamic communication pages
+│   │   │   └── layanan/            # Service selection pages
+│   │   ├── components/             # React components
+│   │   │   ├── ui/                 # 45+ Shadcn UI components
+│   │   │   ├── gesture/            # Gesture recognition components
+│   │   │   ├── chat/               # Enhanced chat interface components
+│   │   │   ├── layanan/            # Service selection components
+│   │   │   ├── admin/              # Admin dashboard components
+│   │   │   ├── auth/               # Authentication components
+│   │   │   └── emails/             # Email templates
+│   │   ├── lib/                    # Utilities and configurations
+│   │   │   ├── ai/                 # AI service integrations
+│   │   │   ├── api/                # API client utilities
+│   │   │   ├── db/                 # Drizzle ORM schema
+│   │   │   └── services/           # Frontend service layer
+│   │   └── hooks/                  # Custom React hooks
+│   ├── public/                     # Static assets
+│   │   └── assets/                 # Brand assets and technical images
+│   ├── drizzle/                    # Database migrations
+│   ├── package.json                # Bun dependencies
+│   └── Dockerfile.{dev,prod}       # Container configurations
 │
-├── monitoring/                 # Advanced Observability Stack
-│   ├── prometheus/             # Prometheus Metrics collection & SLI/SLO alerting
-│   │   └── rules/              # DeepEval and SLI/SLO monitoring rules
-│   └── grafana/                # Business intelligence dashboards
-│       ├── dashboards/         # Real-time monitoring & BI dashboards
-│       └── provisioning/       # Grafana configuration and data sources
-├── readme/                     # Comprehensive system documentation
-├── compose.{dev,prod}.yaml     # Environment orchestration
-├── .env.example                # Environment configuration template
-└── README.md                   # This file
+├── monitoring/                     # Advanced Observability Stack
+│   ├── prometheus/                 # Prometheus Metrics collection
+│   │   ├── alerting/rules/         # Comprehensive alerting rules
+│   │   ├── configs/                # Environment-specific Prometheus configs
+│   │   └── recording-rules/        # SLI/SLO recording rules for efficiency
+│   └── grafana/                    # Business intelligence dashboards
+│       ├── dashboards/             # Real-time monitoring & BI dashboards
+│       └── provisioning/           # Grafana configuration and data sources
+│
+├── readme/                         # Comprehensive system documentation
+├── compose.{dev,prod}.yaml         # Environment orchestration
+├── .env.example                    # Environment configuration template
+└── README.md                       # This file
 ```
 
 ## 🚀 Getting Started
@@ -165,7 +192,7 @@ tunarasa/
    # Essential configuration in .env
    GROQ_API_KEY=your_groq_api_key
    PINECONE_API_KEY=your_pinecone_api_key
-   CLERK_SECRET_KEY=your_clerk_secret_key
+   SUPABASE_SECRET_KEY=your_supabase_secret_key
    ```
 
 ### Environment Variables
@@ -241,29 +268,35 @@ curl http://localhost:8000/api/health
 
 ### End User Journey
 1. **Access**: User visits platform via browser
-2. **Permission**: Grant camera access for gesture recognition
-3. **Gesture**: Perform sign language gestures
-4. **Recognition**: MediaPipe processes hand landmarks
-5. **Classification**: TensorFlow.js converts to text question
-6. **Processing**: FastAPI receives and validates question
-7. **RAG**: Pinecone retrieves relevant documents
-8. **LLM**: ChatGroq processes with context to generate answer
-9. **Response**: Answer displayed with optional QR code
-10. **Feedback**: Optional user satisfaction rating
+2. **Institution Selection**: User selects relevant government institution/service
+3. **Permission**: Grant camera access for gesture recognition
+4. **Gesture**: Perform sign language gestures (or use speech-to-text alternative)
+5. **Recognition**: MediaPipe processes hand landmarks
+6. **Classification**: TensorFlow.js converts to text question
+7. **Processing**: FastAPI receives and validates question with institution context
+8. **RAG**: Pinecone retrieves relevant documents based on institution and question
+9. **LLM**: ChatGroq processes with contextual information to generate answer
+10. **FAQ Recommendations**: System suggests related frequently asked questions
+11. **Response**: Answer displayed with optional QR code and related FAQs
+12. **QA Logging**: Conversation logged for quality analysis and improvement
+13. **Feedback**: Optional user satisfaction rating
 
 ### Admin Workflow
-1. **Authentication**: Clerk-based login with role verification
-2. **Dashboard**: View system metrics and pending validations
-3. **Validation**: Review and approve/reject LLM responses
-4. **Analytics**: Monitor performance trends and user satisfaction
-5. **Management**: Invite new admins (super admin only)
-6. **Configuration**: Update system parameters and knowledge base
+1. **Authentication**: Supabase Auth-based login with role verification
+2. **Dashboard**: View system metrics, pending validations, and business intelligence
+3. **Institution Management**: Add, edit, and manage government institution data
+4. **FAQ Administration**: Monitor FAQ clustering results and manage recommendations
+5. **QA Analytics**: Review conversation logs and system performance metrics
+6. **Validation**: Review and approve/reject LLM responses with quality scoring
+7. **Performance Monitoring**: Track response times, accuracy metrics, and SLI/SLO compliance
+8. **User Management**: Invite new admins and manage role-based permissions (super admin only)
+9. **Knowledge Base**: Upload documents, manage RAG system, and update institutional information
 
 ## 🛡️ Security & Privacy
 
 ### Authentication Strategy
 - **Public Access**: Session-based tracking without authentication
-- **Admin Access**: Clerk JWT with role-based permissions
+- **Admin Access**: Supabase Auth JWT with role-based permissions
 - **API Security**: Rate limiting, input validation, CORS protection
 - **Data Protection**: Encryption at rest and in transit
 
@@ -301,13 +334,17 @@ curl http://localhost:8000/api/health
 - **Executive Analytics**: Usage patterns, completion rates, user satisfaction trends
 - **Performance Analytics**: Resource utilization, optimization recommendations
 - **AI Quality Metrics**: LLM response relevance, token efficiency, processing optimization
+- **FAQ Analytics**: Clustering performance, recommendation effectiveness, trending topics
+- **Institution Analytics**: Service usage by institution, response quality by department
+- **QA Performance**: Conversation success rates, resolution times, user engagement metrics
 - **Security Monitoring**: Authentication success rates, access pattern analysis
 
 ### Advanced Monitoring Stack
 - **Prometheus**: Advanced metrics collection with SLI/SLO alerting rules
-- **Grafana**: Multi-tier dashboards (operational, business intelligence, executive)
+- **Grafana**: Multi-tier dashboards (operational, business intelligence, executive, FAQ clustering)
 - **DeepEval**: Comprehensive LLM response quality assessment and optimization
-- **Monitoring Rules**: Automated monitoring with deepeval_rules.yml and sli_slo_rules.yml
+- **FAQ Monitoring**: Automated clustering analysis and recommendation performance tracking
+- **Monitoring Rules**: Comprehensive alerting with FAQ-specific, DeepEval, and SLI/SLO rules
 
 ## 📈 Performance Targets
 
@@ -371,7 +408,7 @@ For support and questions:
 - [x] Pinecone setup with document embedding pipeline
 
 ### Phase 3: Admin System ✅
-- [x] Clerk authentication integration
+- [x] Supabase Auth authentication integration
 - [x] Admin dashboard with validation interface
 - [x] Email invitation system with Resend
 - [x] Role-based access control implementation
@@ -395,7 +432,7 @@ For support and questions:
 - [x] Authentication security hardening and vulnerability resolution
 - [x] Business intelligence dashboards with real-time analytics
 
-### Phase 7: Advanced Features (Work In Progress)
+### Phase 7: Advanced Features
 - [ ] Enhanced TypeScript quality with comprehensive type checking
 - [ ] Advanced testing framework with automated quality gates
 - [ ] Enhanced gesture recognition with custom models

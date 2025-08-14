@@ -47,8 +47,8 @@ export function SuperAdminOnly({ children, fallbackToAdmin = false }: SuperAdmin
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
             <AlertTriangle className="h-8 w-8 text-red-600" />
           </div>
-          <h2 className="mb-2 text-xl font-semibold text-red-600">Authentication Required</h2>
-          <p className="mb-4 text-gray-600">You need to be signed in to access this area.</p>
+          <h2 className="mb-2 text-xl font-semibold text-red-600">Autentikasi Diperlukan</h2>
+          <p className="mb-4 text-gray-600">Anda perlu masuk untuk mengakses area ini.</p>
         </div>
       </div>
     )
@@ -72,29 +72,27 @@ export function SuperAdminOnly({ children, fallbackToAdmin = false }: SuperAdmin
   if (!hasAccess) {
     console.log('🚫 [SuperAdminOnly] Access denied, showing restricted component')
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="max-w-md text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-            <AlertTriangle className="h-8 w-8 text-red-600" />
+      <div className="bg-card w-full rounded-lg border p-6 text-center shadow-sm">
+        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+          <AlertTriangle className="h-6 w-6 text-red-600" />
+        </div>
+        <h2 className="mb-2 text-lg font-semibold text-red-600">Akses Terbatas</h2>
+        <p className="mb-4 text-sm text-gray-600">
+          {fallbackToAdmin
+            ? 'Anda memerlukan hak akses superadmin atau admin untuk mengakses area ini.'
+            : 'Anda memerlukan hak akses superadmin untuk mengakses area ini.'}
+        </p>
+        <div className="space-y-1 text-xs text-gray-500">
+          <div className="flex items-center justify-center gap-2">
+            <Crown className="h-3 w-3 text-yellow-600" />
+            <span>SuperAdmin: Akses penuh sistem</span>
           </div>
-          <h2 className="mb-2 text-xl font-semibold text-red-600">Access Restricted</h2>
-          <p className="mb-4 text-gray-600">
-            {fallbackToAdmin
-              ? 'You need superadmin or admin privileges to access this area.'
-              : 'You need superadmin privileges to access this area.'}
-          </p>
-          <div className="space-y-2 text-sm text-gray-500">
+          {fallbackToAdmin && (
             <div className="flex items-center justify-center gap-2">
-              <Crown className="h-4 w-4 text-yellow-600" />
-              <span>SuperAdmin: Full system access</span>
+              <Shield className="h-3 w-3 text-blue-600" />
+              <span>Admin: Akses terbatas sistem</span>
             </div>
-            {fallbackToAdmin && (
-              <div className="flex items-center justify-center gap-2">
-                <Shield className="h-4 w-4 text-blue-600" />
-                <span>Admin: Limited system access</span>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
     )

@@ -22,8 +22,14 @@ RUN mkdir -p /app/assets /app/.deepeval
 
 # Create non-root user
 RUN groupadd -r tunarasa && useradd -r -g tunarasa tunarasa
+
+# Set ownership for app directory including deepeval
 RUN chown -R tunarasa:tunarasa /app
 USER tunarasa
+
+# Set working directory and disable deepeval telemetry
+WORKDIR /app
+ENV DEEPEVAL_TELEMETRY_OPT_OUT=YES
 
 # Expose port
 EXPOSE 8000

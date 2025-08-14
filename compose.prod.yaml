@@ -172,6 +172,8 @@ services:
       - 8.8.4.4
     networks:
       - tunarasa-net
+    volumes:
+      - shared_uploads:/app/uploads
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "${NEXT_PUBLIC_APP_URL}/api/health"]
@@ -276,7 +278,9 @@ services:
     networks:
       - tunarasa-net
     volumes:
-      - uploads_data:/app/uploads
+      - ./backend:/app
+      - ./assets:/app/assets
+      - shared_uploads:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "${NEXT_PUBLIC_BACKEND_URL}/api/health"]
       interval: 30s
@@ -306,36 +310,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
-    restart: unless-stopped
-
-  # Nginx (Reverse Proxy & Load Balancer)
-  nginx:
-    container_name: tunarasa-nginx
-    image: nginx:alpine
-    depends_on:
-      frontend:
-        condition: service_healthy
-      backend:
-        condition: service_healthy
-    ports:
-      - "443:443"
-      - "80:80"
-    dns:
-      - 1.1.1.1
-      - 1.0.0.1
-      - 8.8.8.8
-      - 8.8.4.4
-    networks:
-      - tunarasa-net
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - nginx_logs:/var/log/nginx
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     restart: unless-stopped
 
   # Prometheus (Metrics Collection)
@@ -404,7 +378,7 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider ${NEXT_PUBLIC_APP_URL}/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -418,9 +392,7 @@ volumes:
     driver: local
   grafana_data_prod:
     driver: local
-  uploads_data:
-    driver: local
-  nginx_logs:
+  shared_uploads:
     driver: local
 
 networks:

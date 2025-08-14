@@ -40,13 +40,13 @@ export function AuthSignIn() {
 
       if (result.error) {
         console.error('❌ [AuthSignIn] Sign in failed:', result.error)
-        setError(result.error.message || 'Sign in failed')
+        setError(result.error.message || 'Masuk gagal')
       } else {
         console.log('✅ [AuthSignIn] Sign in successful!')
       }
     } catch (error) {
       console.error('❌ [AuthSignIn] Exception during sign in:', error)
-      setError('An unexpected error occurred. Please try again.')
+      setError('Terjadi kesalahan tak terduga. Silakan coba lagi.')
     } finally {
       setLoading(false)
       console.log('🏁 [AuthSignIn] Process completed')
@@ -58,8 +58,8 @@ export function AuthSignIn() {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>Sign in to your Tunarasa admin account</CardDescription>
+            <CardTitle>Masuk</CardTitle>
+            <CardDescription>Masuk ke akun admin Tunarasa Anda</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={(e) => void handleSignIn(e)} className="space-y-4">
@@ -92,7 +92,7 @@ export function AuthSignIn() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? 'Sedang masuk...' : 'Masuk'}
               </Button>
             </form>
           </CardContent>
@@ -128,7 +128,7 @@ export function AuthSignUp() {
     // Validate passwords match
     if (password !== confirmPassword) {
       console.log('❌ [AuthSignUp] Passwords do not match')
-      setError('Passwords do not match')
+      setError('Password tidak sama')
       setLoading(false)
       return
     }
@@ -136,7 +136,7 @@ export function AuthSignUp() {
     // Validate password strength
     if (password.length < 6) {
       console.log('❌ [AuthSignUp] Password too short')
-      setError('Password must be at least 6 characters long')
+      setError('Password harus minimal 6 karakter')
       setLoading(false)
       return
     }
@@ -148,10 +148,10 @@ export function AuthSignUp() {
 
       if (result.error) {
         console.error('❌ [AuthSignUp] Sign up failed:', result.error)
-        setError(result.error.message || 'Sign up failed')
+        setError(result.error.message || 'Pendaftaran gagal')
       } else {
         console.log('✅ [AuthSignUp] Sign up successful!')
-        setMessage('Check your email for confirmation link')
+        setMessage('Periksa email Anda untuk link konfirmasi')
         // Clear form on success
         setEmail('')
         setPassword('')
@@ -159,7 +159,7 @@ export function AuthSignUp() {
       }
     } catch (error) {
       console.error('❌ [AuthSignUp] Exception during sign up:', error)
-      setError('An unexpected error occurred. Please try again.')
+      setError('Terjadi kesalahan tak terduga. Silakan coba lagi.')
     } finally {
       setLoading(false)
       console.log('🏁 [AuthSignUp] Process completed')
@@ -171,8 +171,8 @@ export function AuthSignUp() {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Sign Up</CardTitle>
-            <CardDescription>Create your Tunarasa admin account</CardDescription>
+            <CardTitle>Daftar</CardTitle>
+            <CardDescription>Buat akun admin Tunarasa Anda</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={(e) => void handleSignUp(e)} className="space-y-4">
@@ -210,7 +210,7 @@ export function AuthSignUp() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Label htmlFor="confirm-password">Konfirmasi Password</Label>
                 <Input
                   id="confirm-password"
                   type="password"
@@ -221,7 +221,7 @@ export function AuthSignUp() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating account...' : 'Sign Up'}
+                {loading ? 'Membuat akun...' : 'Daftar'}
               </Button>
             </form>
           </CardContent>
@@ -260,7 +260,7 @@ export function AuthUserButton() {
       disabled={loading}
     >
       <LogOut className="h-4 w-4" />
-      <span>{loading ? 'Signing Out...' : 'Sign Out'}</span>
+      <span>{loading ? 'Keluar...' : 'Keluar'}</span>
     </Button>
   )
 }
@@ -271,7 +271,7 @@ export function AuthUserButton() {
 export function AuthSignInButton() {
   return (
     <Button variant="outline" asChild>
-      <a href="/sign-in">Sign In</a>
+      <a href="/sign-in">Masuk</a>
     </Button>
   )
 }
@@ -282,7 +282,7 @@ export function AuthSignInButton() {
 export function AuthSignUpButton() {
   return (
     <Button asChild>
-      <a href="/sign-up">Sign Up</a>
+      <a href="/sign-up">Daftar</a>
     </Button>
   )
 }
@@ -310,7 +310,7 @@ export function AuthStatus() {
     return (
       <div className="flex items-center justify-center space-x-2">
         <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />
-        <span className="text-muted-foreground text-sm">Loading...</span>
+        <span className="text-muted-foreground text-sm">Memuat...</span>
       </div>
     )
   }
@@ -342,7 +342,7 @@ export function AuthStatus() {
         disabled={signOutLoading}
       >
         <LogOut className="h-4 w-4" />
-        <span>{signOutLoading ? 'Signing Out...' : 'Sign Out'}</span>
+        <span>{signOutLoading ? 'Keluar...' : 'Keluar'}</span>
       </Button>
     </div>
   )
@@ -368,8 +368,8 @@ export function AdminOnly({ children }: { children: React.ReactNode }) {
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <AlertTriangle className="mx-auto mb-4 h-16 w-16 text-red-600" />
-          <h2 className="text-destructive mb-2 text-xl font-semibold">Authentication Required</h2>
-          <p className="text-muted-foreground">You need to be signed in to access this area.</p>
+          <h2 className="text-destructive mb-2 text-xl font-semibold">Autentikasi Diperlukan</h2>
+          <p className="text-muted-foreground">Anda perlu masuk untuk mengakses area ini.</p>
         </div>
       </div>
     )
@@ -380,8 +380,8 @@ export function AdminOnly({ children }: { children: React.ReactNode }) {
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <AlertTriangle className="mx-auto mb-4 h-16 w-16 text-red-600" />
-          <h2 className="text-destructive mb-2 text-xl font-semibold">Access Denied</h2>
-          <p className="text-muted-foreground">You need admin privileges to access this area.</p>
+          <h2 className="text-destructive mb-2 text-xl font-semibold">Akses Ditolak</h2>
+          <p className="text-muted-foreground">Anda memerlukan hak akses admin untuk mengakses area ini.</p>
         </div>
       </div>
     )

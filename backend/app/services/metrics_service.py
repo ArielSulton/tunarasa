@@ -383,6 +383,101 @@ except ValueError as e:
     if "already exists" in str(e):
         logger.warning("Redis memory max metric already exists, retrieving existing")
 
+# FAQ Clustering Metrics
+try:
+    tunarasa_faq_clustering_total = Counter(
+        "tunarasa_faq_clustering_total",
+        "Total FAQ clustering operations performed",
+        ["institution_id", "data_source"],
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(
+            "FAQ clustering total metric already exists, retrieving existing"
+        )
+
+try:
+    tunarasa_faq_clustering_duration_seconds = Histogram(
+        "tunarasa_faq_clustering_duration_seconds",
+        "FAQ clustering operation duration in seconds",
+        ["institution_id", "data_source"],
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(
+            "FAQ clustering duration metric already exists, retrieving existing"
+        )
+
+try:
+    tunarasa_faq_clusters_count = Gauge(
+        "tunarasa_faq_clusters_count",
+        "Number of clusters generated per institution",
+        ["institution_id"],
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning("FAQ clusters count metric already exists, retrieving existing")
+
+try:
+    tunarasa_faq_questions_per_cluster_avg = Gauge(
+        "tunarasa_faq_questions_per_cluster_avg",
+        "Average questions per cluster per institution",
+        ["institution_id"],
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(
+            "FAQ questions per cluster metric already exists, retrieving existing"
+        )
+
+try:
+    tunarasa_faq_clustering_silhouette_score = Gauge(
+        "tunarasa_faq_clustering_silhouette_score",
+        "FAQ clustering quality silhouette score (0-1)",
+        ["institution_id"],
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(
+            "FAQ clustering silhouette score metric already exists, retrieving existing"
+        )
+
+try:
+    tunarasa_faq_recommendations_served_total = Counter(
+        "tunarasa_faq_recommendations_served_total",
+        "Total FAQ recommendations served to users",
+        ["institution_id", "cluster_id"],
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(
+            "FAQ recommendations served metric already exists, retrieving existing"
+        )
+
+try:
+    tunarasa_faq_clustering_errors_total = Counter(
+        "tunarasa_faq_clustering_errors_total",
+        "Total FAQ clustering operation failures",
+        ["institution_id", "error_type"],
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(
+            "FAQ clustering errors metric already exists, retrieving existing"
+        )
+
+try:
+    tunarasa_faq_clustering_data_source = Counter(
+        "tunarasa_faq_clustering_data_source",
+        "FAQ clustering data source usage",
+        ["institution_id", "source_type"],  # database, fallback
+    )
+except ValueError as e:
+    if "already exists" in str(e):
+        logger.warning(
+            "FAQ clustering data source metric already exists, retrieving existing"
+        )
+
 # Note: Enhanced versions defined above - removing duplicates
 
 try:
@@ -830,6 +925,99 @@ class MetricsService:
             tunarasa_redis_memory_max_bytes.set(max_memory_bytes)
         except Exception as e:
             logger.error(f"Failed to update Redis memory max: {e}")
+
+    # FAQ Clustering Metrics Methods
+    def record_faq_clustering_operation(
+        self,
+        institution_id: int,
+        data_source: str,
+        duration_seconds: float,
+        success: bool = True,
+    ):
+        """Record FAQ clustering operation with duration and source tracking"""
+        try:
+            institution_str = str(institution_id)
+            tunarasa_faq_clustering_total.labels(
+                institution_id=institution_str, data_source=data_source
+            ).inc()
+
+            tunarasa_faq_clustering_duration_seconds.labels(
+                institution_id=institution_str, data_source=data_source
+            ).observe(duration_seconds)
+
+            tunarasa_faq_clustering_data_source.labels(
+                institution_id=institution_str, source_type=data_source
+            ).inc()
+
+        except Exception as e:
+            logger.error(f"Failed to record FAQ clustering operation: {e}")
+
+    def record_faq_clustering_error(self, institution_id: int, error_type: str):
+        """Record FAQ clustering operation failure"""
+        try:
+            institution_str = str(institution_id)
+            tunarasa_faq_clustering_errors_total.labels(
+                institution_id=institution_str, error_type=error_type
+            ).inc()
+        except Exception as e:
+            logger.error(f"Failed to record FAQ clustering error: {e}")
+
+    def update_faq_clustering_quality(
+        self,
+        institution_id: int,
+        cluster_count: int,
+        avg_questions_per_cluster: float,
+        silhouette_score: float,
+    ):
+        """Update FAQ clustering quality metrics"""
+        try:
+            institution_str = str(institution_id)
+
+            tunarasa_faq_clusters_count.labels(institution_id=institution_str).set(
+                cluster_count
+            )
+            tunarasa_faq_questions_per_cluster_avg.labels(
+                institution_id=institution_str
+            ).set(avg_questions_per_cluster)
+            tunarasa_faq_clustering_silhouette_score.labels(
+                institution_id=institution_str
+            ).set(silhouette_score)
+
+        except Exception as e:
+            logger.error(f"Failed to update FAQ clustering quality: {e}")
+
+    def record_faq_recommendation_served(self, institution_id: int, cluster_id: int):
+        """Record FAQ recommendation served to user"""
+        try:
+            institution_str = str(institution_id)
+            cluster_str = str(cluster_id)
+            tunarasa_faq_recommendations_served_total.labels(
+                institution_id=institution_str, cluster_id=cluster_str
+            ).inc()
+        except Exception as e:
+            logger.error(f"Failed to record FAQ recommendation served: {e}")
+
+    def get_faq_clustering_metrics_summary(self, institution_id: int) -> Dict[str, Any]:
+        """Get FAQ clustering metrics summary for specific institution"""
+        try:
+            # Note: In a real implementation, you'd query the actual metric values
+            # For now, returning a template structure
+            return {
+                "institution_id": institution_id,
+                "metrics": {
+                    "total_clustering_operations": "Available in Prometheus",
+                    "average_clustering_duration": "Available in Prometheus",
+                    "cluster_count": "Available in Prometheus",
+                    "questions_per_cluster_avg": "Available in Prometheus",
+                    "silhouette_score": "Available in Prometheus",
+                    "recommendations_served": "Available in Prometheus",
+                    "error_rate": "Available in Prometheus",
+                },
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        except Exception as e:
+            logger.error(f"Failed to get FAQ clustering metrics summary: {e}")
+            return {"error": str(e), "institution_id": institution_id}
 
 
 # Global metrics service instance

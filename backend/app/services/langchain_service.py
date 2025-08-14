@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import pinecone
 import redis
 from app.core.config import settings
+from app.core.database import get_db_session
+from app.db.models import Institution
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.memory import (
     ConversationBufferWindowMemory,
@@ -24,7 +26,6 @@ from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain.schema import BaseMemory
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Pinecone
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import (
@@ -33,8 +34,9 @@ from langchain_core.prompts import (
     SystemMessagePromptTemplate,
 )
 from langchain_groq import ChatGroq
-from langchain_pinecone import PineconeEmbeddings
+from langchain_pinecone import PineconeEmbeddings, PineconeVectorStore
 from pinecone import Pinecone as PineconeClient
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -213,19 +215,35 @@ class EnhancedLangChainService:
                 pc = PineconeClient(api_key=settings.PINECONE_API_KEY)
 
                 # Create or connect to index
-                if settings.PINECONE_INDEX_NAME not in pc.list_indexes():
-                    pc.create_index(
-                        name=settings.PINECONE_INDEX_NAME,
-                        dimension=1536,  # multilingual-e5-large embedding dimension
-                        metric="cosine",
-                        spec=pinecone.ServerlessSpec(cloud="aws", region="us-east-1"),
-                    )
-                    logger.info(
-                        f"Created Pinecone index: {settings.PINECONE_INDEX_NAME}"
-                    )
+                existing_indexes = [idx.name for idx in pc.list_indexes()]
+                if settings.PINECONE_INDEX_NAME not in existing_indexes:
+                    try:
+                        pc.create_index(
+                            name=settings.PINECONE_INDEX_NAME,
+                            dimension=1536,  # multilingual-e5-large embedding dimension
+                            metric="cosine",
+                            spec=pinecone.ServerlessSpec(
+                                cloud="aws", region="us-east-1"
+                            ),
+                        )
+                        logger.info(
+                            f"Created Pinecone index: {settings.PINECONE_INDEX_NAME}"
+                        )
+                    except Exception as create_error:
+                        # Check if error is due to index already existing
+                        if "already exists" in str(
+                            create_error
+                        ).lower() or "ALREADY_EXISTS" in str(create_error):
+                            logger.info(
+                                f"Pinecone index '{settings.PINECONE_INDEX_NAME}' already exists, continuing..."
+                            )
+                        else:
+                            # Re-raise if it's a different error
+                            raise create_error
 
-                index = pc.Index(settings.PINECONE_INDEX_NAME)
-                self.vectorstore = Pinecone(index, self.embeddings.embed_query, "text")
+                self.vectorstore = PineconeVectorStore.from_existing_index(
+                    index_name=settings.PINECONE_INDEX_NAME, embedding=self.embeddings
+                )
 
                 logger.info("Pinecone vector store initialized successfully")
 
@@ -1023,19 +1041,71 @@ class EnhancedLangChainService:
             logger.error(f"Failed to clear conversation memory: {e}")
             return False
 
-    async def correct_typo_question(self, question: str, language: str = "id") -> str:
-        """Correct typos in the question using LLM, focusing only on spelling/typo, not grammar or structure. Context: Dukcapil public service."""
+    async def _get_institution_context(
+        self, institution_slug: Optional[str] = None
+    ) -> Tuple[str, str]:
+        """Get institution context for typo correction based on institution slug"""
+        try:
+            if not institution_slug:
+                return "pelayanan publik Indonesia", "Indonesian public services"
+
+            async with get_db_session() as db:
+                result = await db.execute(
+                    select(Institution).where(Institution.slug == institution_slug)
+                )
+                institution = result.scalar_one_or_none()
+
+                if institution:
+                    # Build context from institution data
+                    institution_context = f"pelayanan {institution.name}"
+                    if institution.description:
+                        institution_context += f" ({institution.description})"
+
+                    # For English, use a generic translation
+                    institution_context_en = f"{institution.name} services"
+                    if institution.description:
+                        institution_context_en += f" ({institution.description})"
+
+                    return institution_context, institution_context_en
+                else:
+                    # Fallback to generic if institution not found
+                    logger.warning(
+                        f"Institution not found for slug: {institution_slug}"
+                    )
+                    return "pelayanan publik Indonesia", "Indonesian public services"
+
+        except Exception as e:
+            logger.error(f"Error getting institution context: {e}")
+            return "pelayanan publik Indonesia", "Indonesian public services"
+
+    async def correct_typo_question(
+        self,
+        question: str,
+        language: str = "id",
+        institution_slug: Optional[str] = None,
+    ) -> str:
+        """Correct typos in the question using LLM, focusing only on spelling/typo, not grammar or structure. Context-aware based on institution."""
+
+        # Get dynamic institution context from database
+        institution_context, institution_context_en = (
+            await self._get_institution_context(institution_slug)
+        )
+
         if language == "id":
             prompt = (
                 "Perbaiki hanya kesalahan ketik (typo) pada pertanyaan berikut, tanpa mengubah struktur kalimat atau memperbaiki tata bahasa. "
-                "Fokus pada konteks pelayanan publik Dukcapil. Pastikan tidak ada tanda baca yang salah dan hindari penggunaan singkatan. "
+                f"Fokus pada konteks {institution_context}. "
+                "PENTING: Jangan mengubah singkatan yang benar seperti SIM (Surat Izin Mengemudi), KTP (Kartu Tanda Penduduk), SKCK, dll. "
+                "Pastikan tidak ada tanda baca yang salah. "
                 "Kembalikan hanya pertanyaan yang telah diperbaiki tanpa penjelasan apapun.\n"
                 f"PERTANYAAN: {question}"
             )
         else:
             prompt = (
                 "Correct only the typos in the following question, without changing the sentence structure or grammar. "
-                "Focus on the context of Indonesian public service (Dukcapil). Ensure there are no incorrect punctuation marks and avoid abbreviations. "
+                f"Focus on the context of {institution_context_en}. "
+                "IMPORTANT: Do not change correct abbreviations like SIM (driver's license), KTP (ID card), SKCK, etc. "
+                "Ensure there are no incorrect punctuation marks. "
                 "Return only the corrected question, without any explanation.\n"
                 f"QUESTION: {question}"
             )

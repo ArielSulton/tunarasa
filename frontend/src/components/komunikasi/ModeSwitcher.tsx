@@ -29,7 +29,7 @@ export function ModeSwitcher({ onModeChange }: ModeSwitcherProps) {
         ) : (
           <>
             <Users className="mr-1 h-3 w-3" />
-            Human Support
+            Dukungan Manusia
           </>
         )}
       </Badge>
@@ -98,7 +98,7 @@ export function ModeSwitcher({ onModeChange }: ModeSwitcherProps) {
     return (
       <Badge variant="outline" className="text-xs">
         <div className="mr-1 h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></div>
-        Loading...
+        Memuat...
       </Badge>
     )
   }

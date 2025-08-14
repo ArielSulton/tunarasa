@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
         setSuccess(true)
       }
     } catch {
-      setError('An unexpected error occurred')
+      setError('Terjadi kesalahan yang tidak terduga')
     } finally {
       setLoading(false)
     }
@@ -42,16 +42,16 @@ export default function ForgotPasswordPage() {
       <div className="bg-background flex min-h-screen items-center justify-center px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-green-600">Check Your Email</CardTitle>
+            <CardTitle className="text-2xl font-bold text-green-600">Periksa Email Anda</CardTitle>
             <CardDescription>
-              We&apos;ve sent you a password reset link. Please check your email and follow the instructions to reset
-              your password.
+              Kami telah mengirimkan tautan reset kata sandi. Silakan periksa email Anda dan ikuti petunjuk untuk
+              mereset kata sandi Anda.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/sign-in" className="text-primary inline-flex items-center text-sm hover:underline">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to sign in
+              Kembali ke masuk
             </Link>
           </CardContent>
         </Card>
@@ -63,8 +63,10 @@ export default function ForgotPasswordPage() {
     <div className="bg-background flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
-          <CardDescription>Enter your email address and we&apos;ll send you a password reset link</CardDescription>
+          <CardTitle className="text-2xl font-bold">Reset Kata Sandi</CardTitle>
+          <CardDescription>
+            Masukkan alamat email Anda dan kami akan mengirimkan tautan reset kata sandi
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={void handleSubmit} className="space-y-4">
@@ -79,7 +81,7 @@ export default function ForgotPasswordPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Masukkan email Anda"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -89,7 +91,7 @@ export default function ForgotPasswordPage() {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Send Reset Link
+              Kirim Tautan Reset
             </Button>
 
             <div className="text-center">
@@ -98,7 +100,7 @@ export default function ForgotPasswordPage() {
                 className="text-muted-foreground hover:text-primary inline-flex items-center text-sm"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to sign in
+                Kembali ke masuk
               </Link>
             </div>
           </form>

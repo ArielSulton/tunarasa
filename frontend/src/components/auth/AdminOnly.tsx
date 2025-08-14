@@ -71,7 +71,7 @@ export function AdminOnly({ children, requireSuperAdmin = false, fallback }: Adm
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-600">{loading ? 'Verifying access permissions...' : 'Syncing user data...'}</p>
+          <p className="text-gray-600">{loading ? 'Memverifikasi izin akses...' : 'Sinkronisasi data pengguna...'}</p>
         </div>
       </div>
     )
@@ -86,10 +86,10 @@ export function AdminOnly({ children, requireSuperAdmin = false, fallback }: Adm
             <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
-            <h2 className="mb-2 text-xl font-semibold text-red-600">Authentication Required</h2>
-            <p className="mb-4 text-gray-600">You need to be signed in to access this area.</p>
+            <h2 className="mb-2 text-xl font-semibold text-red-600">Autentikasi Diperlukan</h2>
+            <p className="mb-4 text-gray-600">Anda perlu masuk untuk mengakses area ini.</p>
             <Button onClick={() => router.push('/sign-in')} className="w-full">
-              Sign In
+              Masuk
             </Button>
           </div>
         </div>
@@ -120,30 +120,30 @@ export function AdminOnly({ children, requireSuperAdmin = false, fallback }: Adm
             <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <Shield className="h-8 w-8 text-red-600" />
             </div>
-            <h2 className="mb-2 text-xl font-semibold text-red-600">Access Restricted</h2>
+            <h2 className="mb-2 text-xl font-semibold text-red-600">Akses Terbatas</h2>
             <p className="mb-4 text-gray-600">
               {requireSuperAdmin
-                ? 'You need superadmin privileges to access this area.'
-                : 'You need admin or superadmin privileges to access this area.'}
+                ? 'Anda memerlukan hak akses superadmin untuk mengakses area ini.'
+                : 'Anda memerlukan hak akses admin atau superadmin untuk mengakses area ini.'}
             </p>
             <div className="mb-6 space-y-2 text-sm text-gray-500">
               <div className="flex items-center justify-center gap-2">
                 <Crown className="h-4 w-4 text-yellow-600" />
-                <span>SuperAdmin (role_id: 1): Full system access</span>
+                <span>SuperAdmin (role_id: 1): Akses penuh sistem</span>
               </div>
               {!requireSuperAdmin && (
                 <div className="flex items-center justify-center gap-2">
                   <Shield className="h-4 w-4 text-blue-600" />
-                  <span>Admin (role_id: 2): Limited system access</span>
+                  <span>Admin (role_id: 2): Akses terbatas sistem</span>
                 </div>
               )}
             </div>
             <div className="space-y-2">
               <Button onClick={() => router.push('/unauthorized')} className="w-full" variant="outline">
-                Go to Unauthorized Page
+                Ke Halaman Tidak Diizinkan
               </Button>
               <Button onClick={() => router.push('/')} className="w-full">
-                Go Home
+                Ke Beranda
               </Button>
             </div>
           </div>

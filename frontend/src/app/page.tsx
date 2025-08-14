@@ -64,9 +64,10 @@ export default function Beranda() {
             <div className="space-y-6">
               <h1 className="text-4xl leading-tight font-bold text-gray-900 lg:text-5xl">
                 Menciptakan kota cerdas dengan{' '}
-                <span className="text-blue-600" style={{ fontFamily: 'cursive' }}>
-                  komunikasi tanpa batas
-                </span>
+                <span className="text-blue-600" style={{ fontFamily: 'var(--font-covered-by-your-grace)' }}>
+                  komunikasi
+                </span>{' '}
+                tanpa batas
               </h1>
               <p className="max-w-xl text-lg text-gray-600">
                 Mendukung komunikasi tanpa batas untuk menciptakan aksesibilitas yang setara bagi penyandang
@@ -94,30 +95,6 @@ export default function Beranda() {
 
               {/* Overlaid Cards and Elements */}
               <div className="absolute inset-0">
-                {/* Dukcapil Document Card */}
-                <div className="absolute top-8 left-8 z-10 max-w-xs rotate-6 transform rounded-xl bg-white p-4 shadow-xl">
-                  <div className="mb-2 rounded-lg bg-green-100 p-3">
-                    <div className="mb-1 text-xs font-semibold text-green-800">📄 DUKCAPIL</div>
-                    <div className="text-sm text-green-700">Layanan Publik Digital</div>
-                  </div>
-                  <Image
-                    src="/assets/tech/header_dukcapil.png"
-                    alt="Dukcapil Document"
-                    width={200}
-                    height={120}
-                    className="h-auto w-full rounded-lg"
-                  />
-                </div>
-
-                {/* Performance Statistics Card */}
-                <div className="absolute top-4 right-12 z-20 -rotate-3 transform rounded-xl bg-white p-4 shadow-xl">
-                  <div className="text-center">
-                    <div className="mb-1 text-xs text-gray-600">🎯 AKURASI SISTEM</div>
-                    <div className="text-2xl font-bold text-blue-600">95.9%</div>
-                    <div className="text-xs text-gray-500">Recognition Rate</div>
-                  </div>
-                </div>
-
                 {/* Live System Indicator */}
                 <div className="absolute bottom-20 left-4 z-10 rounded-lg bg-white p-3 shadow-lg">
                   <div className="flex items-center space-x-2">
@@ -163,7 +140,7 @@ export default function Beranda() {
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-gray-900">
               Pilar{' '}
-              <span className="text-blue-600" style={{ fontFamily: 'cursive' }}>
+              <span className="text-blue-600" style={{ fontFamily: 'var(--font-covered-by-your-grace)' }}>
                 Teknologi
               </span>{' '}
               Sebagai Dapur Pacu
@@ -197,7 +174,7 @@ export default function Beranda() {
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-gray-900">
               Kenapa teknologi komunikasi inklusif{' '}
-              <span className="text-blue-600" style={{ fontFamily: 'cursive' }}>
+              <span className="text-blue-600" style={{ fontFamily: 'var(--font-covered-by-your-grace)' }}>
                 penting
               </span>{' '}
               untuk masyarakat?
@@ -310,7 +287,7 @@ export default function Beranda() {
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-gray-900">
               Bagaimana tunarasa membantu penyandang{' '}
-              <span className="text-blue-600" style={{ fontFamily: 'cursive' }}>
+              <span className="text-blue-600" style={{ fontFamily: 'var(--font-covered-by-your-grace)' }}>
                 disabilitas berkomunikasi disabilitas publik?
               </span>
             </h2>

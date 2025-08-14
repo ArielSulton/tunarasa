@@ -15,6 +15,7 @@ from app.services.document_manager import DocumentManager, get_document_manager
 from app.services.evaluation_service import evaluation_service
 from app.services.langchain_service import get_langchain_service
 from app.services.metrics_service import metrics_service
+from app.services.qa_logging_service import get_qa_logging_service
 from app.services.qr_service import qr_service
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
@@ -121,6 +122,12 @@ class QuestionAnswerRequest(BaseModel):
     language: str = Field(default="id")
     max_sources: int = Field(default=3, ge=1, le=10)
     similarity_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    institution_id: Optional[int] = Field(
+        default=None, description="Institution ID for institution-specific RAG"
+    )
+    institution_slug: Optional[str] = Field(
+        default=None, description="Institution slug for namespace selection"
+    )
 
 
 class QuestionAnswerResponse(BaseModel):
@@ -181,14 +188,14 @@ async def cache_conversation(
 
     if redis_client:
         try:
-            # Store individual conversation
+            # Store individual conversation (sync operations)
             key = f"rag_conversation:{conversation_id}"
-            await redis_client.setex(key, 86400, json.dumps(conversation))
+            redis_client.setex(key, 86400, json.dumps(conversation))
 
             # Add to session history
             session_key = f"rag_session_conversations:{session_id}"
-            await redis_client.lpush(session_key, conversation_id)
-            await redis_client.expire(session_key, 86400)
+            redis_client.lpush(session_key, conversation_id)
+            redis_client.expire(session_key, 86400)
 
         except Exception as e:
             logger.error(f"Failed to cache RAG conversation: {e}")
@@ -264,6 +271,8 @@ async def upload_document(
     author: Optional[str] = Form(None),
     topics: Optional[str] = Form(None),  # Comma-separated string
     language: str = Form("id"),
+    institution_id: Optional[int] = Form(None),
+    institution_slug: Optional[str] = Form(None),
     doc_manager: DocumentManager = Depends(get_document_manager_dep),
 ):
     """
@@ -307,7 +316,7 @@ async def upload_document(
                     topic.strip() for topic in topics.split(",") if topic.strip()
                 ]
 
-            # Add document using document manager
+            # Add document using document manager with institution parameters
             result = await doc_manager.add_document(
                 file_path=temp_path,
                 title=title,
@@ -315,6 +324,8 @@ async def upload_document(
                 author=author,
                 topics=topic_list,
                 language=language,
+                institution_id=institution_id,
+                institution_slug=institution_slug,
             )
 
             if result["success"]:
@@ -506,19 +517,28 @@ async def ask_question_with_rag(
         # Generate conversation ID
         conversation_id = f"{request.session_id}_{int(start_time.timestamp())}"
 
-        # Step 1: Correct typos in the question
+        # Step 1: Correct typos in the question with institution context
         langchain_service = get_langchain_service()
         corrected_question = await langchain_service.correct_typo_question(
-            request.question, language=request.language
+            request.question,
+            language=request.language,
+            institution_slug=request.institution_slug,
         )
 
         # Step 2: Process RAG with corrected question
+        # Log institution information for debugging
+        logger.info(
+            f"🏢 [RAG] Processing question for institution: {request.institution_slug} (ID: {request.institution_id})"
+        )
+
         result = await doc_manager.search_with_qa(
             question=corrected_question,
             session_id=request.session_id,
             language=request.language,
             max_docs=request.max_sources,
             similarity_threshold=request.similarity_threshold,
+            institution_id=request.institution_id,
+            institution_slug=request.institution_slug,
         )
 
         answer = result.get("answer", "")
@@ -604,6 +624,30 @@ async def ask_question_with_rag(
         except Exception as e:
             logger.warning(f"Failed to record RAG metrics: {e}")
 
+        # Log QA interaction to database (NEW: Fix for empty qa_logs table)
+        try:
+            qa_service = get_qa_logging_service()
+
+            qa_log_id = await qa_service.log_llm_response(
+                session_id=request.session_id,
+                question=corrected_question,
+                answer=answer,
+                confidence=confidence,
+                response_time=processing_time,
+                context_used=f"RAG with {len(sources)} sources",
+                sources=sources,
+                institution_id=getattr(request, "institution_id", 1),  # Default to 1
+                evaluation_data=evaluation_data,
+            )
+
+            if qa_log_id:
+                logger.info(f"QA interaction logged with ID: {qa_log_id}")
+            else:
+                logger.warning("Failed to log QA interaction")
+
+        except Exception as e:
+            logger.warning(f"Failed to log QA interaction: {e}")
+
         return QuestionAnswerResponse(
             success=result["success"],
             question=corrected_question,  # return the corrected question
@@ -626,7 +670,7 @@ async def ask_question_with_rag(
         return QuestionAnswerResponse(
             success=False,
             question=request.question,
-            answer="I'm sorry, I couldn't process your question right now. Please try again.",
+            answer="Maaf, saya tidak dapat memproses pertanyaan Anda saat ini. Silakan coba lagi.",
             confidence=0.0,
             sources=[],
             session_id=request.session_id,

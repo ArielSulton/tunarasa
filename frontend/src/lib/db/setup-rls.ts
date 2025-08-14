@@ -37,7 +37,6 @@ export async function setupRLSPolicies(db: PostgresJsDatabase<typeof schema>) {
 export async function setupIndividualPolicies(db: PostgresJsDatabase<typeof schema>) {
   const policies = [
     { name: 'Roles Policies', sql: schema.rolesPolicies },
-    { name: 'Genders Policies', sql: schema.gendersPolicies },
     { name: 'Users Policies', sql: schema.usersPolicies },
     { name: 'User Sync Log Policies', sql: schema.userSyncLogPolicies },
     { name: 'Admin Invitations Policies', sql: schema.adminInvitationsPolicies },
@@ -84,7 +83,7 @@ export async function verifyRLSPolicies(db: PostgresJsDatabase<typeof schema>) {
         permissive
       FROM pg_policies 
       WHERE schemaname = 'public' 
-      AND tablename IN ('users', 'user_sync_log', 'roles', 'genders')
+      AND tablename IN ('users', 'user_sync_log', 'roles')
       ORDER BY tablename, policyname;
     `)
 
@@ -98,7 +97,7 @@ export async function verifyRLSPolicies(db: PostgresJsDatabase<typeof schema>) {
         rowsecurity
       FROM pg_tables 
       WHERE schemaname = 'public' 
-      AND tablename IN ('users', 'user_sync_log', 'roles', 'genders', 'admin_invitations')
+      AND tablename IN ('users', 'user_sync_log', 'roles', 'admin_invitations')
       ORDER BY tablename;
     `)
 

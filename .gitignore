@@ -88,6 +88,7 @@ backend/logs/
 # Environment files
 .env
 .env.local
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
@@ -112,6 +113,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Runtime data
+uploads/
 assets/
 pids/
 *.pid
@@ -146,7 +148,7 @@ temp/
 *.tmp
 
 # Documentation
-/readme/*/
+readme/
 CLAUDE.md
 GEMINI.md
 QWEN.md
@@ -161,7 +163,7 @@ reference/
 *.sqlite3
 
 # Model and RAG Docs
-/backend/documents/buku-saku-pelayanan-dukcapil-8166.pdf
+/backend/documents/pdf
 /frontend/public/models/tfjs_model/*.bin
 /frontend/public/models/*.h5
 !/frontend/public/models/model.h5

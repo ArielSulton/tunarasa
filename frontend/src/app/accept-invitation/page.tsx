@@ -45,7 +45,7 @@ export default function AcceptInvitationPage() {
   // Validate invitation token on component mount
   useEffect(() => {
     if (!token) {
-      setError('Invalid invitation link - missing token')
+      setError('Tautan undangan tidak valid - token hilang')
       setIsValidating(false)
       return
     }
@@ -62,11 +62,11 @@ export default function AcceptInvitationPage() {
         setInvitation(result.data)
         setError(null)
       } else {
-        setError(result.error ?? 'Invalid invitation')
+        setError(result.error ?? 'Undangan tidak valid')
       }
     } catch (error) {
       console.error('Error validating invitation:', error)
-      setError('Failed to validate invitation')
+      setError('Gagal memvalidasi undangan')
     } finally {
       setIsValidating(false)
     }
@@ -76,19 +76,19 @@ export default function AcceptInvitationPage() {
     const errors: Record<string, string> = {}
 
     if (!formData.firstName.trim()) {
-      errors.firstName = 'First name is required'
+      errors.firstName = 'Nama depan wajib diisi'
     }
 
     if (!formData.lastName.trim()) {
-      errors.lastName = 'Last name is required'
+      errors.lastName = 'Nama belakang wajib diisi'
     }
 
     if (formData.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters long'
+      errors.password = 'Kata sandi harus minimal 8 karakter'
     }
 
     if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match'
+      errors.confirmPassword = 'Kata sandi tidak cocok'
     }
 
     // Password strength validation
@@ -98,7 +98,7 @@ export default function AcceptInvitationPage() {
     const _hasNonalphas = /\W/.test(formData.password)
 
     if (formData.password && (!hasUpperCase || !hasLowerCase || !hasNumbers)) {
-      errors.password = 'Password must contain uppercase, lowercase, and numbers'
+      errors.password = 'Kata sandi harus mengandung huruf besar, kecil, dan angka'
     }
 
     setValidationErrors(errors)
@@ -138,11 +138,11 @@ export default function AcceptInvitationPage() {
           router.push('/sign-in?message=Account created successfully, please sign in')
         }, 3000)
       } else {
-        setError(result.error ?? 'Failed to accept invitation')
+        setError(result.error ?? 'Gagal menerima undangan')
       }
     } catch (error) {
       console.error('Error accepting invitation:', error)
-      setError('Failed to accept invitation')
+      setError('Gagal menerima undangan')
     } finally {
       setIsSubmitting(false)
     }
@@ -162,7 +162,7 @@ export default function AcceptInvitationPage() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-600">Validating invitation...</p>
+          <p className="text-gray-600">Memvalidasi undangan...</p>
         </div>
       </div>
     )
@@ -176,12 +176,12 @@ export default function AcceptInvitationPage() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
               <AlertCircle className="h-6 w-6 text-red-600" />
             </div>
-            <CardTitle className="text-red-900">Invalid Invitation</CardTitle>
+            <CardTitle className="text-red-900">Undangan Tidak Valid</CardTitle>
             <CardDescription className="text-red-700">{error}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/')} className="w-full" variant="outline">
-              Return to Home
+              Kembali ke Beranda
             </Button>
           </CardContent>
         </Card>
@@ -197,9 +197,9 @@ export default function AcceptInvitationPage() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
-            <CardTitle className="text-green-900">Welcome to Tunarasa!</CardTitle>
+            <CardTitle className="text-green-900">Selamat Datang di Tunarasa!</CardTitle>
             <CardDescription className="text-green-700">
-              Your admin account has been created successfully. You will be redirected to the sign-in page shortly.
+              Akun admin Anda telah berhasil dibuat. Anda akan diarahkan ke halaman masuk sebentar lagi.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -215,14 +215,14 @@ export default function AcceptInvitationPage() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
               <CheckCircle className="h-6 w-6 text-blue-600" />
             </div>
-            <CardTitle className="text-blue-900">Already Accepted</CardTitle>
+            <CardTitle className="text-blue-900">Sudah Diterima</CardTitle>
             <CardDescription className="text-blue-700">
-              This invitation has already been accepted. Please sign in to access your account.
+              Undangan ini sudah diterima. Silakan masuk untuk mengakses akun Anda.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/sign-in')} className="w-full">
-              Go to Sign In
+              Masuk ke Akun
             </Button>
           </CardContent>
         </Card>
@@ -239,17 +239,17 @@ export default function AcceptInvitationPage() {
               <Clock className="h-6 w-6 text-amber-600" />
             </div>
             <CardTitle className="text-amber-900">
-              {invitation.isExpired ? 'Invitation Expired' : 'Invitation Cancelled'}
+              {invitation.isExpired ? 'Undangan Kadaluarsa' : 'Undangan Dibatalkan'}
             </CardTitle>
             <CardDescription className="text-amber-700">
               {invitation.isExpired
-                ? 'This invitation has expired and can no longer be used.'
-                : 'This invitation has been cancelled and is no longer valid.'}
+                ? 'Undangan ini telah kadaluarsa dan tidak bisa digunakan lagi.'
+                : 'Undangan ini telah dibatalkan dan tidak valid lagi.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/')} className="w-full" variant="outline">
-              Return to Home
+              Kembali ke Beranda
             </Button>
           </CardContent>
         </Card>
@@ -265,8 +265,8 @@ export default function AcceptInvitationPage() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
               <Shield className="h-6 w-6 text-blue-600" />
             </div>
-            <CardTitle>Accept Admin Invitation</CardTitle>
-            <CardDescription>Complete your account setup to join the Tunarasa admin team</CardDescription>
+            <CardTitle>Terima Undangan Admin</CardTitle>
+            <CardDescription>Lengkapi pengaturan akun Anda untuk bergabung dengan tim admin Tunarasa</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-6">
@@ -279,13 +279,13 @@ export default function AcceptInvitationPage() {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <User className="h-4 w-4 text-gray-500" />
-                <span className="font-medium">Role:</span>
+                <span className="font-medium">Peran:</span>
                 <span className="font-semibold text-blue-600 capitalize">{invitation?.role}</span>
               </div>
               {invitation?.timeRemainingFormatted && (
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-gray-500" />
-                  <span className="font-medium">Expires in:</span>
+                  <span className="font-medium">Berakhir dalam:</span>
                   <span className="text-amber-600">{invitation.timeRemainingFormatted}</span>
                 </div>
               )}
@@ -295,7 +295,7 @@ export default function AcceptInvitationPage() {
             {invitation?.customMessage && (
               <Alert>
                 <AlertDescription>
-                  <strong>Message from admin:</strong> {invitation.customMessage}
+                  <strong>Pesan dari admin:</strong> {invitation.customMessage}
                 </AlertDescription>
               </Alert>
             )}
@@ -305,7 +305,7 @@ export default function AcceptInvitationPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="firstName" className="mb-2 block text-sm font-medium">
-                    First Name *
+                    Nama Depan *
                   </label>
                   <Input
                     id="firstName"
@@ -322,7 +322,7 @@ export default function AcceptInvitationPage() {
 
                 <div>
                   <label htmlFor="lastName" className="mb-2 block text-sm font-medium">
-                    Last Name *
+                    Nama Belakang *
                   </label>
                   <Input
                     id="lastName"
@@ -340,7 +340,7 @@ export default function AcceptInvitationPage() {
 
               <div>
                 <label htmlFor="password" className="mb-2 block text-sm font-medium">
-                  Password *
+                  Kata Sandi *
                 </label>
                 <Input
                   id="password"
@@ -352,13 +352,13 @@ export default function AcceptInvitationPage() {
                 />
                 {validationErrors.password && <p className="mt-1 text-xs text-red-500">{validationErrors.password}</p>}
                 <p className="mt-1 text-xs text-gray-500">
-                  Must be at least 8 characters with uppercase, lowercase, and numbers
+                  Harus minimal 8 karakter dengan huruf besar, kecil, dan angka
                 </p>
               </div>
 
               <div>
                 <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium">
-                  Confirm Password *
+                  Konfirmasi Kata Sandi *
                 </label>
                 <Input
                   id="confirmPassword"
@@ -384,17 +384,17 @@ export default function AcceptInvitationPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Account...
+                    Membuat Akun...
                   </>
                 ) : (
-                  'Accept Invitation & Create Account'
+                  'Terima Undangan & Buat Akun'
                 )}
               </Button>
             </form>
 
             <div className="text-center text-xs text-gray-500">
-              By accepting this invitation, you agree to join the Tunarasa admin team and follow our security and
-              privacy policies.
+              Dengan menerima undangan ini, Anda setuju untuk bergabung dengan tim admin Tunarasa dan mengikuti
+              kebijakan keamanan dan privasi kami.
             </div>
           </CardContent>
         </Card>

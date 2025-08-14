@@ -1,7 +1,7 @@
 'use client'
 
 import { AuthStatus } from '@/components/auth/auth-components'
-import { Shield, CheckCircle, Users, Lock } from 'lucide-react'
+import { CheckCircle, Users, Lock } from 'lucide-react'
 
 export default function AksesKhusus() {
   return (
@@ -15,21 +15,14 @@ export default function AksesKhusus() {
         <div className="mx-auto w-full max-w-2xl">
           {/* Header Section with Better Visual Hierarchy */}
           <div className="mb-12 text-center">
-            {/* Icon Hero */}
-            <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-blue-600 shadow-lg">
-              <Shield className="h-10 w-10 text-white" />
-            </div>
-
             {/* Main Heading with Better Typography */}
             <h1 className="mb-4 text-4xl leading-tight font-bold text-gray-900 md:text-5xl">
               Akses{' '}
-              <span className="relative text-blue-600" style={{ fontFamily: 'cursive' }}>
+              <span className="relative text-blue-600" style={{ fontFamily: 'var(--font-covered-by-your-grace)' }}>
                 Khusus
-                <div className="absolute -bottom-2 left-0 h-1 w-full rounded-full bg-blue-600/30"></div>
-              </span>
+              </span>{' '}
+              hanya bisa diperoleh setelah verifikasi akun
             </h1>
-
-            <p className="mb-2 text-xl font-medium text-gray-700">hanya bisa diperoleh setelah verifikasi akun</p>
           </div>
 
           {/* Features Section for Better Understanding */}
@@ -72,7 +65,7 @@ export default function AksesKhusus() {
 
             {/* Help Text */}
             <div className="mt-6 border-t border-gray-200 pt-6 text-center">
-              <p className="text-sm text-gray-500">Butuh bantuan? Hubungi tim support atau administrator sistem</p>
+              <p className="text-sm text-gray-500">Butuh bantuan? Hubungi tim support atau administrator</p>
             </div>
           </div>
         </div>

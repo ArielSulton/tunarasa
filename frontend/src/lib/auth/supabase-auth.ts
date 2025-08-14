@@ -220,3 +220,80 @@ export async function validateApiAdminAuth(request: NextRequest) {
     }
   }
 }
+
+/**
+ * Legacy function aliases for backward compatibility
+ * These provide the same functionality as the original /lib/auth.ts file
+ */
+
+/**
+ * Check if a Supabase user ID has admin or superadmin role
+ * @param supabaseUserId - The Supabase user ID from auth.uid()
+ * @returns Promise<boolean> - True if user is admin (roleId 1 or 2) and active
+ */
+export async function isAdminOrSuperAdmin(supabaseUserId: string): Promise<boolean> {
+  try {
+    const user = await db
+      .select({
+        roleId: users.roleId,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(eq(users.supabaseUserId, supabaseUserId))
+      .limit(1)
+
+    if (user.length === 0) {
+      return false
+    }
+
+    const userData = user[0]
+    return userData.isActive && userData.roleId !== null && [1, 2].includes(userData.roleId)
+  } catch (error) {
+    console.error('Error checking admin status:', error)
+    return false
+  }
+}
+
+/**
+ * Check if a Supabase user ID has superadmin role
+ * @param supabaseUserId - The Supabase user ID from auth.uid()
+ * @returns Promise<boolean> - True if user is superadmin (roleId 1) and active
+ */
+export async function isSuperAdmin(supabaseUserId: string): Promise<boolean> {
+  try {
+    const user = await db
+      .select({
+        roleId: users.roleId,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(eq(users.supabaseUserId, supabaseUserId))
+      .limit(1)
+
+    if (user.length === 0) {
+      return false
+    }
+
+    const userData = user[0]
+    return userData.isActive && userData.roleId === 1
+  } catch (error) {
+    console.error('Error checking superadmin status:', error)
+    return false
+  }
+}
+
+/**
+ * Get user's database record by Supabase user ID
+ * @param supabaseUserId - The Supabase user ID from auth.uid()
+ * @returns Promise<User | null> - The user record or null if not found
+ */
+export async function getUserBySupabaseId(supabaseUserId: string) {
+  try {
+    const user = await db.select().from(users).where(eq(users.supabaseUserId, supabaseUserId)).limit(1)
+
+    return user.length > 0 ? user[0] : null
+  } catch (error) {
+    console.error('Error fetching user by Supabase ID:', error)
+    return null
+  }
+}

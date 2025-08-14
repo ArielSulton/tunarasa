@@ -64,7 +64,7 @@ export function SessionTracker({
       <div className="pointer-events-none fixed right-4 bottom-4 z-50 rounded bg-gray-800 p-2 text-xs text-white opacity-75">
         📊 Session: {trackedSessionId?.substring(0, 12)}...
         <br />
-        Status: {isTracking ? '✅ Tracking' : '⏸️ Not tracking'}
+        Status: {isTracking ? '✅ Melacak' : '⏸️ Tidak melacak'}
         <br />
         Type: {sessionType}
       </div>

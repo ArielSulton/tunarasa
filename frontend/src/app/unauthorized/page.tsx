@@ -26,26 +26,26 @@ export default function UnauthorizedPage() {
             <AlertTriangle className="h-10 w-10 text-red-600" />
           </div>
           <h1 className="text-4xl font-bold text-red-600">403</h1>
-          <h2 className="text-2xl font-semibold text-gray-900">Access Denied</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">Akses Ditolak</h2>
           <p className="text-gray-600">
-            You don&apos;t have permission to access the admin dashboard.
+            Anda tidak memiliki izin untuk mengakses dashboard admin.
             {hasAdminAccess
-              ? 'This might be a temporary issue with your session.'
-              : 'Admin or SuperAdmin privileges are required.'}
+              ? 'Ini mungkin masalah sementara dengan sesi Anda.'
+              : 'Diperlukan hak istimewa Admin atau SuperAdmin.'}
           </p>
         </div>
 
         {/* User Status Information */}
         {user && (
           <div className="rounded-lg border bg-white p-4">
-            <h3 className="mb-3 font-medium text-gray-900">Your Account Status</h3>
+            <h3 className="mb-3 font-medium text-gray-900">Status Akun Anda</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Email:</span>
                 <span className="font-medium">{user.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Role:</span>
+                <span className="text-gray-600">Peran:</span>
                 <span className="font-medium capitalize">{role}</span>
               </div>
               <div className="flex justify-between">
@@ -53,9 +53,9 @@ export default function UnauthorizedPage() {
                 <span className="font-medium">{roleId}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Admin Access:</span>
+                <span className="text-gray-600">Akses Admin:</span>
                 <span className={`font-medium ${hasAdminAccess ? 'text-green-600' : 'text-red-600'}`}>
-                  {hasAdminAccess ? 'Yes' : 'No'}
+                  {hasAdminAccess ? 'Ya' : 'Tidak'}
                 </span>
               </div>
             </div>
@@ -64,15 +64,15 @@ export default function UnauthorizedPage() {
 
         {/* Role Requirements */}
         <div className="rounded-lg border bg-blue-50 p-4">
-          <h3 className="mb-3 font-medium text-blue-900">Access Requirements</h3>
+          <h3 className="mb-3 font-medium text-blue-900">Persyaratan Akses</h3>
           <div className="space-y-2 text-sm text-blue-800">
             <div className="flex items-center gap-2">
               <Crown className="h-4 w-4 text-yellow-600" />
-              <span>SuperAdmin (role_id: 1): Full system access</span>
+              <span>SuperAdmin (role_id: 1): Akses sistem penuh</span>
             </div>
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-blue-600" />
-              <span>Admin (role_id: 2): Dashboard and analytics access</span>
+              <span>Admin (role_id: 2): Akses dashboard dan analitik</span>
             </div>
           </div>
         </div>
@@ -87,19 +87,19 @@ export default function UnauthorizedPage() {
             <Button asChild variant="outline" className="flex items-center gap-2">
               <Link href="/">
                 <Home className="h-4 w-4" />
-                Go Home
+                Beranda
               </Link>
             </Button>
             {!hasAdminAccess && (
               <Button asChild>
-                <Link href="/sign-in">Sign In with Different Account</Link>
+                <Link href="/sign-in">Masuk dengan Akun Lain</Link>
               </Button>
             )}
           </div>
         </div>
 
         <div className="text-sm text-gray-500">
-          If you believe this is an error, please contact your system administrator.
+          Jika Anda yakin ini adalah kesalahan, silakan hubungi administrator sistem Anda.
         </div>
       </div>
     </div>

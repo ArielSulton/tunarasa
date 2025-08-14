@@ -3,7 +3,6 @@ Database models for Tunarasa application (New 6-table schema)
 """
 
 from .conversation import Conversation, ConversationCreate, ConversationUpdate
-from .genders import Gender, GenderCreate, GenderUpdate
 from .messages import Message, MessageCreate, MessageUpdate
 from .notes import Note, NoteCreate, NoteUpdate
 from .roles import Role, RoleCreate, RoleUpdate
@@ -26,7 +25,4 @@ __all__ = [
     "Role",
     "RoleCreate",
     "RoleUpdate",
-    "Gender",
-    "GenderCreate",
-    "GenderUpdate",
 ]

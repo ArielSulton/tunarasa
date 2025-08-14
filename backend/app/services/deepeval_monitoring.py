@@ -101,7 +101,7 @@ class LLMConversation:
 class CustomDeepEvalLLM(DeepEvalBaseLLM):
     """Custom DeepEval LLM wrapper for ChatGroq"""
 
-    def __init__(self, model_name: str = "llama3-70b-8192"):
+    def __init__(self, model_name: str = settings.LLM_MODEL):
         self.model_name = model_name
 
     def load_model(self):

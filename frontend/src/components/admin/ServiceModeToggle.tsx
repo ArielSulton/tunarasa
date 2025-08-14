@@ -29,12 +29,12 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
     if (success) {
       setMessage({
         type: 'success',
-        text: `Service mode changed to ${newMode === 'full_llm_bot' ? 'Full LLM Bot' : 'Bot + Admin Validation'} successfully!`,
+        text: `Mode layanan berhasil diubah ke ${newMode === 'full_llm_bot' ? 'Bot LLM Penuh' : 'Bot + Validasi Admin'}!`,
       })
     } else {
       setMessage({
         type: 'error',
-        text: 'Failed to update service mode. Please try again.',
+        text: 'Gagal mengupdate mode layanan. Silakan coba lagi.',
       })
     }
 
@@ -48,7 +48,7 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
     await refreshConfig()
     setMessage({
       type: 'info',
-      text: 'Configuration refreshed from server',
+      text: 'Konfigurasi direfresh dari server',
     })
     setTimeout(() => setMessage(null), 3000)
   }
@@ -60,7 +60,7 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-blue-800">
               <Settings className="h-5 w-5" />
-              Service Mode Configuration
+              Konfigurasi Mode Layanan
             </CardTitle>
             <Button
               variant="outline"
@@ -70,7 +70,7 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
               className="flex items-center gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+              Segarkan
             </Button>
           </div>
         </CardHeader>
@@ -107,7 +107,7 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
           {error && (
             <Alert className="mb-6 border-red-200 bg-red-50">
               <AlertTriangle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">Error loading configuration: {error}</AlertDescription>
+              <AlertDescription className="text-red-800">Error memuat konfigurasi: {error}</AlertDescription>
             </Alert>
           )}
 
@@ -115,7 +115,7 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
           <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-gray-900">Current Service Mode</h4>
+                <h4 className="font-medium text-gray-900">Mode Layanan Saat Ini</h4>
                 <p className="mt-1 text-sm text-gray-600">{description}</p>
               </div>
               <Badge
@@ -128,7 +128,7 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
 
           {/* Mode Selection */}
           <div className="space-y-4">
-            <h4 className="font-medium text-gray-900">Select Service Mode</h4>
+            <h4 className="font-medium text-gray-900">Pilih Mode Layanan</h4>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {/* Full LLM Bot Mode */}
@@ -146,10 +146,12 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
                       <Bot className="h-5 w-5 text-blue-600" />
                     </div>
                     <div className="flex-1">
-                      <h5 className="font-medium text-gray-900">Full LLM Bot</h5>
-                      <p className="mt-1 text-sm text-gray-600">Users receive direct AI responses via RAG system</p>
+                      <h5 className="font-medium text-gray-900">Bot LLM Penuh</h5>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Pengguna menerima respons AI langsung melalui sistem RAG
+                      </p>
                       {serviceMode === 'full_llm_bot' && (
-                        <Badge className="mt-2 bg-blue-100 text-blue-800">Active</Badge>
+                        <Badge className="mt-2 bg-blue-100 text-blue-800">Aktif</Badge>
                       )}
                     </div>
                   </div>
@@ -171,12 +173,12 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
                       <Users className="h-5 w-5 text-green-600" />
                     </div>
                     <div className="flex-1">
-                      <h5 className="font-medium text-gray-900">Bot + Admin Validation</h5>
+                      <h5 className="font-medium text-gray-900">Bot + Validasi Admin</h5>
                       <p className="mt-1 text-sm text-gray-600">
-                        AI generates responses but admin must approve before sending to user
+                        AI menghasilkan respons tetapi admin harus menyetujui sebelum dikirim ke pengguna
                       </p>
                       {serviceMode === 'bot_with_admin_validation' && (
-                        <Badge className="mt-2 bg-green-100 text-green-800">Active</Badge>
+                        <Badge className="mt-2 bg-green-100 text-green-800">Aktif</Badge>
                       )}
                     </div>
                   </div>
@@ -190,7 +192,7 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
             {updating && (
               <div className="flex items-center gap-2 text-blue-600">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Updating service mode...</span>
+                <span className="text-sm">Mengupdate mode layanan...</span>
               </div>
             )}
           </div>
@@ -200,15 +202,15 @@ export function ServiceModeToggle({ className }: ServiceModeToggleProps) {
             <div className="flex gap-3">
               <Bot className="mt-0.5 h-4 w-4 text-blue-600" />
               <div>
-                <span className="font-medium">Full LLM Bot:</span> All user questions are processed directly by the AI
-                system using RAG (Retrieval-Augmented Generation). Faster responses, 24/7 availability.
+                <span className="font-medium">Bot LLM Penuh:</span> Semua pertanyaan pengguna diproses langsung oleh
+                sistem AI menggunakan RAG (Retrieval-Augmented Generation). Respons lebih cepat, tersedia 24/7.
               </div>
             </div>
             <div className="flex gap-3">
               <Users className="mt-0.5 h-4 w-4 text-green-600" />
               <div>
-                <span className="font-medium">Bot + Admin Validation:</span> AI automatically generates responses but
-                admin must validate and approve them before they are sent to users.
+                <span className="font-medium">Bot + Validasi Admin:</span> AI secara otomatis menghasilkan respons
+                tetapi admin harus memvalidasi dan menyetujuinya sebelum dikirim ke pengguna.
               </div>
             </div>
           </div>

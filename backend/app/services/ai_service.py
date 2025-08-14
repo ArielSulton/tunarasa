@@ -12,9 +12,8 @@ from app.core.config import settings
 from groq import Groq
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
-from langchain_community.vectorstores import Pinecone
 from langchain_core.documents import Document
-from langchain_pinecone import PineconeEmbeddings
+from langchain_pinecone import PineconeEmbeddings, PineconeVectorStore
 from pinecone import Pinecone as PineconeClient
 
 logger = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 class GroqLLM:
     """Custom LangChain-compatible Groq LLM wrapper"""
 
-    def __init__(self, api_key: str, model_name: str = "llama3-8b-8192"):
+    def __init__(self, api_key: str, model_name: str = settings.LLM_MODEL):
         self.client = Groq(api_key=api_key)
         self.model_name = model_name
         self.temperature = settings.LLM_TEMPERATURE
@@ -159,22 +158,35 @@ class AIService:
                     pc = PineconeClient(api_key=settings.PINECONE_API_KEY)
 
                     # Create or connect to index
-                    if settings.PINECONE_INDEX_NAME not in pc.list_indexes():
-                        pc.create_index(
-                            name=settings.PINECONE_INDEX_NAME,
-                            dimension=1536,  # multilingual-e5-large embedding dimension
-                            metric="cosine",
-                            spec=pinecone.ServerlessSpec(
-                                cloud="aws", region="us-east-1"
-                            ),
-                        )
-                        logger.info(
-                            f"Created Pinecone index: {settings.PINECONE_INDEX_NAME}"
-                        )
+                    existing_indexes = [idx.name for idx in pc.list_indexes()]
+                    if settings.PINECONE_INDEX_NAME not in existing_indexes:
+                        try:
+                            pc.create_index(
+                                name=settings.PINECONE_INDEX_NAME,
+                                dimension=1536,  # multilingual-e5-large embedding dimension
+                                metric="cosine",
+                                spec=pinecone.ServerlessSpec(
+                                    cloud="aws", region="us-east-1"
+                                ),
+                            )
+                            logger.info(
+                                f"Created Pinecone index: {settings.PINECONE_INDEX_NAME}"
+                            )
+                        except Exception as create_error:
+                            # Check if error is due to index already existing
+                            if "already exists" in str(
+                                create_error
+                            ).lower() or "ALREADY_EXISTS" in str(create_error):
+                                logger.info(
+                                    f"Pinecone index '{settings.PINECONE_INDEX_NAME}' already exists, continuing..."
+                                )
+                            else:
+                                # Re-raise if it's a different error
+                                raise create_error
 
-                    index = pc.Index(settings.PINECONE_INDEX_NAME)
-                    self.vectorstore = Pinecone(
-                        index, self.embeddings.embed_query, "text"
+                    self.vectorstore = PineconeVectorStore.from_existing_index(
+                        index_name=settings.PINECONE_INDEX_NAME,
+                        embedding=self.embeddings,
                     )
                     logger.info("Pinecone vector store initialized successfully")
 
@@ -242,7 +254,7 @@ class AIService:
                 "processing_time": processing_time,
                 "session_id": session_id,
                 "timestamp": datetime.utcnow().isoformat(),
-                "model_used": "groq-llama3-8b-8192",
+                "model_used": settings.LLM_MODEL,
             }
 
             # Cache the response

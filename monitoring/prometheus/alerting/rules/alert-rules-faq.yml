@@ -1,0 +1,201 @@
+groups:
+  - name: tunarasa_faq_clustering_alerts
+    rules:
+      # FAQ Clustering Quality Alerts
+      - alert: FAQClusteringQualityLow
+        expr: tunarasa_faq_clustering_silhouette_score < 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "FAQ clustering quality is low for institution {{ $labels.institution_id }}"
+          description: "The silhouette score for FAQ clustering is {{ $value }}, which is below the acceptable threshold of 0.5. This indicates poor clustering quality and may affect recommendation accuracy."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-quality"
+          
+      - alert: FAQClusteringQualityCritical
+        expr: tunarasa_faq_clustering_silhouette_score < 0.3
+        for: 2m
+        labels:
+          severity: critical
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "FAQ clustering quality is critically low for institution {{ $labels.institution_id }}"
+          description: "The silhouette score for FAQ clustering is {{ $value }}, which is critically low. Immediate investigation required as this severely impacts recommendation quality."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-critical"
+
+      # FAQ Clustering Performance Alerts
+      - alert: FAQClusteringHighLatency
+        expr: histogram_quantile(0.95, sum(rate(tunarasa_faq_clustering_duration_seconds_bucket[5m])) by (le)) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "FAQ clustering operations taking too long"
+          description: "95th percentile clustering duration is {{ $value }}s, exceeding the 10s threshold. This may cause user experience degradation."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-performance"
+          
+      - alert: FAQClusteringVeryHighLatency
+        expr: histogram_quantile(0.95, sum(rate(tunarasa_faq_clustering_duration_seconds_bucket[5m])) by (le)) > 30
+        for: 2m
+        labels:
+          severity: critical
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "FAQ clustering operations critically slow"
+          description: "95th percentile clustering duration is {{ $value }}s, which is critically high. Immediate investigation required."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-critical-performance"
+
+      # FAQ Clustering Error Rate Alerts
+      - alert: FAQClusteringHighErrorRate
+        expr: sum(rate(tunarasa_faq_clustering_errors_total[5m])) / sum(rate(tunarasa_faq_clustering_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "High error rate in FAQ clustering operations"
+          description: "FAQ clustering error rate is {{ $value | humanizePercentage }}, exceeding 10% threshold. Check system health and data integrity."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-errors"
+          
+      - alert: FAQClusteringCriticalErrorRate
+        expr: sum(rate(tunarasa_faq_clustering_errors_total[5m])) / sum(rate(tunarasa_faq_clustering_total[5m])) > 0.25
+        for: 2m
+        labels:
+          severity: critical
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "Critical error rate in FAQ clustering operations"
+          description: "FAQ clustering error rate is {{ $value | humanizePercentage }}, which is critically high. Immediate action required."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-critical-errors"
+
+      # FAQ Clustering Volume Alerts
+      - alert: FAQClusteringNoActivity
+        expr: sum(rate(tunarasa_faq_clustering_total[10m])) == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "No FAQ clustering activity detected"
+          description: "No FAQ clustering operations have been performed in the last 15 minutes. This may indicate a system issue or lack of user activity."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-no-activity"
+
+      - alert: FAQClusteringVolumeSpike
+        expr: sum(rate(tunarasa_faq_clustering_total[5m])) > sum(rate(tunarasa_faq_clustering_total[1h] offset 1h)) * 5
+        for: 5m
+        labels:
+          severity: warning
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "Unusual spike in FAQ clustering operations"
+          description: "Current FAQ clustering rate is 5x higher than historical average. Monitor for potential abuse or system issues."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-volume-spike"
+
+      # FAQ Data Quality Alerts
+      - alert: FAQClusteringTooManySmallClusters
+        expr: tunarasa_faq_questions_per_cluster_avg < 2
+        for: 10m
+        labels:
+          severity: warning
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "FAQ clusters are too small for institution {{ $labels.institution_id }}"
+          description: "Average questions per cluster is {{ $value }}, indicating over-clustering. Consider adjusting clustering parameters."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-small-clusters"
+
+      - alert: FAQClusteringTooFewClusters
+        expr: tunarasa_faq_clusters_count < 3 and tunarasa_faq_questions_per_cluster_avg > 20
+        for: 10m
+        labels:
+          severity: warning
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "Too few FAQ clusters for institution {{ $labels.institution_id }}"
+          description: "Only {{ $value }} clusters with high questions per cluster. Consider increasing cluster granularity."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-few-clusters"
+
+      # FAQ Recommendation Service Alerts
+      - alert: FAQRecommendationsNotServed
+        expr: sum(rate(tunarasa_faq_recommendations_served_total[10m])) == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: faq_recommendations
+          service: tunarasa
+        annotations:
+          summary: "No FAQ recommendations being served"
+          description: "No FAQ recommendations have been served in the last 15 minutes. Check if the recommendation service is functioning correctly."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-recommendations-not-served"
+
+      # Data Source Balance Alerts
+      - alert: FAQClusteringOnlyFallbackData
+        expr: sum(tunarasa_faq_clustering_data_source{data_source="database"}) == 0 and sum(tunarasa_faq_clustering_data_source{data_source="fallback"}) > 0
+        for: 30m
+        labels:
+          severity: info
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "FAQ clustering using only fallback data"
+          description: "All FAQ clustering operations are using fallback data. Consider encouraging more user interactions to build database content."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-only-fallback"
+
+      - alert: FAQClusteringDataSourceImbalance
+        expr: |
+          (
+            sum(tunarasa_faq_clustering_data_source{data_source="fallback"}) / 
+            (sum(tunarasa_faq_clustering_data_source{data_source="database"}) + sum(tunarasa_faq_clustering_data_source{data_source="fallback"}))
+          ) > 0.8
+        for: 1h
+        labels:
+          severity: warning
+          component: faq_clustering
+          service: tunarasa
+        annotations:
+          summary: "High reliance on fallback data for FAQ clustering"
+          description: "Over 80% of FAQ clustering operations are using fallback data. Consider strategies to increase real user question volume."
+          runbook_url: "https://docs.tunarasa.com/troubleshooting/faq-clustering-fallback-heavy"
+
+  - name: tunarasa_faq_clustering_sli_alerts
+    rules:
+      # SLI/SLO Alerts for FAQ Clustering
+      - alert: FAQClusteringSLOViolation
+        expr: |
+          (
+            sum(rate(tunarasa_faq_clustering_total[5m])) - sum(rate(tunarasa_faq_clustering_errors_total[5m]))
+          ) / sum(rate(tunarasa_faq_clustering_total[5m])) < 0.99
+        for: 10m
+        labels:
+          severity: critical
+          component: faq_clustering
+          service: tunarasa
+          slo: "faq_clustering_availability"
+        annotations:
+          summary: "FAQ clustering SLO violation - availability below 99%"
+          description: "FAQ clustering availability is {{ $value | humanizePercentage }}, violating the 99% SLO. Immediate investigation required."
+          runbook_url: "https://docs.tunarasa.com/slo/faq-clustering-availability"
+
+      - alert: FAQClusteringLatencySLOViolation
+        expr: histogram_quantile(0.95, sum(rate(tunarasa_faq_clustering_duration_seconds_bucket[5m])) by (le)) > 5
+        for: 10m
+        labels:
+          severity: critical
+          component: faq_clustering
+          service: tunarasa
+          slo: "faq_clustering_latency"
+        annotations:
+          summary: "FAQ clustering SLO violation - latency above 5s"
+          description: "FAQ clustering 95th percentile latency is {{ $value }}s, violating the 5s SLO."
+          runbook_url: "https://docs.tunarasa.com/slo/faq-clustering-latency"

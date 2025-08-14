@@ -47,12 +47,11 @@ export async function initializeDefaultRoles(): Promise<void> {
   try {
     console.log('🔄 Initializing default roles...')
 
-    // Delete existing roles first to avoid duplicates (only in development)
-    // In production, you might want to handle this differently
+    // Check if roles already exist to avoid duplicates
     const existingRoles = await db.select().from(roles)
     if (existingRoles.length > 0) {
-      console.log(`🗑️  Removing ${existingRoles.length} existing roles before re-creating...`)
-      await db.delete(roles) // Clear existing roles
+      console.log(`✅ ${existingRoles.length} roles already exist, skipping initialization`)
+      return
     }
 
     console.log('🚀 Creating default roles...')

@@ -132,6 +132,7 @@ class SearchQuery:
     language: str = "id"
     document_types: Optional[List[DocumentType]] = None
     date_range: Optional[Tuple[datetime, datetime]] = None
+    namespace: Optional[str] = None  # Institution-specific namespace
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
@@ -532,6 +533,7 @@ class PineconeVectorService:
         file_path: str,
         document_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        namespace: Optional[str] = None,
     ) -> DocumentMetadata:
         """Ingest a single document into the vector database"""
 
@@ -576,8 +578,8 @@ class PineconeVectorService:
                 file_path, doc_metadata
             )
 
-            # Generate embeddings for chunks
-            await self._embed_and_store_chunks(chunks, doc_metadata)
+            # Generate embeddings for chunks with namespace
+            await self._embed_and_store_chunks(chunks, doc_metadata, namespace)
 
             # Calculate processing time
             processing_time = (datetime.utcnow() - start_time).total_seconds()
@@ -608,7 +610,10 @@ class PineconeVectorService:
             raise
 
     async def _embed_and_store_chunks(
-        self, chunks: List[Document], doc_metadata: DocumentMetadata
+        self,
+        chunks: List[Document],
+        doc_metadata: DocumentMetadata,
+        namespace: Optional[str] = None,
     ):
         """Generate embeddings and store chunks in Pinecone"""
 
@@ -665,8 +670,8 @@ class PineconeVectorService:
 
                 all_vectors.extend(batch_vectors)
 
-            # Store all vectors in Pinecone
-            await self._store_vectors_batch(all_vectors)
+            # Store all vectors in Pinecone with namespace
+            await self._store_vectors_batch(all_vectors, namespace)
 
             logger.info(
                 f"Stored {len(all_vectors)} vectors for document {doc_metadata.document_id}"
@@ -676,7 +681,9 @@ class PineconeVectorService:
             logger.error(f"Embedding and storage failed: {e}")
             raise
 
-    async def _store_vectors_batch(self, vectors: List[Dict[str, Any]]):
+    async def _store_vectors_batch(
+        self, vectors: List[Dict[str, Any]], namespace: Optional[str] = None
+    ):
         """Store vectors in Pinecone in batches"""
 
         try:
@@ -685,8 +692,19 @@ class PineconeVectorService:
             for i in range(0, len(vectors), batch_size):
                 batch = vectors[i : i + batch_size]
 
-                # Upsert batch to Pinecone
-                await asyncio.to_thread(self.index.upsert, vectors=batch)
+                # Upsert batch to Pinecone with namespace
+                if namespace:
+                    await asyncio.to_thread(
+                        self.index.upsert, vectors=batch, namespace=namespace
+                    )
+                    logger.debug(
+                        f"Upserted batch to namespace '{namespace}': {len(batch)} vectors"
+                    )
+                else:
+                    await asyncio.to_thread(self.index.upsert, vectors=batch)
+                    logger.debug(
+                        f"Upserted batch to default namespace: {len(batch)} vectors"
+                    )
 
                 logger.debug(
                     f"Upserted batch {i//batch_size + 1}: {len(batch)} vectors"
@@ -708,13 +726,14 @@ class PineconeVectorService:
             # Prepare search filters
             search_filter = self._build_search_filter(query)
 
-            # Perform vector search
+            # Perform vector search with namespace
             search_results = await asyncio.to_thread(
                 self.index.query,
                 vector=query_embedding,
                 top_k=query.top_k,
                 include_metadata=query.include_metadata,
                 filter=search_filter,
+                namespace=query.namespace,  # Use institution-specific namespace
             )
 
             # Process and format results

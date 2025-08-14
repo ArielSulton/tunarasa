@@ -1,16 +1,6 @@
 import { pgTable, text, timestamp, integer, boolean, varchar, serial, index, jsonb, uuid } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 
-// Genders Table
-export const genders = pgTable(
-  'genders',
-  {
-    genderId: serial('gender_id').primaryKey(),
-    genderName: varchar('gender_name', { length: 50 }).notNull().unique(),
-  },
-  (table) => [index('genders_gender_name_idx').on(table.genderName)],
-).enableRLS()
-
 // Roles Table with enhanced admin role support
 export const roles = pgTable(
   'roles',
@@ -40,7 +30,6 @@ export const users = pgTable(
     roleId: integer('role_id')
       .references(() => roles.roleId)
       .default(3), // Default to regular user role
-    genderId: integer('gender_id').references(() => genders.genderId),
     isActive: boolean('is_active').notNull().default(true),
     lastSignInAt: timestamp('last_sign_in_at'),
     emailVerified: boolean('email_verified').notNull().default(false),
@@ -57,7 +46,6 @@ export const users = pgTable(
     index('users_supabase_user_id_idx').on(table.supabaseUserId),
     index('users_email_idx').on(table.email),
     index('users_role_id_idx').on(table.roleId),
-    index('users_gender_id_idx').on(table.genderId),
     index('users_is_active_idx').on(table.isActive),
     index('users_created_at_idx').on(table.createdAt),
     index('users_invited_by_idx').on(table.invitedBy),
@@ -124,6 +112,8 @@ export const conversations = pgTable(
     ipAddress: varchar('ip_address', { length: 45 }),
     // Service mode: 'full_llm_bot' or 'bot_with_admin_validation'
     serviceMode: varchar('service_mode', { length: 50 }).notNull().default('full_llm_bot'),
+    // Institution context for RAG system
+    institutionId: integer('institution_id').references(() => institutions.institutionId),
     // For human CS support mode
     assignedAdminId: integer('assigned_admin_id').references(() => users.userId),
     status: varchar('status', { length: 20 }).notNull().default('active'), // 'active', 'waiting', 'in_progress', 'resolved'
@@ -137,6 +127,7 @@ export const conversations = pgTable(
     index('conversations_session_id_idx').on(table.sessionId),
     index('conversations_is_active_idx').on(table.isActive),
     index('conversations_service_mode_idx').on(table.serviceMode),
+    index('conversations_institution_id_idx').on(table.institutionId),
     index('conversations_assigned_admin_id_idx').on(table.assignedAdminId),
     index('conversations_status_idx').on(table.status),
     index('conversations_last_message_at_idx').on(table.lastMessageAt),
@@ -213,6 +204,8 @@ export const qaLogs = pgTable(
     evaluationScore: integer('evaluation_score'), // 0-100 for LLM evaluation
     // Service mode tracking
     serviceMode: varchar('service_mode', { length: 50 }).notNull().default('full_llm_bot'),
+    // Institution context for RAG system
+    institutionId: integer('institution_id').references(() => institutions.institutionId),
     respondedBy: varchar('responded_by', { length: 20 }).notNull().default('llm'), // 'llm', 'admin'
     adminId: integer('admin_id').references(() => users.userId), // If responded by admin
     llmRecommendationUsed: boolean('llm_recommendation_used').default(false),
@@ -221,6 +214,7 @@ export const qaLogs = pgTable(
   (table) => [
     index('qa_logs_conversation_id_idx').on(table.conversationId),
     index('qa_logs_service_mode_idx').on(table.serviceMode),
+    index('qa_logs_institution_id_idx').on(table.institutionId),
     index('qa_logs_responded_by_idx').on(table.respondedBy),
     index('qa_logs_admin_id_idx').on(table.adminId),
     index('qa_logs_created_at_idx').on(table.createdAt),
@@ -247,6 +241,71 @@ export const appSettings = pgTable(
     index('app_settings_setting_key_idx').on(table.settingKey),
     index('app_settings_is_public_idx').on(table.isPublic),
     index('app_settings_updated_at_idx').on(table.updatedAt),
+  ],
+).enableRLS()
+
+// Institutions Table - For managing different government agencies/organizations
+export const institutions = pgTable(
+  'institutions',
+  {
+    institutionId: serial('institution_id').primaryKey(),
+    name: varchar('name', { length: 255 }).notNull(),
+    slug: varchar('slug', { length: 100 }).notNull().unique(),
+    description: text('description'),
+    logoUrl: text('logo_url'),
+    contactInfo: jsonb('contact_info')
+      .$type<{
+        phone?: string
+        email?: string
+        address?: string
+        website?: string
+      }>()
+      .default({}),
+    isActive: boolean('is_active').notNull().default(true),
+    createdBy: integer('created_by')
+      .notNull()
+      .references(() => users.userId),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('institutions_slug_idx').on(table.slug),
+    index('institutions_is_active_idx').on(table.isActive),
+    index('institutions_created_by_idx').on(table.createdBy),
+    index('institutions_created_at_idx').on(table.createdAt),
+  ],
+).enableRLS()
+
+// RAG Files Table - For managing PDF/TXT files associated with institutions
+export const ragFiles = pgTable(
+  'rag_files',
+  {
+    ragFileId: serial('rag_file_id').primaryKey(),
+    institutionId: integer('institution_id')
+      .notNull()
+      .references(() => institutions.institutionId, { onDelete: 'cascade' }),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    fileType: varchar('file_type', { length: 10 }).notNull(), // 'pdf' or 'txt'
+    filePath: text('file_path').notNull(),
+    fileSize: integer('file_size'), // in bytes
+    description: text('description'),
+    processingStatus: varchar('processing_status', { length: 20 }).notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
+    pineconeNamespace: varchar('pinecone_namespace', { length: 100 }),
+    isActive: boolean('is_active').notNull().default(true),
+    createdBy: integer('created_by')
+      .notNull()
+      .references(() => users.userId),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('rag_files_institution_id_idx').on(table.institutionId),
+    index('rag_files_file_type_idx').on(table.fileType),
+    index('rag_files_processing_status_idx').on(table.processingStatus),
+    index('rag_files_pinecone_namespace_idx').on(table.pineconeNamespace),
+    index('rag_files_is_active_idx').on(table.isActive),
+    index('rag_files_created_by_idx').on(table.createdBy),
+    index('rag_files_created_at_idx').on(table.createdAt),
   ],
 ).enableRLS()
 
@@ -323,10 +382,6 @@ export const userRelations = relations(users, ({ one, many }) => ({
     fields: [users.roleId],
     references: [roles.roleId],
   }),
-  gender: one(genders, {
-    fields: [users.genderId],
-    references: [genders.genderId],
-  }),
   invitedByUser: one(users, {
     fields: [users.invitedBy],
     references: [users.userId],
@@ -349,13 +404,12 @@ export const userRelations = relations(users, ({ one, many }) => ({
   adminQaLogsResponded: many(qaLogs, {
     relationName: 'adminQaLogs',
   }),
+  // Institution management relations (admin-only)
+  createdInstitutions: many(institutions),
+  createdRagFiles: many(ragFiles),
 }))
 
 export const roleRelations = relations(roles, ({ many }) => ({
-  users: many(users),
-}))
-
-export const genderRelations = relations(genders, ({ many }) => ({
   users: many(users),
 }))
 
@@ -376,6 +430,10 @@ export const userSyncLogRelations = relations(userSyncLog, ({ one }) => ({
 
 export const conversationRelations = relations(conversations, ({ one, many }) => ({
   // No user relation - conversations are anonymous now
+  institution: one(institutions, {
+    fields: [conversations.institutionId],
+    references: [institutions.institutionId],
+  }),
   assignedAdmin: one(users, {
     fields: [conversations.assignedAdminId],
     references: [users.userId],
@@ -421,6 +479,10 @@ export const qaLogRelations = relations(qaLogs, ({ one }) => ({
     fields: [qaLogs.conversationId],
     references: [conversations.conversationId],
   }),
+  institution: one(institutions, {
+    fields: [qaLogs.institutionId],
+    references: [institutions.institutionId],
+  }),
   admin: one(users, {
     fields: [qaLogs.adminId],
     references: [users.userId],
@@ -431,6 +493,27 @@ export const qaLogRelations = relations(qaLogs, ({ one }) => ({
 export const appSettingsRelations = relations(appSettings, ({ one }) => ({
   updatedByUser: one(users, {
     fields: [appSettings.updatedBy],
+    references: [users.userId],
+  }),
+}))
+
+export const institutionRelations = relations(institutions, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [institutions.createdBy],
+    references: [users.userId],
+  }),
+  ragFiles: many(ragFiles),
+  conversations: many(conversations),
+  qaLogs: many(qaLogs),
+}))
+
+export const ragFileRelations = relations(ragFiles, ({ one }) => ({
+  institution: one(institutions, {
+    fields: [ragFiles.institutionId],
+    references: [institutions.institutionId],
+  }),
+  createdByUser: one(users, {
+    fields: [ragFiles.createdBy],
     references: [users.userId],
   }),
 }))
@@ -463,8 +546,6 @@ export type Note = typeof notes.$inferSelect
 export type NewNote = typeof notes.$inferInsert
 export type Role = typeof roles.$inferSelect
 export type NewRole = typeof roles.$inferInsert
-export type Gender = typeof genders.$inferSelect
-export type NewGender = typeof genders.$inferInsert
 export type AdminInvitation = typeof adminInvitations.$inferSelect
 export type NewAdminInvitation = typeof adminInvitations.$inferInsert
 export type UserSyncLog = typeof userSyncLog.$inferSelect
@@ -475,6 +556,10 @@ export type AppSetting = typeof appSettings.$inferSelect
 export type NewAppSetting = typeof appSettings.$inferInsert
 export type AdminQueue = typeof adminQueue.$inferSelect
 export type NewAdminQueue = typeof adminQueue.$inferInsert
+export type Institution = typeof institutions.$inferSelect
+export type NewInstitution = typeof institutions.$inferInsert
+export type RagFile = typeof ragFiles.$inferSelect
+export type NewRagFile = typeof ragFiles.$inferInsert
 
 // Enum types for better type safety
 export type UserRole = 'superadmin' | 'admin' | 'user'
@@ -490,6 +575,8 @@ export type Priority = 'low' | 'normal' | 'high' | 'urgent'
 export type InputMethod = 'text' | 'speech' | 'gesture'
 export type QueueStatus = 'waiting' | 'assigned' | 'in_progress' | 'resolved'
 export type SettingType = 'string' | 'number' | 'boolean' | 'json'
+export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed'
+export type FileType = 'pdf' | 'txt'
 
 // ========================================
 // DATABASE TRIGGERS & FUNCTIONS
@@ -650,33 +737,6 @@ export const rolesPolicies = sql`
     
   -- Admins can manage roles
   CREATE POLICY "Admins can manage roles" ON public.roles
-    FOR ALL USING (
-      EXISTS (
-        SELECT 1 FROM public.users u
-        WHERE u.supabase_user_id = auth.uid()
-        AND u.role_id IN (1, 2)
-        AND u.is_active = true
-      )
-    );
-`
-
-// Policies for genders table (public read access)
-export const gendersPolicies = sql`
-  -- Drop existing policies
-  DROP POLICY IF EXISTS "Anyone can read genders" ON public.genders;
-  DROP POLICY IF EXISTS "Service role can manage genders" ON public.genders;
-  DROP POLICY IF EXISTS "Admins can manage genders" ON public.genders;
-  
-  -- Public read access for genders
-  CREATE POLICY "Anyone can read genders" ON public.genders
-    FOR SELECT USING (true);
-    
-  -- Service role can manage all genders
-  CREATE POLICY "Service role can manage genders" ON public.genders
-    FOR ALL USING (auth.role() = 'service_role');
-    
-  -- Admins can manage genders
-  CREATE POLICY "Admins can manage genders" ON public.genders
     FOR ALL USING (
       EXISTS (
         SELECT 1 FROM public.users u
@@ -983,6 +1043,57 @@ export const adminQueuePolicies = sql`
     );
 `
 
+// Policies for institutions table
+export const institutionsPolicies = sql`
+  -- Drop existing policies
+  DROP POLICY IF EXISTS "Service role can manage institutions" ON public.institutions;
+  DROP POLICY IF EXISTS "Anyone can read active institutions" ON public.institutions;
+  DROP POLICY IF EXISTS "Admins can manage institutions" ON public.institutions;
+  
+  -- Service role has full access
+  CREATE POLICY "Service role can manage institutions" ON public.institutions
+    FOR ALL USING (auth.role() = 'service_role');
+  
+  -- Anyone can read active institutions (for public listing)
+  CREATE POLICY "Anyone can read active institutions" ON public.institutions
+    FOR SELECT USING (is_active = true);
+  
+  -- Admins can manage all institutions
+  CREATE POLICY "Admins can manage institutions" ON public.institutions
+    FOR ALL 
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.users u
+        WHERE u.supabase_user_id = auth.uid()
+        AND u.role_id IN (1, 2)
+        AND u.is_active = true
+      )
+    );
+`
+
+// Policies for rag_files table
+export const ragFilesPolicies = sql`
+  -- Drop existing policies
+  DROP POLICY IF EXISTS "Service role can manage rag_files" ON public.rag_files;
+  DROP POLICY IF EXISTS "Admins can manage rag_files" ON public.rag_files;
+  
+  -- Service role has full access
+  CREATE POLICY "Service role can manage rag_files" ON public.rag_files
+    FOR ALL USING (auth.role() = 'service_role');
+  
+  -- Admins can manage all RAG files
+  CREATE POLICY "Admins can manage rag_files" ON public.rag_files
+    FOR ALL 
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.users u
+        WHERE u.supabase_user_id = auth.uid()
+        AND u.role_id IN (1, 2)
+        AND u.is_active = true
+      )
+    );
+`
+
 // Master policy application function
 export const applyAllRLSPolicies = sql`
   -- Apply all RLS policies in correct order
@@ -990,7 +1101,6 @@ export const applyAllRLSPolicies = sql`
   
   -- Apply reference table policies first
   ${rolesPolicies};
-  ${gendersPolicies};
   
   -- Apply core user management policies
   ${usersPolicies};
@@ -1004,6 +1114,10 @@ export const applyAllRLSPolicies = sql`
   ${notesPolicies};
   ${appSettingsPolicies};
   ${adminQueuePolicies};
+  
+  -- Apply new institution and RAG file policies
+  ${institutionsPolicies};
+  ${ragFilesPolicies};
   
   SELECT 'RLS policies applied successfully!';
 `

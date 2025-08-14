@@ -84,7 +84,7 @@ async def close_database():
 
 
 class DatabaseManager:
-    """Database manager for the new 6-table schema"""
+    """Database manager for the new 5-table schema"""
 
     def __init__(self):
         self.session = None
@@ -98,7 +98,7 @@ class DatabaseManager:
         await close_database()
 
     async def create_tables(self):
-        """Create tables based on new schema"""
+        """Create tables based on 5-table schema"""
         if not engine:
             await init_database()
 
@@ -126,7 +126,7 @@ class DatabaseManager:
                 return {
                     "status": "healthy",
                     "database": "connected",
-                    "schema": "6-table schema (users, conversations, messages, notes, roles, genders)",
+                    "schema": "5-table schema (users, conversations, messages, notes, roles)",
                 }
 
         except Exception as e:

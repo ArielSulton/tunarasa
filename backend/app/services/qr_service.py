@@ -136,7 +136,7 @@ class QRCodeService:
             logger.error(f"Failed to generate QR code for note {note_id}: {e}")
             raise
 
-    def _create_qr_code(self, data: str, size: int = 200) -> str:
+    def _create_qr_code(self, data: str, size: int = 300) -> str:
         """
         Create QR code image and return as base64 string
 

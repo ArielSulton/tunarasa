@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { users, roles, userSyncLog } from '@/lib/db/schema'
 import { desc } from 'drizzle-orm'
-import { seedDefaultRoles } from '@/lib/db/seed-roles'
+import { initializeDefaultRoles } from '@/lib/services/role-management'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'seed_roles':
-        await seedDefaultRoles()
+        await initializeDefaultRoles()
         return NextResponse.json({
           success: true,
           message: 'Roles seeded successfully',

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Geist, Geist_Mono, Covered_By_Your_Grace } from 'next/font/google'
 import AuthProvider from '@/components/auth/AuthProvider'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
@@ -13,6 +13,12 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
+  subsets: ['latin'],
+})
+
+const coveredByYourGrace = Covered_By_Your_Grace({
+  variable: '--font-covered-by-your-grace',
+  weight: '400',
   subsets: ['latin'],
 })
 
@@ -43,7 +49,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${coveredByYourGrace.variable} antialiased`}>
         <AuthProvider>
           <div className="flex min-h-screen flex-col">
             <Navbar />

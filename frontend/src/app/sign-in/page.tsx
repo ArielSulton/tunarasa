@@ -49,8 +49,8 @@ export default function SignInPage() {
     <div className="bg-background flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
-          <CardDescription>Enter your email and password to access your account</CardDescription>
+          <CardTitle className="text-2xl font-bold">Masuk</CardTitle>
+          <CardDescription>Masukkan email dan kata sandi untuk mengakses akun Anda</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
@@ -65,7 +65,7 @@ export default function SignInPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Masukkan email Anda"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -74,11 +74,11 @@ export default function SignInPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Kata Sandi</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Masukkan kata sandi Anda"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -88,7 +88,7 @@ export default function SignInPage() {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              Masuk
             </Button>
 
             <div className="text-center text-sm">
@@ -96,14 +96,14 @@ export default function SignInPage() {
                 href="/forgot-password"
                 className="text-muted-foreground hover:text-primary underline underline-offset-4"
               >
-                Forgot your password?
+                Lupa kata sandi?
               </Link>
             </div>
 
             <div className="text-center text-sm">
-              Don&apos;t have an account?{' '}
+              Belum punya akun?{' '}
               <Link href="/sign-up" className="text-primary hover:underline">
-                Sign up
+                Daftar
               </Link>
             </div>
           </form>

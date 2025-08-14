@@ -19,6 +19,7 @@ class ResponseMetadata(BaseModel):
     request_id: Optional[str] = None
     version: str = "1.0.0"
     processing_time_ms: Optional[float] = None
+    message: Optional[str] = None
 
 
 class PaginationInfo(BaseModel):
@@ -300,7 +301,6 @@ class UserData(BaseModel):
     supabase_user_id: Optional[str] = None
     full_name: Optional[str] = None
     role: Optional[str] = None
-    gender: Optional[str] = None
     created_at: str
     updated_at: str
     conversation_count: int = 0

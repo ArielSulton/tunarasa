@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict
 
 from app.core.database import get_db_session
-from app.db.crud import ConversationCRUD, GenderCRUD, RoleCRUD, StatsCRUD, UserCRUD
+from app.db.crud import ConversationCRUD, RoleCRUD, StatsCRUD, UserCRUD
 from app.db.models import Conversation, Message
 from app.middleware.admin_validation import (
     AdminValidationSettings,
@@ -198,7 +198,6 @@ async def get_all_users(
                 "supabase_user_id": user.supabase_user_id,
                 "full_name": user.full_name,
                 "role": user.role.role_name if user.role else None,
-                "gender": user.gender.gender_name if user.gender else None,
                 "created_at": user.created_at.isoformat(),
                 "updated_at": user.updated_at.isoformat(),
                 "conversation_count": (
@@ -246,7 +245,6 @@ async def get_user_by_id(
             "supabase_user_id": user.supabase_user_id,
             "full_name": user.full_name,
             "role": user.role.role_name if user.role else None,
-            "gender": user.gender.gender_name if user.gender else None,
             "created_at": user.created_at.isoformat(),
             "updated_at": user.updated_at.isoformat(),
             "conversations": [
@@ -305,7 +303,6 @@ async def update_user(
             "supabase_user_id": updated_user.supabase_user_id,
             "full_name": updated_user.full_name,
             "role": updated_user.role.role_name if updated_user.role else None,
-            "gender": updated_user.gender.gender_name if updated_user.gender else None,
             "updated_at": updated_user.updated_at.isoformat(),
         }
 
@@ -546,31 +543,6 @@ async def get_all_roles(db: AsyncSession = Depends(get_db_session)) -> Dict[str,
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve roles",
-        )
-
-
-@router.get("/system/genders")
-async def get_all_genders(db: AsyncSession = Depends(get_db_session)) -> Dict[str, Any]:
-    """Get all available genders"""
-    try:
-        genders = await GenderCRUD.get_all(db)
-
-        genders_data = [
-            {"gender_id": gender.gender_id, "gender_name": gender.gender_name}
-            for gender in genders
-        ]
-
-        return {
-            "success": True,
-            "data": {"genders": genders_data},
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-
-    except Exception as e:
-        logger.error(f"Error getting genders: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve genders",
         )
 
 

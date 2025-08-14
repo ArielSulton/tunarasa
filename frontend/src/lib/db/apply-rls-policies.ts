@@ -76,7 +76,7 @@ async function applyRLSPolicies() {
         cmd
       FROM pg_policies 
       WHERE schemaname = 'public' 
-      AND tablename IN ('users', 'user_sync_log', 'roles', 'genders')
+      AND tablename IN ('users', 'user_sync_log', 'roles')
       ORDER BY tablename, policyname;
     `
 

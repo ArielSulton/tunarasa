@@ -24,14 +24,6 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
 
-  // Experimental features
-  experimental: {
-    // Enable server actions
-    serverActions: {
-      allowedOrigins: ['localhost:3000', 'localhost:5000', '127.0.0.1:3000', '127.0.0.1:5000'],
-    },
-  },
-
   // Generate build ID to force dynamic rendering for problematic pages
   generateBuildId: async () => {
     return 'build-' + Date.now()
@@ -83,30 +75,36 @@ const nextConfig: NextConfig = {
     ]
   },
 
-  // Webpack configuration
-  webpack: (config, { dev, isServer }) => {
-    // Fix source map issues in development
-    if (dev && !isServer) {
-      config.devtool = 'cheap-module-source-map'
-    }
+  // Experimental features
+  experimental: {
+    // Enable server actions
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'localhost:5000', '127.0.0.1:3000', '127.0.0.1:5000'],
+    },
+  },
 
-    // Handle Node.js modules that aren't available in browser environment
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        crypto: false,
-        stream: false,
-        util: false,
-        url: false,
-        zlib: false,
-        http: false,
-        https: false,
-        assert: false,
-        os: false,
-        path: false,
+  // Webpack configuration (for production builds)
+  webpack: (config, { dev, isServer }) => {
+    // Only apply webpack config for production builds
+    if (!dev) {
+      // Handle Node.js modules that aren't available in browser environment
+      if (!isServer) {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          fs: false,
+          net: false,
+          tls: false,
+          crypto: false,
+          stream: false,
+          util: false,
+          url: false,
+          zlib: false,
+          http: false,
+          https: false,
+          assert: false,
+          os: false,
+          path: false,
+        }
       }
     }
 

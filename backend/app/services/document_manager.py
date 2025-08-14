@@ -13,11 +13,13 @@ from typing import Any, Dict, List, Optional
 
 from app.services.langchain_service import get_langchain_service
 from app.services.pinecone_service import (
+    DocumentMetadata,
     DocumentType,
     ProcessingStatus,
     SearchQuery,
     get_pinecone_service,
 )
+from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,8 @@ class DocumentManager:
         author: Optional[str] = None,
         topics: Optional[List[str]] = None,
         language: str = "id",
+        institution_id: Optional[int] = None,
+        institution_slug: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Add a new document to the knowledge base"""
 
@@ -64,10 +68,95 @@ class DocumentManager:
             if topics:
                 metadata["topics"] = topics
 
-            # Ingest into Pinecone
-            doc_metadata = await self.pinecone_service.ingest_document(
-                file_path=file_path, metadata=metadata
-            )
+            # Add institution metadata for tracking
+            if institution_id:
+                metadata["institution_id"] = institution_id
+            if institution_slug:
+                metadata["institution_slug"] = institution_slug
+
+            # Determine namespace based on institution
+            namespace = None
+            if institution_slug:
+                # Generate namespace based on institution slug (matching search format)
+                namespace = f"institution_{institution_slug}"
+                logger.info(
+                    f"🏢 [DocumentManager] Uploading document to namespace: {namespace}"
+                )
+            else:
+                logger.info(
+                    "🏢 [DocumentManager] Uploading document to default namespace"
+                )
+
+            # Clean metadata to prevent null value errors in Pinecone
+            clean_metadata = {}
+            for key, value in metadata.items():
+                if value is not None:
+                    clean_metadata[key] = value
+                else:
+                    # Provide default values for required fields
+                    if key == "author":
+                        clean_metadata[key] = institution_slug or "System"
+                    elif key == "description":
+                        clean_metadata[key] = (
+                            f"Document uploaded for {institution_slug or 'general'} institution"
+                        )
+                    elif key == "title":
+                        clean_metadata[key] = title or "Uploaded Document"
+                    else:
+                        clean_metadata[key] = ""
+
+            # Ingest into Pinecone with namespace and clean metadata
+            try:
+                doc_metadata = await self.pinecone_service.ingest_document(
+                    file_path=file_path, metadata=clean_metadata, namespace=namespace
+                )
+                logger.info(
+                    f"✅ [DocumentManager] Successfully uploaded to Pinecone: {doc_metadata.document_id}"
+                )
+                # Successfully uploaded to Pinecone
+
+                # Update database status to completed after successful Pinecone upload
+                await self._update_rag_file_status(
+                    file_path=file_path,
+                    status="completed",
+                    pinecone_namespace=namespace,
+                    processing_error=None,
+                )
+
+            except Exception as pinecone_error:
+                logger.error(
+                    f"❌ [DocumentManager] Pinecone upload failed: {pinecone_error}"
+                )
+
+                # Update database status to failed with error details
+                await self._update_rag_file_status(
+                    file_path=file_path,
+                    status="failed",
+                    pinecone_namespace=namespace,
+                    processing_error=str(pinecone_error),
+                )
+
+                # Continue without failing the entire upload process
+                # Create a minimal DocumentMetadata for local processing
+                import os
+                import uuid
+                from datetime import datetime
+
+                doc_metadata = DocumentMetadata(
+                    document_id=str(uuid.uuid4()),
+                    filename=os.path.basename(file_path),
+                    upload_timestamp=datetime.utcnow(),
+                    processing_status=ProcessingStatus.FAILED,
+                    document_type=DocumentType.PDF,
+                    language=clean_metadata.get("language", "id"),
+                    file_size=os.path.getsize(file_path),
+                    chunk_count=0,
+                    processing_time=0.0,
+                    metadata=clean_metadata,
+                )
+                logger.warning(
+                    "⚠️ [DocumentManager] Continuing with local processing only"
+                )
 
             # Also add to LangChain vector store for compatibility
             try:
@@ -96,6 +185,68 @@ class DocumentManager:
                 "message": "Failed to add document",
             }
 
+    async def _update_rag_file_status(
+        self,
+        file_path: str,
+        status: str,
+        pinecone_namespace: Optional[str] = None,
+        processing_error: Optional[str] = None,
+    ):
+        """Update RAG file status in database after Pinecone operation"""
+        try:
+            import os
+            from datetime import datetime
+
+            from app.core.database import get_db_session
+            from app.db.models import RagFile
+            from sqlalchemy import select, update
+
+            # Extract filename from path for database lookup
+            filename = os.path.basename(file_path)
+
+            async with get_db_session() as db:
+                # Find RAG file by filename
+                query = select(RagFile).where(RagFile.file_name == filename)
+                result = await db.execute(query)
+                rag_file = result.scalars().first()
+
+                if rag_file:
+                    # Update status and related fields
+                    update_data = {
+                        "processing_status": status,
+                        "updated_at": datetime.utcnow(),
+                    }
+
+                    if pinecone_namespace:
+                        update_data["pinecone_namespace"] = pinecone_namespace
+
+                    if processing_error:
+                        # Note: processing_error column may not exist in schema
+                        # Only update if column exists
+                        update_data["processing_error"] = processing_error
+
+                    # Perform update
+                    update_query = (
+                        update(RagFile)
+                        .where(RagFile.rag_file_id == rag_file.rag_file_id)
+                        .values(**update_data)
+                    )
+
+                    await db.execute(update_query)
+                    await db.commit()
+
+                    logger.info(
+                        f"📝 [DocumentManager] Updated RAG file status: {filename} → {status}"
+                    )
+                else:
+                    logger.warning(
+                        f"⚠️ [DocumentManager] RAG file not found in database: {filename}"
+                    )
+
+        except Exception as e:
+            logger.error(f"❌ [DocumentManager] Failed to update RAG file status: {e}")
+            # Don't raise exception - this is a non-critical operation
+
     async def search_documents(
         self,
         query: str,
@@ -104,6 +255,8 @@ class DocumentManager:
         similarity_threshold: float = 0.7,
         document_types: Optional[List[str]] = None,
         topics: Optional[List[str]] = None,
+        institution_id: Optional[int] = None,
+        institution_slug: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Search documents using vector similarity"""
 
@@ -120,6 +273,13 @@ class DocumentManager:
                 topic_filter = {"topics": {"$in": topics}}
                 metadata_filter = topic_filter
 
+            # Determine namespace based on institution
+            namespace = None
+            if institution_slug:
+                # Generate namespace based on institution slug (matching frontend format)
+                namespace = f"institution_{institution_slug}"
+                logger.info(f"🏢 [DocumentManager] Using namespace: {namespace}")
+
             # Create search query
             search_query = SearchQuery(
                 query_text=query,
@@ -128,6 +288,7 @@ class DocumentManager:
                 language=language,
                 document_types=doc_types,
                 metadata_filter=metadata_filter,
+                namespace=namespace,
             )
 
             # Perform search
@@ -404,6 +565,8 @@ class DocumentManager:
         language: str = "id",
         max_docs: int = 3,
         similarity_threshold: float = 0.7,
+        institution_id: Optional[int] = None,
+        institution_slug: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Search for documents and generate an answer using LangChain"""
 
@@ -412,9 +575,21 @@ class DocumentManager:
             if not self.pinecone_service:
                 # Use text-based fallback search in local documents
                 fallback_answer = await self._search_local_documents(
-                    question, session_id, language
+                    question,
+                    session_id,
+                    language,
+                    institution_id=institution_id,
+                    institution_slug=institution_slug,
                 )
                 return fallback_answer
+
+            # Log institution-specific search
+            if institution_slug:
+                logger.info(
+                    f"🏢 [DocumentManager] Searching in institution-specific namespace for: {institution_slug}"
+                )
+            else:
+                logger.info("🏢 [DocumentManager] Using default namespace for search")
 
             # First, search for relevant documents
             search_result = await self.search_documents(
@@ -422,6 +597,8 @@ class DocumentManager:
                 language=language,
                 max_results=max_docs,
                 similarity_threshold=similarity_threshold,
+                institution_id=institution_id,
+                institution_slug=institution_slug,
             )
 
             if not search_result["success"] or not search_result["results"]:
@@ -430,7 +607,11 @@ class DocumentManager:
                     f"Vector search found no results, trying local document search for: {question}"
                 )
                 fallback_answer = await self._search_local_documents(
-                    question, session_id, language
+                    question,
+                    session_id,
+                    language,
+                    institution_id=institution_id,
+                    institution_slug=institution_slug,
                 )
                 return fallback_answer
 
@@ -442,11 +623,44 @@ class DocumentManager:
                         hasattr(self.langchain_service, "llm")
                         and self.langchain_service.llm
                     ):
-                        # Create a simple chat prompt
-                        prompt = f"Please answer this question: {question}"
+                        # Create proper Indonesian system prompt with context
+                        # Get context from search results
+                        context = "\n".join(
+                            [
+                                f"Dokumen: {result.get('title', 'Unknown')}\n"
+                                f"Konten: {result['content'][:500]}..."
+                                for result in search_result["results"][:3]
+                            ]
+                        )
 
-                        # Use the Groq LLM directly
-                        response = await self.langchain_service.llm.ainvoke(prompt)
+                        messages = [
+                            SystemMessage(
+                                content=f"""Anda adalah asisten layanan pemerintah Indonesia yang profesional dan membantu.
+Berikan informasi yang akurat dan komprehensif berdasarkan konteks dokumen yang tersedia.
+Gunakan bahasa Indonesia yang baik dan benar dalam seluruh respons Anda.
+
+PENTING: WAJIB SELALU jawab dalam bahasa Indonesia yang baik dan benar.
+
+Konteks dokumen yang relevan:
+{context}
+
+Instruksi:
+1. Gunakan konteks yang diberikan untuk menjawab pertanyaan dengan akurat
+2. Jika informasi tidak tersedia dalam konteks, nyatakan dengan jelas
+3. Berikan respons yang informatif dan membantu
+4. Selalu gunakan bahasa Indonesia"""
+                            ),
+                            HumanMessage(content=f"Pertanyaan: {question}"),
+                        ]
+
+                        # Use the Groq LLM with proper messages
+                        logger.info(
+                            f"🤖 [DEBUG] Calling LLM with {len(messages)} messages for question: {question[:50]}..."
+                        )
+                        response = await self.langchain_service.llm.ainvoke(messages)
+                        logger.info(
+                            f"✅ [DEBUG] LLM response received: {len(response.content) if hasattr(response, 'content') else 'No content'} chars"
+                        )
 
                         qa_response = {
                             "answer": (
@@ -457,8 +671,8 @@ class DocumentManager:
                             "confidence": 0.8,
                             "processing_time": 0.5,
                             "follow_up_suggestions": [
-                                "Can you tell me more?",
-                                "What else would you like to know?",
+                                "Bisakah Anda jelaskan lebih detail?",
+                                "Apakah ada hal lain yang ingin Anda ketahui?",
                             ],
                         }
                     else:
@@ -467,15 +681,18 @@ class DocumentManager:
                     logger.error(f"LangChain service failed: {llm_error}")
                     # Fallback to basic response
                     qa_response = {
-                        "answer": f"I understand you're asking about '{question}'. I'm currently operating with limited capabilities, but I'm here to help with general information and assistance.",
+                        "answer": f"Saya memahami Anda bertanya tentang '{question}'. Saat ini saya beroperasi dengan kemampuan terbatas, namun saya di sini untuk membantu dengan informasi umum.",
                         "confidence": 0.5,
                         "processing_time": 0.1,
-                        "follow_up_suggestions": [],
+                        "follow_up_suggestions": [
+                            "Bisakah Anda coba pertanyaan yang lebih spesifik?",
+                            "Apakah ada hal lain yang bisa saya bantu?",
+                        ],
                     }
             else:
                 # No LangChain service available
                 qa_response = {
-                    "answer": f"I understand you're asking about '{question}'. The AI service is currently unavailable, but I'm here to help in any way I can.",
+                    "answer": f"Saya memahami Anda bertanya tentang '{question}'. Layanan AI sedang tidak tersedia, namun saya tetap di sini untuk membantu semampu saya.",
                     "confidence": 0.3,
                     "processing_time": 0.1,
                     "follow_up_suggestions": [],
@@ -503,17 +720,97 @@ class DocumentManager:
             }
 
     async def _search_local_documents(
-        self, question: str, session_id: str, language: str = "id"
+        self,
+        question: str,
+        session_id: str,
+        language: str = "id",
+        institution_id: int = None,
+        institution_slug: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Search through local documents when Pinecone is unavailable"""
 
         try:
-            # Path to local document
+            # Default to Dukcapil institution document
             document_path = (
                 Path(__file__).parent.parent.parent
                 / "documents"
                 / "buku-saku-dukcapil-yogya.txt"
             )
+
+            institution_name = "Dukcapil"
+
+            # Support for institution-specific documents (prefer slug if available)
+            if institution_slug or institution_id:
+                try:
+                    from app.core.database import get_db_session
+                    from app.db.models import Institution, RagFile
+                    from sqlalchemy import and_, select
+
+                    async with get_db_session() as db:
+                        # Build base query for active institution and completed active RAG file
+                        base_query = (
+                            select(Institution, RagFile)
+                            .join(
+                                RagFile,
+                                Institution.institution_id == RagFile.institution_id,
+                            )
+                            .where(
+                                and_(
+                                    Institution.is_active,
+                                    RagFile.is_active,
+                                    RagFile.processing_status.in_(
+                                        ["completed", "pending"]
+                                    ),
+                                )
+                            )
+                            .limit(1)
+                        )
+
+                        if institution_slug:
+                            # Try by slug first
+                            from sqlalchemy import and_ as _and
+
+                            query = base_query.where(
+                                _and(Institution.slug == institution_slug)
+                            )
+                            result = await db.execute(query)
+                        else:
+                            # Fallback to ID lookup
+                            result = await db.execute(
+                                base_query.where(
+                                    Institution.institution_id == institution_id
+                                )
+                            )
+                        row = result.first()
+
+                        if row:
+                            institution, rag_file = row
+                            # Fix file path prefix - add /app prefix if path starts with /uploads
+                            file_path = rag_file.file_path
+                            if file_path.startswith("/uploads/"):
+                                file_path = f"/app{file_path}"
+                            elif not file_path.startswith(
+                                "/"
+                            ) and not file_path.startswith("documents/"):
+                                # Relative path, assume it's in documents directory
+                                file_path = f"/app/documents/{file_path}"
+                            elif file_path.startswith("documents/"):
+                                # Handle documents/ prefix
+                                file_path = f"/app/{file_path}"
+
+                            document_path = Path(file_path)
+                            institution_name = institution.name
+                            logger.info(
+                                f"Using institution-specific document: {rag_file.file_name} at {file_path}"
+                            )
+                        else:
+                            logger.warning(
+                                f"No active RAG files found for institution slug={institution_slug} id={institution_id}, using default"
+                            )
+                except Exception as e:
+                    logger.warning(
+                        f"Error looking up institution RAG files: {e}, using default"
+                    )
 
             if not document_path.exists():
                 logger.warning(f"Local document not found: {document_path}")
@@ -539,7 +836,7 @@ class DocumentManager:
                     # Create prompt with relevant sections
                     context = "\n\n".join(relevant_sections)
                     prompt = self._create_local_search_prompt(
-                        question, context, language
+                        question, context, language, institution_name
                     )
 
                     # Use the Groq LLM directly
@@ -557,7 +854,7 @@ class DocumentManager:
                         "confidence": 0.8,
                         "sources": [
                             {
-                                "title": "Buku Saku Dukcapil Yogya",
+                                "title": f"Buku Saku {institution_name} Yogya",
                                 "content": context[:200] + "...",
                             }
                         ],
@@ -584,7 +881,7 @@ class DocumentManager:
                     "confidence": 0.6,
                     "sources": [
                         {
-                            "title": "Buku Saku Dukcapil Yogya",
+                            "title": f"Buku Saku {institution_name} Yogya",
                             "content": relevant_sections[0][:200] + "...",
                         }
                     ],
@@ -691,14 +988,18 @@ class DocumentManager:
         return score
 
     def _create_local_search_prompt(
-        self, question: str, context: str, language: str
+        self,
+        question: str,
+        context: str,
+        language: str,
+        institution_name: str = "Dukcapil",
     ) -> str:
         """Create prompt for LLM using local document context"""
 
         if language == "id":
             return f"""Anda adalah asisten layanan pemerintah Indonesia yang sangat membantu. WAJIB menjawab SELALU dalam bahasa Indonesia yang baik dan benar.
 
-Berdasarkan informasi dari dokumen Dukcapil berikut, jawab pertanyaan dengan akurat dan informatif:
+Berdasarkan informasi dari dokumen {institution_name} berikut, jawab pertanyaan dengan akurat dan informatif:
 
 KONTEKS DOKUMEN:
 {context}
@@ -724,12 +1025,16 @@ QUESTION: {question}
 ANSWER: Provide a complete answer based on the available information in the document. If specific information is not available, state this clearly and provide related information that might be helpful."""
 
     def _generate_simple_answer(
-        self, question: str, sections: List[str], language: str
+        self,
+        question: str,
+        sections: List[str],
+        language: str,
+        institution_name: str = "Dukcapil",
     ) -> str:
         """Generate simple answer from relevant sections"""
 
         if language == "id":
-            intro = f"Berdasarkan dokumen Dukcapil, berikut informasi terkait pertanyaan Anda tentang '{question}':\n\n"
+            intro = f"Berdasarkan dokumen {institution_name}, berikut informasi terkait pertanyaan Anda tentang '{question}':\n\n"
         else:
             intro = f"Based on the Dukcapil document, here is information related to your question about '{question}':\n\n"
 

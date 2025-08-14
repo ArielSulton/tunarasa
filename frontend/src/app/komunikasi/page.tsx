@@ -340,7 +340,7 @@ function UserKomunikasiPage() {
 
     return serviceMode === 'full_llm_bot'
       ? { text: 'AI Bot', color: 'bg-blue-100 text-blue-800' }
-      : { text: 'Human Support', color: 'bg-green-100 text-green-800' }
+      : { text: 'Dukungan Manusia', color: 'bg-green-100 text-green-800' }
   }
 
   const serviceModeDisplay = getServiceModeDisplay()
@@ -353,7 +353,7 @@ function UserKomunikasiPage() {
             <div className="mb-4 flex items-center justify-center gap-2">
               <h1 className="text-3xl font-bold text-gray-900">
                 Berkomunikasi{' '}
-                <span className="text-blue-600" style={{ fontFamily: 'cursive' }}>
+                <span className="text-blue-600" style={{ fontFamily: 'var(--font-covered-by-your-grace)' }}>
                   tanpa
                 </span>{' '}
                 hambatan
@@ -632,7 +632,7 @@ function UserKomunikasiPage() {
                         {serviceModeLoading ? (
                           <div className="flex items-center gap-1">
                             <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></div>
-                            Loading...
+                            Memuat...
                           </div>
                         ) : serviceMode === 'full_llm_bot' ? (
                           <>
@@ -640,7 +640,7 @@ function UserKomunikasiPage() {
                           </>
                         ) : (
                           <>
-                            <Users className="h-3 w-3" /> Human Support
+                            <Users className="h-3 w-3" /> Dukungan Manusia
                           </>
                         )}
                       </span>
@@ -710,9 +710,25 @@ function UserKomunikasiPage() {
 export default function Komunikasi() {
   const { role } = useUserRole()
 
-  // Admin gets the admin panel as their main page
-  if (role === 'admin' || role === 'superadmin') {
+  // Only admin gets the admin panel (superadmin has no access to komunikasi)
+  if (role === 'admin') {
     return <AdminConversationPanel isVisible={true} onVisibilityChange={() => {}} />
+  }
+
+  // Superadmin should not access komunikasi pages
+  if (role === 'superadmin') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">Akses Terbatas</h1>
+          <p className="mt-2 text-gray-600">SuperAdmin tidak memiliki akses ke halaman komunikasi.</p>
+          <p className="mt-1 text-sm text-gray-500">Silakan gunakan Dashboard untuk manajemen sistem.</p>
+          <a href="/dashboard" className="mt-4 inline-block rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+            Ke Dashboard
+          </a>
+        </div>
+      </div>
+    )
   }
 
   // Regular users get the user interface
