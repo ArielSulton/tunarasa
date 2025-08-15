@@ -136,6 +136,11 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# Create uploads directory with proper permissions for nextjs user
+RUN mkdir -p /app/uploads/rag-files && \
+    chown -R nextjs:bun /app/uploads && \
+    chmod -R 775 /app/uploads
+
 # Copy necessary files
 COPY --from=builder --chown=nextjs:bun /app/public ./public
 COPY --from=builder --chown=nextjs:bun /app/.next/standalone ./

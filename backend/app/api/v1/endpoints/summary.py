@@ -102,9 +102,9 @@ async def generate_conversation_summary(
             )
 
             # Calculate actual expiry date (7 days from now)
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
 
-            expires_at = datetime.utcnow() + timedelta(days=7)
+            expires_at = datetime.now(timezone.utc) + timedelta(days=7)
 
             qr_code_data = QRCodeResponse(
                 qr_code_base64=qr_result["qr_code_base64"],

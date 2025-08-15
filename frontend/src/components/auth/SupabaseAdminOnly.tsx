@@ -23,8 +23,34 @@ interface SupabaseAdminOnlyProps extends PropsWithChildren {
 /**
  * Component that only renders children if user has admin privileges
  * Replaces Clerk's role-based protection with Supabase Auth
+ * Protected version that handles auth context safely
  */
 export default function SupabaseAdminOnly({ children, minRole = 2, fallback, unauthorized }: SupabaseAdminOnlyProps) {
+  const [isClient, setIsClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      fallback ?? (
+        <div className="flex items-center justify-center p-4">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      )
+    )
+  }
+
+  return (
+    <SupabaseAdminOnlyContent minRole={minRole} fallback={fallback} unauthorized={unauthorized}>
+      {children}
+    </SupabaseAdminOnlyContent>
+  )
+}
+
+function SupabaseAdminOnlyContent({ children, minRole = 2, fallback, unauthorized }: SupabaseAdminOnlyProps) {
   const { user, loading: authLoading } = useAuth()
   const [userRole, setUserRole] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)

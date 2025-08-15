@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     public_session,
     qa_log,
     rag,
+    rag_processing,
     session,
     summary,
 )
@@ -32,6 +33,9 @@ api_router.include_router(
 
 # Keep existing functional endpoints
 api_router.include_router(rag.router, prefix="/rag", tags=["rag"])
+api_router.include_router(
+    rag_processing.router, prefix="/rag-processing", tags=["rag-processing"]
+)
 api_router.include_router(health.router, prefix="/health", tags=["health"])
 
 # Admin and gesture endpoints

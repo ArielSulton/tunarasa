@@ -4,12 +4,22 @@ import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
+// Lazy initialize Supabase admin client
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase environment variables are required')
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+}
 
 /**
  * POST /api/admin/cleanup-users
@@ -20,7 +30,7 @@ export async function POST() {
     console.log('🧹 [Cleanup Users] Starting user cleanup process...')
 
     // Get all auth users
-    const authUsersResponse = await supabaseAdmin.auth.admin.listUsers()
+    const authUsersResponse = await getSupabaseAdmin().auth.admin.listUsers()
     const authUsers = authUsersResponse.data.users
     const authUserIds = authUsers.map((u) => u.id)
 
@@ -167,7 +177,7 @@ export async function GET() {
     console.log('🔍 [Cleanup Users] Analyzing users for cleanup preview...')
 
     // Get all auth users
-    const authUsersResponse = await supabaseAdmin.auth.admin.listUsers()
+    const authUsersResponse = await getSupabaseAdmin().auth.admin.listUsers()
     const authUsers = authUsersResponse.data.users
     const authUserIds = authUsers.map((u) => u.id)
 

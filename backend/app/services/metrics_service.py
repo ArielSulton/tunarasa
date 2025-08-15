@@ -4,7 +4,7 @@ Prometheus metrics collection service for Tunarasa
 
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from app.core.config import settings
@@ -704,7 +704,7 @@ class MetricsService:
         try:
             tunarasa_deepeval_scores.labels(metric_type=metric_type).observe(score)
             # Also record LLM evaluations count
-            tunarasa_llm_evaluations_total.inc()
+            tunarasa_llm_evaluations_total.labels(category="deepeval").inc()
         except Exception as e:
             logger.error(f"Failed to record DeepEval metrics: {e}")
 
@@ -852,7 +852,7 @@ class MetricsService:
                 "gesture_accuracy": tunarasa_gesture_recognition_accuracy._value._value,
                 "ai_confidence": tunarasa_ai_response_confidence_avg._value._value,
                 "database_connections": tunarasa_database_connections_active._value._value,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         except Exception as e:
             logger.error(f"Failed to get system metrics: {e}")
@@ -949,6 +949,12 @@ class MetricsService:
                 institution_id=institution_str, source_type=data_source
             ).inc()
 
+            # Record error if operation failed
+            if not success:
+                tunarasa_faq_clustering_errors_total.labels(
+                    institution_id=institution_str, error_type="operation_failure"
+                ).inc()
+
         except Exception as e:
             logger.error(f"Failed to record FAQ clustering operation: {e}")
 
@@ -1013,7 +1019,7 @@ class MetricsService:
                     "recommendations_served": "Available in Prometheus",
                     "error_rate": "Available in Prometheus",
                 },
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         except Exception as e:
             logger.error(f"Failed to get FAQ clustering metrics summary: {e}")

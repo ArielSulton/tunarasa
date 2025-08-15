@@ -19,7 +19,7 @@ import logging
 import os
 import uuid
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -90,7 +90,7 @@ class DocumentMetadata:
         if self.topics is None:
             self.topics = []
         if self.upload_timestamp is None:
-            self.upload_timestamp = datetime.utcnow()
+            self.upload_timestamp = datetime.now(timezone.utc)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -388,12 +388,17 @@ class DocumentProcessor:
                     "upload_timestamp": document_metadata.upload_timestamp.isoformat(),
                     "version": document_metadata.version,
                     "topics": document_metadata.topics,
-                    "author": document_metadata.author,
-                    "title": document_metadata.title,
-                    "description": document_metadata.description,
                     "chunk_size": len(chunk),
                     "embedding_model": document_metadata.embedding_model,
                 }
+
+                # Add optional fields only if they have values (Pinecone doesn't accept null)
+                if document_metadata.author:
+                    chunk_metadata["author"] = document_metadata.author
+                if document_metadata.title:
+                    chunk_metadata["title"] = document_metadata.title
+                if document_metadata.description:
+                    chunk_metadata["description"] = document_metadata.description
 
                 # Create Document object
                 doc = Document(page_content=chunk, metadata=chunk_metadata)
@@ -537,7 +542,7 @@ class PineconeVectorService:
     ) -> DocumentMetadata:
         """Ingest a single document into the vector database"""
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         try:
             # Generate document ID if not provided
@@ -554,7 +559,7 @@ class PineconeVectorService:
                 file_path=file_path,
                 document_type=DocumentType.TEXT,  # Will be updated during processing
                 file_size=file_stats.st_size,
-                upload_timestamp=datetime.utcnow(),
+                upload_timestamp=datetime.now(timezone.utc),
                 processing_status=ProcessingStatus.PROCESSING,
             )
 
@@ -582,7 +587,7 @@ class PineconeVectorService:
             await self._embed_and_store_chunks(chunks, doc_metadata, namespace)
 
             # Calculate processing time
-            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
             doc_metadata.processing_time = processing_time
 
             # Cache metadata
@@ -604,7 +609,7 @@ class PineconeVectorService:
                 doc_metadata.processing_status = ProcessingStatus.FAILED
                 doc_metadata.error_message = str(e)
                 doc_metadata.processing_time = (
-                    datetime.utcnow() - start_time
+                    datetime.now(timezone.utc) - start_time
                 ).total_seconds()
 
             raise
@@ -807,7 +812,7 @@ class PineconeVectorService:
             for doc_id in document_ids:
                 if doc_id in self.document_metadata_cache:
                     metadata = self.document_metadata_cache[doc_id]
-                    metadata.last_accessed = datetime.utcnow()
+                    metadata.last_accessed = datetime.now(timezone.utc)
                     metadata.access_count += 1
 
         except Exception as e:
@@ -962,7 +967,9 @@ class PineconeVectorService:
                     document_type=DocumentType(metadata.get("document_type", "txt")),
                     file_size=0,  # Not stored in Pinecone
                     upload_timestamp=datetime.fromisoformat(
-                        metadata.get("upload_timestamp", datetime.utcnow().isoformat())
+                        metadata.get(
+                            "upload_timestamp", datetime.now(timezone.utc).isoformat()
+                        )
                     ),
                     processing_status=ProcessingStatus.COMPLETED,
                     version=metadata.get("version", 1),

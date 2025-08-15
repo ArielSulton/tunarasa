@@ -7,7 +7,7 @@ import json
 import logging
 import textwrap
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any, Dict
 
@@ -58,7 +58,7 @@ class QRCodeService:
                 "user_id": user_id,
                 "access_token": access_token,
                 "url": summary_url,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
                 "summary": {
                     "title": summary_data.get("title", "Ringkasan Percakapan"),
                     "message_count": summary_data.get("message_count", 0),
@@ -114,7 +114,7 @@ class QRCodeService:
                 "conversation_id": conversation_id,
                 "access_token": access_token,
                 "url": note_url,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
                 "preview": (
                     note_content[:100] + "..."
                     if len(note_content) > 100
@@ -217,7 +217,9 @@ class QRCodeService:
     ) -> str:
         """Create plain text summary"""
 
-        created_at = conversation_data.get("created_at", datetime.utcnow().isoformat())
+        created_at = conversation_data.get(
+            "created_at", datetime.now(timezone.utc).isoformat()
+        )
 
         text_summary = f"""
 RINGKASAN PERCAKAPAN TUNARASA
@@ -250,7 +252,7 @@ https://tunarasa.my.id
                 "ai_messages": len(
                     [m for m in messages if m.get("sender_type") == "ai"]
                 ),
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
             },
             "platform": {
                 "name": "Tunarasa",
@@ -268,7 +270,9 @@ https://tunarasa.my.id
 
         # Extract title and created_at from the conversation_data
         title = conversation_data.get("title", "Ringkasan Percakapan")
-        created_at = conversation_data.get("created_at", datetime.utcnow().isoformat())
+        created_at = conversation_data.get(
+            "created_at", datetime.now(timezone.utc).isoformat()
+        )
 
         # Format summary string into paragraphs by splitting at double newlines \n\n
         formatted_messages = summary.split("\n\n")

@@ -3,7 +3,7 @@ Standardized API Response Models
 Provides consistent response format across all endpoints
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
 
 from fastapi import status
@@ -15,7 +15,9 @@ T = TypeVar("T")
 class ResponseMetadata(BaseModel):
     """Metadata for API responses"""
 
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
     request_id: Optional[str] = None
     version: str = "1.0.0"
     processing_time_ms: Optional[float] = None
@@ -291,7 +293,9 @@ class StatsData(BaseModel):
     user_messages: int = 0
     ai_messages: int = 0
     avg_messages_per_conversation: float = 0.0
-    last_updated: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    last_updated: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
 
 class UserData(BaseModel):

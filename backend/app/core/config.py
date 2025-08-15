@@ -44,7 +44,6 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     SUPABASE_JWT_SECRET: Optional[str] = None
     SUPABASE_PROJECT_ID: Optional[str] = None
-    SUPABASE_URL: Optional[str] = None
 
     # AI Services Configuration
     GROQ_API_KEY: Optional[str] = None

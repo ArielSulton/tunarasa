@@ -5,12 +5,22 @@ import { desc } from 'drizzle-orm'
 import { initializeDefaultRoles } from '@/lib/services/role-management'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
+// Lazy initialize Supabase admin client
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase environment variables are required')
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+}
 
 export async function GET(_request: NextRequest) {
   try {
@@ -23,7 +33,7 @@ export async function GET(_request: NextRequest) {
     const recentSyncLogs = await db.select().from(userSyncLog).orderBy(desc(userSyncLog.createdAt)).limit(10)
 
     // 3. Check users with auth but no database record
-    const authUsersResponse = await supabaseAdmin.auth.admin.listUsers()
+    const authUsersResponse = await getSupabaseAdmin().auth.admin.listUsers()
     const authUsers = authUsersResponse.data.users
 
     const dbUsers = await db.select().from(users)
@@ -139,7 +149,7 @@ export async function POST(request: NextRequest) {
         })
 
       case 'sync_all_users':
-        const authUsersResponse = await supabaseAdmin.auth.admin.listUsers()
+        const authUsersResponse = await getSupabaseAdmin().auth.admin.listUsers()
         const authUsers = authUsersResponse.data.users
 
         let syncCount = 0
@@ -192,7 +202,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Get user from Supabase Auth
-        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(user_id)
+        const { data: authUser, error: authError } = await getSupabaseAdmin().auth.admin.getUserById(user_id)
 
         if (authError) {
           return NextResponse.json(

@@ -447,7 +447,7 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within a SupabaseAuthProvider')
+    throw new Error('.env.local is not configured correctly or useAuth must be used within a SupabaseAuthProvider')
   }
   return context
 }

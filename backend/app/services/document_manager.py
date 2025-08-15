@@ -120,7 +120,6 @@ class DocumentManager:
                     file_path=file_path,
                     status="completed",
                     pinecone_namespace=namespace,
-                    processing_error=None,
                 )
 
             except Exception as pinecone_error:
@@ -133,26 +132,25 @@ class DocumentManager:
                     file_path=file_path,
                     status="failed",
                     pinecone_namespace=namespace,
-                    processing_error=str(pinecone_error),
                 )
 
                 # Continue without failing the entire upload process
                 # Create a minimal DocumentMetadata for local processing
                 import os
                 import uuid
-                from datetime import datetime
+                from datetime import datetime, timezone
 
                 doc_metadata = DocumentMetadata(
                     document_id=str(uuid.uuid4()),
                     filename=os.path.basename(file_path),
-                    upload_timestamp=datetime.utcnow(),
+                    file_path=file_path,
+                    upload_timestamp=datetime.now(timezone.utc),
                     processing_status=ProcessingStatus.FAILED,
                     document_type=DocumentType.PDF,
                     language=clean_metadata.get("language", "id"),
                     file_size=os.path.getsize(file_path),
                     chunk_count=0,
                     processing_time=0.0,
-                    metadata=clean_metadata,
                 )
                 logger.warning(
                     "⚠️ [DocumentManager] Continuing with local processing only"
@@ -190,12 +188,11 @@ class DocumentManager:
         file_path: str,
         status: str,
         pinecone_namespace: Optional[str] = None,
-        processing_error: Optional[str] = None,
     ):
         """Update RAG file status in database after Pinecone operation"""
         try:
             import os
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             from app.core.database import get_db_session
             from app.db.models import RagFile
@@ -204,7 +201,7 @@ class DocumentManager:
             # Extract filename from path for database lookup
             filename = os.path.basename(file_path)
 
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 # Find RAG file by filename
                 query = select(RagFile).where(RagFile.file_name == filename)
                 result = await db.execute(query)
@@ -214,16 +211,11 @@ class DocumentManager:
                     # Update status and related fields
                     update_data = {
                         "processing_status": status,
-                        "updated_at": datetime.utcnow(),
+                        "updated_at": datetime.now(timezone.utc),
                     }
 
                     if pinecone_namespace:
                         update_data["pinecone_namespace"] = pinecone_namespace
-
-                    if processing_error:
-                        # Note: processing_error column may not exist in schema
-                        # Only update if column exists
-                        update_data["processing_error"] = processing_error
 
                     # Perform update
                     update_query = (
@@ -746,7 +738,7 @@ Instruksi:
                     from app.db.models import Institution, RagFile
                     from sqlalchemy import and_, select
 
-                    async with get_db_session() as db:
+                    async for db in get_db_session():
                         # Build base query for active institution and completed active RAG file
                         base_query = (
                             select(Institution, RagFile)
@@ -807,6 +799,8 @@ Instruksi:
                             logger.warning(
                                 f"No active RAG files found for institution slug={institution_slug} id={institution_id}, using default"
                             )
+
+                        break  # Only use first database session
                 except Exception as e:
                     logger.warning(
                         f"Error looking up institution RAG files: {e}, using default"

@@ -57,6 +57,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/faq/dummy-categories",  # Get dummy FAQ categories
         "/api/v1/faq/institutions/",  # Institution question counts (public read-only)
         "/api/v1/faq-clustering/health",  # FAQ clustering service health
+        "/api/v1/rag-processing/process-file",  # Internal RAG processing (triggered by authenticated admin uploads)
         "/api/v1/institutions/public/institutions",  # Public institution data
         "/api/v1/institutions/public/institutions/",  # Public institution data with trailing slash
         "/api/v1/institutions/health",  # Institution service health check
@@ -361,7 +362,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 return False
 
             # Validate session in database
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
 
             from app.core.database import get_session
             from app.db.models import Conversation, User
@@ -382,7 +383,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                             Conversation.is_active,
                             # Consider sessions valid for 24 hours
                             Conversation.updated_at
-                            >= datetime.utcnow() - timedelta(hours=24),
+                            >= datetime.now(timezone.utc) - timedelta(hours=24),
                         )
                     )
                     .first()

@@ -11,13 +11,39 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/components/auth/SupabaseAuthProvider'
 import { useSupabaseUser, useIsAdmin } from '@/hooks/use-supabase-auth'
-import { useState } from 'react'
-import { User, LogOut, AlertTriangle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { User, LogOut, AlertTriangle, Loader2 } from 'lucide-react'
 
 /**
  * Sign In component
+ * Protected version that handles auth context safely
  */
 export function AuthSignIn() {
+  const [isClient, setIsClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      <div className="bg-background flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardContent className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  return <AuthSignInContent />
+}
+
+function AuthSignInContent() {
   const { signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -104,8 +130,34 @@ export function AuthSignIn() {
 
 /**
  * Sign Up component
+ * Protected version that handles auth context safely
  */
 export function AuthSignUp() {
+  const [isClient, setIsClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      <div className="bg-background flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardContent className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  return <AuthSignUpContent />
+}
+
+function AuthSignUpContent() {
   const { signUp } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -233,8 +285,28 @@ export function AuthSignUp() {
 
 /**
  * User profile button
+ * Protected version that handles auth context safely
  */
 export function AuthUserButton() {
+  const [isClient, setIsClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      <Button variant="outline" disabled className="flex items-center space-x-2 px-6 py-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </Button>
+    )
+  }
+
+  return <AuthUserButtonContent />
+}
+
+function AuthUserButtonContent() {
   const { signOut } = useAuth()
   const { user } = useSupabaseUser()
   const [loading, setLoading] = useState(false)
@@ -289,8 +361,49 @@ export function AuthSignUpButton() {
 
 /**
  * Auth status component showing current user or sign in options
+ * Protected version that handles auth context safely
  */
 export function AuthStatus() {
+  const [isClient, setIsClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      <div className="flex items-center justify-center space-x-2">
+        <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />
+        <span className="text-muted-foreground text-sm">Memuat...</span>
+      </div>
+    )
+  }
+
+  return <AuthStatusContent />
+}
+
+function AuthStatusContent() {
+  const [isInternalClient, setIsInternalClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsInternalClient(true)
+  }, [])
+
+  if (!isInternalClient) {
+    return (
+      <div className="flex items-center justify-center space-x-2">
+        <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />
+        <span className="text-muted-foreground text-sm">Memuat...</span>
+      </div>
+    )
+  }
+
+  return <AuthStatusInternalContent />
+}
+
+function AuthStatusInternalContent() {
   const { user, loading } = useSupabaseUser()
   const { signOut } = useAuth()
   const [signOutLoading, setSignOutLoading] = useState(false)
@@ -350,8 +463,28 @@ export function AuthStatus() {
 
 /**
  * Admin only wrapper component
+ * Protected version that handles auth context safely
  */
 export function AdminOnly({ children }: { children: React.ReactNode }) {
+  const [isClient, setIsClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+      </div>
+    )
+  }
+
+  return <AdminOnlyContent>{children}</AdminOnlyContent>
+}
+
+function AdminOnlyContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useSupabaseUser()
   const { isAdmin } = useIsAdmin()
 

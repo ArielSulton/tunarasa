@@ -19,6 +19,10 @@ import { getRagApiUrl } from '@/lib/utils/backend'
 
 import { ChatMessage, ConversationStatus } from '@/types'
 
+// Force dynamic rendering and disable static optimization
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+
 interface BackendMessage {
   id: string
   type: 'user' | 'assistant' | 'admin' | 'system' | 'llm_recommendation'
@@ -707,9 +711,18 @@ function UserKomunikasiPage() {
   )
 }
 
-export default function Komunikasi() {
+// Component that uses auth hooks
+function KomunikasiContent() {
   const { role } = useUserRole()
 
+  return <KomunikasiInner role={role} />
+}
+
+interface KomunikasiInnerProps {
+  role: string | null
+}
+
+function KomunikasiInner({ role }: KomunikasiInnerProps) {
   // Only admin gets the admin panel (superadmin has no access to komunikasi)
   if (role === 'admin') {
     return <AdminConversationPanel isVisible={true} onVisibilityChange={() => {}} />
@@ -733,4 +746,27 @@ export default function Komunikasi() {
 
   // Regular users get the user interface
   return <UserKomunikasiPage />
+}
+
+export default function Komunikasi() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent server-side rendering of auth hooks
+  if (!isMounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <KomunikasiContent />
 }

@@ -81,15 +81,9 @@ class RagFile(Base):
     pinecone_namespace: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
     )
-    document_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    embedding_model: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    processing_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_by: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.user_id"), nullable=False
-    )
-    processed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

@@ -6,7 +6,7 @@ Handles request timing, IDs, and response enhancement
 import logging
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict
 
 from app.models.api_response import (
@@ -154,7 +154,7 @@ class ResponseFactory:
             success=True,
             data=data,
             metadata={
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "request_id": self.request_id,
                 "processing_time_ms": (time.time() - self.start_time) * 1000,
             },

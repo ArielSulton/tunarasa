@@ -6,8 +6,14 @@ import { db } from '@/lib/db'
 import { adminInvitations, users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-// Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy initialize Resend
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY environment variable is required')
+  }
+  return new Resend(apiKey)
+}
 
 /**
  * Resend admin invitation email
@@ -58,7 +64,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/accept-invitation?token=${invitationId}`
 
     // Send email via Resend
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: 'Tunarasa Admin <admin@tunarasa.com>',
       to: [invitation.email],
       subject: 'Reminder: Invitation to Join Tunarasa Admin Team',

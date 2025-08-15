@@ -4,7 +4,7 @@ Handles frontend session tracking and active users metrics
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from app.middleware.response_middleware import ResponseFactory, create_response_factory
@@ -66,7 +66,7 @@ async def update_active_sessions(
 
         response_data = SessionMetricsData(
             active_sessions=active_count,
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
             message=f"Successfully updated {active_count} active sessions",
         )
 
@@ -97,7 +97,7 @@ async def get_session_metrics(
 
         response_data = SessionMetricsData(
             active_sessions=active_count,
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
             message=f"Current active sessions: {active_count}",
         )
 
@@ -137,7 +137,7 @@ async def start_session(
 
         response_data = SessionMetricsData(
             active_sessions=active_count,
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
             message=f"Session started: {session_id}",
         )
 
@@ -174,7 +174,7 @@ async def end_session(
 
         response_data = SessionMetricsData(
             active_sessions=active_count,
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
             message=f"Session ended: {session_id}",
         )
 

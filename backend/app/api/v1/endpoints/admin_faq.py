@@ -4,7 +4,7 @@ Provides admin-only endpoints for managing FAQ clustering and recommendations
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from app.api.middleware.auth import get_current_admin_user
@@ -126,7 +126,7 @@ async def bulk_refresh_recommendations(
             "failed_refreshes": len(request.institution_ids) - successful_refreshes,
             "results": results,
             "initiated_by": admin_user["email"],
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -158,7 +158,7 @@ async def get_institution_detailed_metrics(
             "institution_id": institution_id,
             "period_days": days,
             "metrics": metrics,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "requested_by": admin_user["email"],
         }
 
@@ -219,7 +219,7 @@ async def update_clustering_parameters(
             "institution_id": institution_id,
             "updated_parameters": request.dict(),
             "updated_by": admin_user["email"],
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "requires_refresh": True,
             "message": "Parameters updated successfully. Refresh recommendations to apply changes.",
         }
@@ -243,7 +243,7 @@ async def admin_system_health_check(admin_user=Depends(get_current_admin_user)):
 
         return {
             "success": True,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "checked_by": admin_user["email"],
             "health_status": health_status,
         }
@@ -270,7 +270,7 @@ async def clear_system_cache(admin_user=Depends(get_current_admin_user)):
             "success": True,
             "cleared_caches": result.get("cleared_count", 0),
             "cleared_by": admin_user["email"],
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "warning": "All institutions will need to recalculate recommendations on next request",
         }
 
@@ -326,7 +326,7 @@ async def get_usage_analytics_report(
             },
             "report": report,
             "generated_by": admin_user["email"],
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:

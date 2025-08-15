@@ -7,7 +7,7 @@ Enhanced with standardized API responses
 import logging
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from app.core.config import settings
@@ -325,7 +325,7 @@ async def process_gesture_text(
         # Generate session ID if not provided
         session_id = (
             gesture_request.session_id
-            or f"gesture_session_{int(datetime.utcnow().timestamp())}"
+            or f"gesture_session_{int(datetime.now(timezone.utc).timestamp())}"
         )
 
         # Record gesture recognition metrics
@@ -406,7 +406,7 @@ async def process_gesture_text(
         # Perform DeepEval monitoring for quality assessment
         try:
             conversation_id = (
-                f"gesture_{session_id}_{int(datetime.utcnow().timestamp())}"
+                f"gesture_{session_id}_{int(datetime.now(timezone.utc).timestamp())}"
             )
             await evaluate_llm_response(
                 conversation_id=conversation_id,

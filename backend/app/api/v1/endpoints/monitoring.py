@@ -4,7 +4,7 @@ Provides Prometheus metrics and DeepEval monitoring data
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from app.core.config import settings
@@ -31,7 +31,7 @@ async def monitoring_health_check() -> Dict[str, Any]:
             "deepeval_monitoring": True,
             "system_metrics": True,
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -65,7 +65,7 @@ async def get_deepeval_summary(time_period: str = "24h") -> Dict[str, Any]:
         return {
             "success": True,
             "data": summary,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -94,7 +94,7 @@ async def get_conversation_evaluation(conversation_id: str) -> Dict[str, Any]:
         return {
             "success": True,
             "data": evaluation,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -119,7 +119,7 @@ async def get_quality_report() -> Dict[str, Any]:
         return {
             "success": True,
             "data": report,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -141,7 +141,7 @@ async def get_system_metrics() -> Dict[str, Any]:
         return {
             "success": True,
             "data": system_metrics,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -209,7 +209,7 @@ async def get_system_status() -> Dict[str, Any]:
         return {
             "success": True,
             "data": status,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -256,7 +256,7 @@ async def record_test_metrics(
             "success": True,
             "message": f"Test metric recorded: {metric_type} = {value}",
             "labels": labels or {},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:

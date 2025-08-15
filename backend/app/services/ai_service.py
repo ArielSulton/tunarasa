@@ -4,7 +4,7 @@ AI Service for LangChain + ChatGroq + Pinecone RAG Integration
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import pinecone
@@ -218,7 +218,7 @@ class AIService:
     ) -> Dict[str, Any]:
         """Process a question using RAG pipeline"""
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         try:
             # Check cache first
@@ -240,7 +240,7 @@ class AIService:
             response = await self._generate_response(question, context_text)
 
             # Step 4: Build final response
-            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
 
             result = {
                 "question": question,
@@ -253,7 +253,7 @@ class AIService:
                 "source_documents": [doc.metadata for doc in relevant_docs],
                 "processing_time": processing_time,
                 "session_id": session_id,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "model_used": settings.LLM_MODEL,
             }
 
@@ -272,8 +272,10 @@ class AIService:
                 "answer": "Maaf, terjadi kesalahan dalam memproses pertanyaan Anda. Silakan coba lagi nanti.",
                 "error": str(e),
                 "session_id": session_id,
-                "timestamp": datetime.utcnow().isoformat(),
-                "processing_time": (datetime.utcnow() - start_time).total_seconds(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "processing_time": (
+                    datetime.now(timezone.utc) - start_time
+                ).total_seconds(),
             }
 
     async def _retrieve_documents(self, query: str, k: int = None) -> List[Document]:
@@ -385,7 +387,7 @@ Berikan jawaban yang lengkap dan informatif dalam bahasa Indonesia. Jika informa
                 chunk.metadata.update(
                     {
                         "document_id": document_id,
-                        "processed_at": datetime.utcnow().isoformat(),
+                        "processed_at": datetime.now(timezone.utc).isoformat(),
                     }
                 )
 

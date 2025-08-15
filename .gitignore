@@ -93,7 +93,7 @@ backend/logs/
 .env.test.local
 .env.production.local
 **/.env*
-!.env.example
+!.env*.example
 
 # OS generated files
 .DS_Store

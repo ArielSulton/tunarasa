@@ -246,7 +246,10 @@ async def _check_pinecone() -> Dict[str, Any]:
 async def _check_supabase() -> Dict[str, Any]:
     """Check Supabase service availability"""
     try:
-        if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        if (
+            not settings.NEXT_PUBLIC_SUPABASE_URL
+            or not settings.SUPABASE_SERVICE_ROLE_KEY
+        ):
             return {"status": "not_configured"}
 
         # Implement actual Supabase health check
@@ -256,7 +259,7 @@ async def _check_supabase() -> Dict[str, Any]:
             async with httpx.AsyncClient() as client:
                 # Check Supabase REST API
                 response = await client.get(
-                    f"{settings.SUPABASE_URL}/rest/v1/",
+                    f"{settings.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/",
                     headers={
                         "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
                         "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
@@ -268,7 +271,7 @@ async def _check_supabase() -> Dict[str, Any]:
                 if response.status_code == 200:
                     return {
                         "status": "healthy",
-                        "url": settings.SUPABASE_URL,
+                        "url": settings.NEXT_PUBLIC_SUPABASE_URL,
                         "auth_enabled": bool(settings.SUPABASE_JWT_SECRET),
                         "response_time_ms": response.elapsed.total_seconds() * 1000,
                     }

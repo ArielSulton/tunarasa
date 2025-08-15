@@ -50,7 +50,6 @@ class RagFileResponse(BaseModel):
     pinecone_namespace: Optional[str]
     document_count: Optional[int]
     embedding_model: Optional[str]
-    processing_error: Optional[str]
     is_active: bool
     processed_at: Optional[str]
     created_at: str

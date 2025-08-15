@@ -440,12 +440,11 @@ class QaLog(Base):
     __tablename__ = "qa_logs"
 
     qa_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    # Anonymous session tracking (no foreign key to users table)
-    session_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    conversation_id: Mapped[Optional[int]] = mapped_column(
+    # Conversation-based tracking using foreign key (matches frontend schema)
+    conversation_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("conversations.conversation_id", ondelete="CASCADE"),
-        nullable=True,
+        nullable=False,
     )
     # Institution ID for FAQ clustering and recommendations
     institution_id: Mapped[int] = mapped_column(
@@ -491,7 +490,6 @@ class QaLog(Base):
 
     # Indexes
     __table_args__ = (
-        Index("qa_logs_session_id_idx", "session_id"),
         Index("qa_logs_conversation_id_idx", "conversation_id"),
         Index("qa_logs_institution_id_idx", "institution_id"),
         Index("qa_logs_service_mode_idx", "service_mode"),

@@ -1,9 +1,35 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { AuthStatus } from '@/components/auth/auth-components'
 import { CheckCircle, Users, Lock } from 'lucide-react'
 
+// Force dynamic rendering and disable static optimization
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+
 export default function AksesKhusus() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent server-side rendering of auth hooks
+  if (!isMounted) {
+    return (
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200">
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-blue-800">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200">
       {/* Enhanced Background Elements */}

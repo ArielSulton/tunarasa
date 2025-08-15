@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -57,7 +57,7 @@ class QAExample:
 
     def __post_init__(self):
         if self.timestamp is None:
-            self.timestamp = datetime.utcnow()
+            self.timestamp = datetime.now(timezone.utc)
 
 
 @dataclass
@@ -714,10 +714,10 @@ class LLMRecommendationService:
             return
 
         try:
-            cache_key = f"llm_recommendations:{datetime.utcnow().strftime('%Y%m%d_%H')}"
+            cache_key = f"llm_recommendations:{datetime.now(timezone.utc).strftime('%Y%m%d_%H')}"
             cache_data = {
                 "recommendations": [r.to_dict() for r in recommendations],
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
                 "total_recommendations": len(recommendations),
             }
 
@@ -736,7 +736,7 @@ class LLMRecommendationService:
         """Dapatkan ringkasan rekomendasi"""
         try:
             # Filter Q&A dari jam terakhir
-            cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
             recent_qa = [qa for qa in self.qa_history if qa.timestamp >= cutoff_time]
 
             if not recent_qa:
@@ -792,7 +792,7 @@ class LLMRecommendationService:
                         ),
                     },
                 },
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
@@ -800,7 +800,7 @@ class LLMRecommendationService:
             return {
                 "error": str(e),
                 "period_hours": hours,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
             }
 
 

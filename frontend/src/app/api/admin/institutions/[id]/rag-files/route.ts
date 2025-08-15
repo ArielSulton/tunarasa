@@ -172,6 +172,34 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
       .returning()
 
+    // Trigger backend processing for newly created RAG file
+    if (newRagFile.processingStatus === 'pending') {
+      try {
+        console.log(`Triggering RAG processing for new file: ${newRagFile.ragFileId}`)
+
+        const backendUrl = process.env.BACKEND_URL ?? 'http://backend:8000'
+        const processResponse = await fetch(`${backendUrl}/api/v1/rag-processing/process-file`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            rag_file_id: newRagFile.ragFileId,
+            force_reprocess: true,
+          }),
+        })
+
+        if (processResponse.ok) {
+          console.log(`RAG processing triggered successfully for new file: ${newRagFile.ragFileId}`)
+        } else {
+          console.warn(`Failed to trigger RAG processing: ${processResponse.status}`)
+        }
+      } catch (error) {
+        console.warn('Failed to trigger backend RAG processing:', error)
+        // Don't fail the entire request if processing trigger fails
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,

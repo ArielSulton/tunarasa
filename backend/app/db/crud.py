@@ -4,9 +4,10 @@ Provides async database operations matching the Drizzle schema
 Enhanced with query optimizations and N+1 problem elimination
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from app.models.institution import Institution, RagFile
 from sqlalchemy import and_, case, delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -351,7 +352,7 @@ class NoteCRUD:
         title: Optional[str] = None,
         note_content: Optional[str] = None,
         url_access: Optional[str] = None,
-        **updates
+        **updates,
     ) -> Optional[Note]:
         """Update note by ID"""
         update_data = {}
@@ -654,3 +655,203 @@ class StatsCRUD:
                 "end": end_date.isoformat() if end_date else None,
             },
         }
+
+
+# Legacy sync functions for rag_processing.py compatibility
+def get_rag_file_by_id(db, rag_file_id: int) -> Optional[RagFile]:
+    """Get RAG file by ID - sync function for compatibility"""
+    return db.query(RagFile).filter(RagFile.rag_file_id == rag_file_id).first()
+
+
+def update_rag_file_status(
+    db, rag_file_id: int, status: str, additional_data: Dict = None
+):
+    """Update RAG file status - sync function for compatibility"""
+    rag_file = db.query(RagFile).filter(RagFile.rag_file_id == rag_file_id).first()
+    if rag_file:
+        rag_file.processing_status = status
+        rag_file.updated_at = datetime.now(timezone.utc)
+
+        if additional_data:
+            for key, value in additional_data.items():
+                if hasattr(rag_file, key):
+                    setattr(rag_file, key, value)
+
+        db.commit()
+        db.refresh(rag_file)
+    return rag_file
+
+
+class RagFileCRUD:
+    """CRUD operations for RagFile model"""
+
+    @staticmethod
+    async def create(
+        db: AsyncSession,
+        institution_id: int,
+        file_name: str,
+        file_type: str,
+        file_path: str,
+        file_size: Optional[int] = None,
+        description: Optional[str] = None,
+        created_by: int = 1,
+    ) -> RagFile:
+        """Create a new RAG file"""
+        rag_file = RagFile(
+            institution_id=institution_id,
+            file_name=file_name,
+            file_type=file_type,
+            file_path=file_path,
+            file_size=file_size,
+            description=description,
+            processing_status="pending",
+            pinecone_namespace=f"institution_{institution_id}",
+            created_by=created_by,
+            is_active=True,
+        )
+        db.add(rag_file)
+        await db.commit()
+        await db.refresh(rag_file)
+        return rag_file
+
+    @staticmethod
+    async def get_by_id(db: AsyncSession, rag_file_id: int) -> Optional[RagFile]:
+        """Get RAG file by ID with relationships"""
+        stmt = (
+            select(RagFile)
+            .options(selectinload(RagFile.institution))
+            .where(RagFile.rag_file_id == rag_file_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_by_institution(
+        db: AsyncSession, institution_id: int, active_only: bool = True
+    ) -> List[RagFile]:
+        """Get RAG files by institution ID"""
+        stmt = (
+            select(RagFile)
+            .where(RagFile.institution_id == institution_id)
+            .order_by(RagFile.created_at.desc())
+        )
+
+        if active_only:
+            stmt = stmt.where(RagFile.is_active)
+
+        result = await db.execute(stmt)
+        return result.scalars().all()
+
+    @staticmethod
+    async def update_status(
+        db: AsyncSession, rag_file_id: int, status: str, **updates
+    ) -> Optional[RagFile]:
+        """Update RAG file status and other fields"""
+        update_data = {
+            "processing_status": status,
+            "updated_at": datetime.now(timezone.utc),
+        }
+        update_data.update(updates)
+
+        stmt = (
+            update(RagFile)
+            .where(RagFile.rag_file_id == rag_file_id)
+            .values(**update_data)
+        )
+        await db.execute(stmt)
+        await db.commit()
+        return await RagFileCRUD.get_by_id(db, rag_file_id)
+
+    @staticmethod
+    async def delete(db: AsyncSession, rag_file_id: int) -> bool:
+        """Delete RAG file by ID"""
+        stmt = delete(RagFile).where(RagFile.rag_file_id == rag_file_id)
+        result = await db.execute(stmt)
+        await db.commit()
+        return result.rowcount > 0
+
+
+class InstitutionCRUD:
+    """CRUD operations for Institution model"""
+
+    @staticmethod
+    async def create(
+        db: AsyncSession,
+        name: str,
+        slug: str,
+        description: Optional[str] = None,
+        logo_url: Optional[str] = None,
+        contact_info: Optional[Dict] = None,
+        created_by: int = 1,
+    ) -> Institution:
+        """Create a new institution"""
+        institution = Institution(
+            name=name,
+            slug=slug,
+            description=description,
+            logo_url=logo_url,
+            contact_info=contact_info or {},
+            created_by=created_by,
+            is_active=True,
+        )
+        db.add(institution)
+        await db.commit()
+        await db.refresh(institution)
+        return institution
+
+    @staticmethod
+    async def get_by_id(db: AsyncSession, institution_id: int) -> Optional[Institution]:
+        """Get institution by ID with relationships"""
+        stmt = (
+            select(Institution)
+            .options(selectinload(Institution.rag_files))
+            .where(Institution.institution_id == institution_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_by_slug(db: AsyncSession, slug: str) -> Optional[Institution]:
+        """Get institution by slug"""
+        stmt = (
+            select(Institution)
+            .options(selectinload(Institution.rag_files))
+            .where(and_(Institution.slug == slug, Institution.is_active))
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_all(db: AsyncSession, active_only: bool = True) -> List[Institution]:
+        """Get all institutions"""
+        stmt = select(Institution).options(selectinload(Institution.rag_files))
+
+        if active_only:
+            stmt = stmt.where(Institution.is_active)
+
+        stmt = stmt.order_by(Institution.created_at.desc())
+        result = await db.execute(stmt)
+        return result.scalars().all()
+
+    @staticmethod
+    async def update(
+        db: AsyncSession, institution_id: int, **updates
+    ) -> Optional[Institution]:
+        """Update institution by ID"""
+        updates["updated_at"] = datetime.now(timezone.utc)
+        stmt = (
+            update(Institution)
+            .where(Institution.institution_id == institution_id)
+            .values(**updates)
+        )
+        await db.execute(stmt)
+        await db.commit()
+        return await InstitutionCRUD.get_by_id(db, institution_id)
+
+    @staticmethod
+    async def delete(db: AsyncSession, institution_id: int) -> bool:
+        """Delete institution by ID"""
+        stmt = delete(Institution).where(Institution.institution_id == institution_id)
+        result = await db.execute(stmt)
+        await db.commit()
+        return result.rowcount > 0

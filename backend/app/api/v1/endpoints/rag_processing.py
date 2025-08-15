@@ -4,16 +4,16 @@ Process uploaded files from database records into Pinecone RAG system
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
-from app.core.database import get_db
-from app.db.crud import get_rag_file_by_id, update_rag_file_status
-from app.db.models import Institution, RAGFile
+from app.core.database import get_db_session
+from app.db.crud import InstitutionCRUD, RagFileCRUD
+from app.models.institution import RagFile
 from app.services.document_manager import get_document_manager
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -40,17 +40,17 @@ class ProcessRAGFileResponse(BaseModel):
 
 @router.post("/process-file", response_model=ProcessRAGFileResponse)
 async def process_rag_file(
-    request: ProcessRAGFileRequest, db: Session = Depends(get_db)
+    request: ProcessRAGFileRequest, db: AsyncSession = Depends(get_db_session)
 ):
     """
     Process a RAG file from database into Pinecone vector store
     This endpoint bridges the frontend upload with backend RAG processing
     """
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
 
     try:
         # Get RAG file record from database
-        rag_file = get_rag_file_by_id(db, request.rag_file_id)
+        rag_file = await RagFileCRUD.get_by_id(db, request.rag_file_id)
         if not rag_file:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -67,7 +67,7 @@ async def process_rag_file(
             )
 
         # Update status to processing
-        update_rag_file_status(db, request.rag_file_id, "processing")
+        await RagFileCRUD.update_status(db, request.rag_file_id, "processing")
 
         # Check if file exists in shared uploads volume
         file_path = Path(rag_file.file_path)
@@ -75,10 +75,13 @@ async def process_rag_file(
             # Convert relative path to absolute path in shared volume
             shared_uploads_dir = Path("/app/uploads")  # Docker shared volume path
             file_path = shared_uploads_dir / file_path.name
+        elif str(file_path).startswith("/uploads/"):
+            # Fix old file path prefix - replace /uploads with /app/uploads
+            file_path = Path(str(file_path).replace("/uploads/", "/app/uploads/", 1))
 
         if not file_path.exists():
             logger.error(f"RAG file not found at path: {file_path}")
-            update_rag_file_status(db, request.rag_file_id, "error")
+            await RagFileCRUD.update_status(db, request.rag_file_id, "error")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"File not found at path: {file_path}",
@@ -90,13 +93,9 @@ async def process_rag_file(
         # Resolve institution slug for correct namespace convention `institution_{slug}`
         institution_slug: str | None = None
         try:
-            inst = (
-                db.query(Institution)
-                .filter(Institution.institution_id == rag_file.institution_id)
-                .first()
-            )
-            if inst and getattr(inst, "slug", None):
-                institution_slug = inst.slug
+            institution = await InstitutionCRUD.get_by_id(db, rag_file.institution_id)
+            if institution and institution.slug:
+                institution_slug = institution.slug
         except Exception as e:
             logger.warning(
                 f"Failed to resolve institution slug for id={rag_file.institution_id}: {e}"
@@ -112,16 +111,12 @@ async def process_rag_file(
             institution_slug=institution_slug,
         )
 
-        processing_time = (datetime.utcnow() - start_time).total_seconds()
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
 
         if result["success"]:
             # Update database record with success
-            update_data = {
-                "processing_status": "completed",
-                "processed_at": datetime.utcnow(),
-                "error_message": None,
-            }
             # Normalize and persist the actual namespace used for ingestion
+            update_data = {}
             if institution_slug:
                 update_data["pinecone_namespace"] = f"institution_{institution_slug}"
 
@@ -130,7 +125,9 @@ async def process_rag_file(
             chunk_count = result.get("metadata", {}).get("chunk_count")
 
             # Update RAG file record
-            update_rag_file_status(db, request.rag_file_id, "completed", update_data)
+            await RagFileCRUD.update_status(
+                db, request.rag_file_id, "completed", **update_data
+            )
 
             logger.info(f"RAG file {request.rag_file_id} processed successfully")
 
@@ -146,12 +143,7 @@ async def process_rag_file(
         else:
             # Update database record with error
             error_message = result.get("error", "Unknown processing error")
-            update_data = {
-                "processing_status": "error",
-                "error_message": error_message,
-                "processed_at": datetime.utcnow(),
-            }
-            update_rag_file_status(db, request.rag_file_id, "error", update_data)
+            await RagFileCRUD.update_status(db, request.rag_file_id, "failed")
 
             logger.error(
                 f"RAG file {request.rag_file_id} processing failed: {error_message}"
@@ -160,7 +152,7 @@ async def process_rag_file(
             return ProcessRAGFileResponse(
                 success=False,
                 rag_file_id=request.rag_file_id,
-                processing_status="error",
+                processing_status="failed",
                 message=f"RAG processing failed: {error_message}",
                 processing_time=processing_time,
             )
@@ -169,16 +161,11 @@ async def process_rag_file(
         raise
     except Exception as e:
         # Update database record with error
-        processing_time = (datetime.utcnow() - start_time).total_seconds()
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
         error_message = str(e)
 
         try:
-            update_data = {
-                "processing_status": "error",
-                "error_message": error_message,
-                "processed_at": datetime.utcnow(),
-            }
-            update_rag_file_status(db, request.rag_file_id, "error", update_data)
+            await RagFileCRUD.update_status(db, request.rag_file_id, "failed")
         except Exception as update_error:
             logger.error(f"Failed to update RAG file status: {update_error}")
 
@@ -187,7 +174,7 @@ async def process_rag_file(
         return ProcessRAGFileResponse(
             success=False,
             rag_file_id=request.rag_file_id,
-            processing_status="error",
+            processing_status="failed",
             message=f"Processing failed: {error_message}",
             processing_time=processing_time,
         )
@@ -195,7 +182,9 @@ async def process_rag_file(
 
 @router.post("/batch-process")
 async def batch_process_pending_files(
-    limit: int = 10, institution_id: int = None, db: Session = Depends(get_db)
+    limit: int = 10,
+    institution_id: int = None,
+    db: AsyncSession = Depends(get_db_session),
 ):
     """
     Process multiple pending RAG files in batch
@@ -203,11 +192,15 @@ async def batch_process_pending_files(
     """
     try:
         # Get pending RAG files
-        filters = {"processing_status": "pending"}
-        if institution_id:
-            filters["institution_id"] = institution_id
+        from sqlalchemy import select
 
-        pending_files = db.query(RAGFile).filter_by(**filters).limit(limit).all()
+        stmt = select(RagFile).where(RagFile.processing_status == "pending")
+        if institution_id:
+            stmt = stmt.where(RagFile.institution_id == institution_id)
+        stmt = stmt.limit(limit)
+
+        result = await db.execute(stmt)
+        pending_files = result.scalars().all()
 
         if not pending_files:
             return {
@@ -238,7 +231,7 @@ async def batch_process_pending_files(
                     {
                         "success": False,
                         "rag_file_id": rag_file.rag_file_id,
-                        "processing_status": "error",
+                        "processing_status": "failed",
                         "message": f"Batch processing failed: {str(e)}",
                     }
                 )
@@ -260,12 +253,14 @@ async def batch_process_pending_files(
 
 
 @router.get("/processing-status/{rag_file_id}")
-async def get_processing_status(rag_file_id: int, db: Session = Depends(get_db)):
+async def get_processing_status(
+    rag_file_id: int, db: AsyncSession = Depends(get_db_session)
+):
     """
     Get processing status of a RAG file
     """
     try:
-        rag_file = get_rag_file_by_id(db, rag_file_id)
+        rag_file = await RagFileCRUD.get_by_id(db, rag_file_id)
         if not rag_file:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -278,8 +273,6 @@ async def get_processing_status(rag_file_id: int, db: Session = Depends(get_db))
             "processing_status": rag_file.processing_status,
             "file_name": rag_file.file_name,
             "created_at": rag_file.created_at,
-            "processed_at": rag_file.processed_at,
-            "error_message": rag_file.error_message,
             "pinecone_namespace": rag_file.pinecone_namespace,
         }
 

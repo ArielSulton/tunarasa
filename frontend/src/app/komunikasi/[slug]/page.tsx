@@ -7,6 +7,10 @@ import { ChatInterface } from '@/components/chat/ChatInterface'
 import { AdminConversationPanel } from '@/components/admin/AdminConversationPanel'
 import { useUserRole } from '@/components/auth/SuperAdminOnly'
 
+// Force dynamic rendering and disable static optimization
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+
 interface Institution {
   institutionId: number
   name: string
@@ -36,8 +40,19 @@ async function getInstitutionBySlug(slug: string): Promise<Institution | null> {
   }
 }
 
-export default function KomunikasiSlugPage({ params }: KomunikasiSlugPageProps) {
+// Component that uses auth hooks
+function KomunikasiSlugContent({ params }: KomunikasiSlugPageProps) {
   const { role } = useUserRole()
+
+  return <KomunikasiSlugInner role={role} params={params} />
+}
+
+interface KomunikasiSlugInnerProps {
+  role: string | null
+  params: Promise<{ slug: string }>
+}
+
+function KomunikasiSlugInner({ role, params }: KomunikasiSlugInnerProps) {
   const [institution, setInstitution] = useState<Institution | null>(null)
   const [loading, setLoading] = useState(true)
   const [slug, setSlug] = useState<string>('')
@@ -135,6 +150,29 @@ export default function KomunikasiSlugPage({ params }: KomunikasiSlugPageProps) 
       </section>
     </div>
   )
+}
+
+export default function KomunikasiSlugPage({ params }: KomunikasiSlugPageProps) {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent server-side rendering of auth hooks
+  if (!isMounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <KomunikasiSlugContent params={params} />
 }
 
 // Note: generateStaticParams removed since we converted to Client Component

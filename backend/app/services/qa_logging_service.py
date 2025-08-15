@@ -6,7 +6,7 @@ with proper session tracking, performance metrics, and admin support.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from app.core.database import get_db_session
@@ -25,7 +25,7 @@ class QALoggingService:
 
     async def log_qa_interaction(
         self,
-        session_id: str,
+        conversation_id: int,
         question: str,
         answer: str,
         confidence: Optional[int] = None,
@@ -38,14 +38,13 @@ class QALoggingService:
         admin_id: Optional[int] = None,
         llm_recommendation_used: bool = False,
         institution_id: int = 1,
-        conversation_id: Optional[int] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Optional[int]:
         """
         Log a Q&A interaction to the database with comprehensive tracking
 
         Args:
-            session_id: Session identifier for the user
+            conversation_id: Required conversation ID for tracking
             question: The user's question
             answer: The system's answer
             confidence: Confidence score (0-100)
@@ -58,7 +57,6 @@ class QALoggingService:
             admin_id: Admin ID if responded by admin
             llm_recommendation_used: Whether LLM recommendation was used
             institution_id: Institution ID for clustering
-            conversation_id: Related conversation ID
             metadata: Additional metadata
 
         Returns:
@@ -66,22 +64,18 @@ class QALoggingService:
         """
         try:
             async for db_session in get_db_session():
-                # If conversation_id provided, verify it exists
-                if conversation_id:
-                    conversation_check = await db_session.execute(
-                        select(Conversation.conversation_id).where(
-                            Conversation.conversation_id == conversation_id
-                        )
+                # Verify conversation_id exists (required field)
+                conversation_check = await db_session.execute(
+                    select(Conversation.conversation_id).where(
+                        Conversation.conversation_id == conversation_id
                     )
-                    if not conversation_check.fetchone():
-                        logger.warning(
-                            f"Conversation ID {conversation_id} not found, setting to None"
-                        )
-                        conversation_id = None
+                )
+                if not conversation_check.fetchone():
+                    logger.error(f"Conversation ID {conversation_id} not found")
+                    return None
 
                 # Create QA log entry
                 qa_log_data = {
-                    "session_id": session_id,
                     "conversation_id": conversation_id,
                     "institution_id": institution_id,
                     "question": question,
@@ -95,7 +89,7 @@ class QALoggingService:
                     "responded_by": responded_by,
                     "admin_id": admin_id,
                     "llm_recommendation_used": llm_recommendation_used,
-                    "created_at": datetime.utcnow(),
+                    "created_at": datetime.now(timezone.utc),
                 }
 
                 # Remove None values to use database defaults
@@ -129,7 +123,7 @@ class QALoggingService:
 
     async def log_llm_response(
         self,
-        session_id: str,
+        conversation_id: int,
         question: str,
         answer: str,
         confidence: float = 0.0,
@@ -137,14 +131,13 @@ class QALoggingService:
         context_used: Optional[str] = None,
         sources: Optional[List[Dict]] = None,
         institution_id: int = 1,
-        conversation_id: Optional[int] = None,
         evaluation_data: Optional[Dict] = None,
     ) -> Optional[int]:
         """
         Log LLM response with enhanced metadata
 
         Args:
-            session_id: Session identifier
+            conversation_id: Required conversation ID for tracking
             question: User question
             answer: LLM answer
             confidence: Confidence score (0.0-1.0, will be converted to 0-100)
@@ -152,7 +145,6 @@ class QALoggingService:
             context_used: Context information
             sources: Source documents used
             institution_id: Institution ID
-            conversation_id: Related conversation ID
             evaluation_data: Evaluation results
 
         Returns:
@@ -182,7 +174,7 @@ class QALoggingService:
                 evaluation_score = int(evaluation_data["average_score"] * 100)
 
         return await self.log_qa_interaction(
-            session_id=session_id,
+            conversation_id=conversation_id,
             question=question,
             answer=answer,
             confidence=confidence_percent,
@@ -192,16 +184,14 @@ class QALoggingService:
             service_mode="full_llm_bot",
             responded_by="llm",
             institution_id=institution_id,
-            conversation_id=conversation_id,
         )
 
     async def log_admin_response(
         self,
-        session_id: str,
+        conversation_id: int,
         question: str,
         answer: str,
         admin_id: int,
-        conversation_id: int,
         llm_recommendation_used: bool = False,
         response_time: Optional[int] = None,
         institution_id: int = 1,
@@ -210,11 +200,10 @@ class QALoggingService:
         Log admin response in bot_with_admin_validation mode
 
         Args:
-            session_id: Session identifier
+            conversation_id: Related conversation ID
             question: User question
             answer: Admin answer
             admin_id: ID of the responding admin
-            conversation_id: Related conversation ID
             llm_recommendation_used: Whether admin used LLM recommendation
             response_time: Response time in milliseconds
             institution_id: Institution ID
@@ -223,7 +212,7 @@ class QALoggingService:
             QA log ID if successful, None otherwise
         """
         return await self.log_qa_interaction(
-            session_id=session_id,
+            conversation_id=conversation_id,
             question=question,
             answer=answer,
             response_time=response_time,
@@ -232,14 +221,13 @@ class QALoggingService:
             admin_id=admin_id,
             llm_recommendation_used=llm_recommendation_used,
             institution_id=institution_id,
-            conversation_id=conversation_id,
             # Admin responses get high confidence
             confidence=95,
         )
 
     async def log_gesture_interaction(
         self,
-        session_id: str,
+        conversation_id: int,
         gesture_input: str,
         question: str,
         answer: str,
@@ -251,7 +239,7 @@ class QALoggingService:
         Log gesture-based interaction
 
         Args:
-            session_id: Session identifier
+            conversation_id: Related conversation ID
             gesture_input: Original gesture data/description
             question: Interpreted question from gesture
             answer: System answer
@@ -263,7 +251,7 @@ class QALoggingService:
             QA log ID if successful, None otherwise
         """
         return await self.log_qa_interaction(
-            session_id=session_id,
+            conversation_id=conversation_id,
             question=question,
             answer=answer,
             confidence=confidence,

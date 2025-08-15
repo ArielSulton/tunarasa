@@ -1,4 +1,22 @@
 services:
+  # Init service to fix shared volume permissions
+  init-permissions:
+    container_name: tunarasa-init-permissions
+    image: alpine:latest
+    volumes:
+      - shared_uploads:/app/uploads
+    command: >
+      sh -c "
+        echo 'Setting up shared uploads directory permissions...' &&
+        mkdir -p /app/uploads/rag-files &&
+        chown -R 1001:1000 /app/uploads &&
+        chmod -R 775 /app/uploads &&
+        echo 'Permissions set successfully: frontend=1001:1000, backend can write via group' &&
+        ls -la /app/uploads/
+      "
+    networks:
+      - tunarasa-net
+
   # Frontend Service (Next.js)
   frontend:
     container_name: tunarasa-frontend
@@ -7,6 +25,11 @@ services:
       dockerfile: Dockerfile.dev
     env_file:
       - .env
+    depends_on:
+      init-permissions:
+        condition: service_completed_successfully
+      backend:
+        condition: service_started
     environment:
       # Environment Configuration
       - NODE_ENV=development
@@ -84,8 +107,6 @@ services:
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
       - GRAFANA_URL=${GRAFANA_URL}
-    depends_on:
-      - backend
     ports:
       - "5000:3000"
     dns:
@@ -192,6 +213,8 @@ services:
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
       - GRAFANA_URL=${GRAFANA_URL}
     depends_on:
+      init-permissions:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     ports:

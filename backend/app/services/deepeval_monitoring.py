@@ -8,7 +8,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -95,7 +95,7 @@ class LLMConversation:
 
     def __post_init__(self):
         if self.timestamp is None:
-            self.timestamp = datetime.utcnow()
+            self.timestamp = datetime.now(timezone.utc)
 
 
 class CustomDeepEvalLLM(DeepEvalBaseLLM):
@@ -268,7 +268,7 @@ class DeepEvalMonitoringService:
                 message=message,
                 details=details,
                 execution_time=execution_time,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             )
 
         except Exception as e:
@@ -281,7 +281,7 @@ class DeepEvalMonitoringService:
                 message=f"Evaluation failed: {str(e)}",
                 details={"error": str(e)},
                 execution_time=0.0,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             )
 
     async def _evaluate_performance(
@@ -329,7 +329,7 @@ class DeepEvalMonitoringService:
             message=message,
             details=details,
             execution_time=0.01,  # Minimal computation time
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
 
     async def _evaluate_accuracy(
@@ -371,7 +371,7 @@ class DeepEvalMonitoringService:
             message=message,
             details=details,
             execution_time=0.01,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
 
     def _generate_metric_message(
@@ -406,7 +406,7 @@ class DeepEvalMonitoringService:
             cache_data = {
                 "conversation_id": conversation_id,
                 "results": [result.to_dict() for result in results],
-                "cached_at": datetime.utcnow().isoformat(),
+                "cached_at": datetime.now(timezone.utc).isoformat(),
             }
 
             # Cache for 7 days
@@ -424,7 +424,7 @@ class DeepEvalMonitoringService:
         """Update aggregated performance metrics"""
 
         try:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
 
             for result in results:
                 category = result.category.value
@@ -471,7 +471,7 @@ class DeepEvalMonitoringService:
 
         try:
             # Calculate time range
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             if time_period == "1h":
                 start_time = now - timedelta(hours=1)
             elif time_period == "24h":
@@ -539,7 +539,7 @@ class DeepEvalMonitoringService:
             return {
                 "error": str(e),
                 "period": time_period,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
             }
 
     async def get_conversation_evaluation(
@@ -615,7 +615,7 @@ class DeepEvalMonitoringService:
                 overall_pass_rate = 0.0
 
             report = {
-                "report_generated_at": datetime.utcnow().isoformat(),
+                "report_generated_at": datetime.now(timezone.utc).isoformat(),
                 "overall_quality_score": overall_avg,
                 "overall_pass_rate": overall_pass_rate,
                 "category_quality_scores": quality_scores,
@@ -630,7 +630,7 @@ class DeepEvalMonitoringService:
             logger.error(f"Failed to generate quality report: {e}")
             return {
                 "error": str(e),
-                "report_generated_at": datetime.utcnow().isoformat(),
+                "report_generated_at": datetime.now(timezone.utc).isoformat(),
             }
 
 

@@ -4,7 +4,7 @@ Handles session metrics for Grafana dashboards
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from app.services.metrics_service import metrics_service
@@ -52,7 +52,7 @@ async def track_active_sessions(request: PublicSessionRequest):
             "success": True,
             "active_sessions": active_count,
             "tracked_sessions": list(current_session_ids),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -60,7 +60,7 @@ async def track_active_sessions(request: PublicSessionRequest):
         return {
             "success": False,
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
 
@@ -83,7 +83,7 @@ async def start_public_session(session_id: str):
             "session_id": session_id,
             "active_sessions": active_count,
             "message": f"Session started: {session_id}",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -92,7 +92,7 @@ async def start_public_session(session_id: str):
             "success": False,
             "session_id": session_id,
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
 
@@ -114,7 +114,7 @@ async def end_public_session(session_id: str):
             "session_id": session_id,
             "active_sessions": active_count,
             "message": f"Session ended: {session_id}",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -123,7 +123,7 @@ async def end_public_session(session_id: str):
             "success": False,
             "session_id": session_id,
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
 
@@ -139,7 +139,7 @@ async def get_session_count():
         return {
             "success": True,
             "active_sessions": active_count,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -147,5 +147,5 @@ async def get_session_count():
         return {
             "success": False,
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }

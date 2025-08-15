@@ -11,7 +11,7 @@ import { AdminOnly } from '@/components/auth/auth-components'
 import { ServiceModeToggle } from '@/components/admin/ServiceModeToggle'
 import { SpeechToText } from '@/components/speech/SpeechToText'
 import { useServiceMode } from '@/hooks/use-service-config'
-import { useSupabaseUser } from '@/hooks/use-supabase-auth'
+import { useSupabaseUser, type UserWithRole } from '@/hooks/use-supabase-auth'
 import {
   Send,
   User,
@@ -32,6 +32,10 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { getRagApiUrl } from '@/lib/utils/backend'
+
+// Force dynamic rendering and disable static optimization
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
 interface ChatMessage {
   id: string
@@ -77,9 +81,42 @@ interface LLMRecommendation {
   context: string
 }
 
-export default function AdminKomunikasi() {
+// Component that uses auth hooks
+function AdminKomunikasiContent() {
+  const [isInternalClient, setIsInternalClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsInternalClient(true)
+  }, [])
+
+  if (!isInternalClient) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-gray-600">Memuat...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <AdminKomunikasiInternalContent />
+}
+
+function AdminKomunikasiInternalContent() {
   const { serviceMode } = useServiceMode()
   const { user: adminUser } = useSupabaseUser()
+
+  return <AdminKomunikasiInner serviceMode={serviceMode} adminUser={adminUser} />
+}
+
+interface AdminKomunikasiInnerProps {
+  serviceMode: string | null
+  adminUser: UserWithRole | null
+}
+
+function AdminKomunikasiInner({ serviceMode, adminUser }: AdminKomunikasiInnerProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -1033,4 +1070,27 @@ export default function AdminKomunikasi() {
       </div>
     </AdminOnly>
   )
+}
+
+export default function AdminKomunikasi() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent server-side rendering of auth hooks
+  if (!isMounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-purple-600"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <AdminKomunikasiContent />
 }

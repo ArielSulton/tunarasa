@@ -5,16 +5,41 @@
 
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { AuthStatus } from '@/components/auth/auth-components'
-import { Shield, Crown, AlertTriangle, Home } from 'lucide-react'
+import { Shield, Crown, AlertTriangle, Home, Loader2 } from 'lucide-react'
 import { useAdminAccess } from '@/components/auth/AdminOnly'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
-export default function UnauthorizedPage() {
+// Component that uses auth hooks - only rendered client-side
+function UnauthorizedContent() {
+  const [isInternalClient, setIsInternalClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsInternalClient(true)
+  }, [])
+
+  if (!isInternalClient) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <UnauthorizedInternalContent />
+}
+
+function UnauthorizedInternalContent() {
   const { user, hasAdminAccess, roleId, role } = useAdminAccess()
 
   return (
@@ -104,4 +129,27 @@ export default function UnauthorizedPage() {
       </div>
     </div>
   )
+}
+
+export default function UnauthorizedPage() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent server-side rendering of auth hooks
+  if (!isMounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <UnauthorizedContent />
 }

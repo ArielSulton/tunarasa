@@ -20,7 +20,9 @@ export function validateSupabaseConfig(): SupabaseConfigValidation {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  // Service role key is only available server-side, not in client bundle
+  const supabaseServiceKey = typeof window === 'undefined' ? process.env.SUPABASE_SERVICE_ROLE_KEY : undefined
 
   // Check if variables exist
   if (!supabaseUrl) {
@@ -68,7 +70,8 @@ export function validateSupabaseConfig(): SupabaseConfigValidation {
     if (hasPlaceholder) {
       warnings.push('SUPABASE_SERVICE_ROLE_KEY contains placeholder text. This may cause admin operations to fail.')
     }
-  } else {
+  } else if (typeof window === 'undefined') {
+    // Only warn about missing service role key on server-side
     warnings.push('SUPABASE_SERVICE_ROLE_KEY is missing. Admin operations may not work properly.')
   }
 

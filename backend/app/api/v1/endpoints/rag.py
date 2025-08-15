@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import redis
@@ -511,7 +511,7 @@ async def ask_question_with_rag(
     Ask a question and get an answer using RAG with Pinecone
     Enhanced with QR codes, evaluation, and conversation history
     """
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
 
     try:
         # Generate conversation ID
@@ -626,19 +626,66 @@ async def ask_question_with_rag(
 
         # Log QA interaction to database (NEW: Fix for empty qa_logs table)
         try:
-            qa_service = get_qa_logging_service()
+            # First, ensure we have a conversation record for QA logging
+            from app.core.database import get_db_session
+            from app.db.models import Conversation
+            from sqlalchemy import insert, select
 
-            qa_log_id = await qa_service.log_llm_response(
-                session_id=request.session_id,
-                question=corrected_question,
-                answer=answer,
-                confidence=confidence,
-                response_time=processing_time,
-                context_used=f"RAG with {len(sources)} sources",
-                sources=sources,
-                institution_id=getattr(request, "institution_id", 1),  # Default to 1
-                evaluation_data=evaluation_data,
-            )
+            conversation_db_id = None
+            async for db_session in get_db_session():
+                # Check if conversation already exists for this session
+                existing_conversation = await db_session.execute(
+                    select(Conversation.conversation_id).where(
+                        Conversation.session_id == request.session_id,
+                        Conversation.service_mode == "full_llm_bot",
+                        Conversation.is_active,
+                    )
+                )
+
+                conversation_row = existing_conversation.fetchone()
+
+                if conversation_row:
+                    conversation_db_id = conversation_row[0]
+                else:
+                    # Create new conversation record for QA logging
+                    conversation_data = {
+                        "session_id": request.session_id,
+                        "service_mode": "full_llm_bot",
+                        "is_active": True,
+                        "status": "active",
+                        "priority": "normal",
+                        "last_message_at": start_time,
+                        "created_at": start_time,
+                        "updated_at": start_time,
+                    }
+
+                    result_conv = await db_session.execute(
+                        insert(Conversation)
+                        .values(**conversation_data)
+                        .returning(Conversation.conversation_id)
+                    )
+
+                    await db_session.commit()
+                    conversation_db_id = result_conv.fetchone()[0]
+
+                break
+
+            if conversation_db_id:
+                qa_service = get_qa_logging_service()
+
+                qa_log_id = await qa_service.log_llm_response(
+                    conversation_id=conversation_db_id,
+                    question=corrected_question,
+                    answer=answer,
+                    confidence=confidence,
+                    response_time=processing_time,
+                    context_used=f"RAG with {len(sources)} sources",
+                    sources=sources,
+                    institution_id=getattr(
+                        request, "institution_id", 1
+                    ),  # Default to 1
+                    evaluation_data=evaluation_data,
+                )
 
             if qa_log_id:
                 logger.info(f"QA interaction logged with ID: {qa_log_id}")
@@ -674,7 +721,7 @@ async def ask_question_with_rag(
             confidence=0.0,
             sources=[],
             session_id=request.session_id,
-            processing_time=(datetime.utcnow() - start_time).total_seconds(),
+            processing_time=(datetime.now(timezone.utc) - start_time).total_seconds(),
             follow_up_suggestions=[],
             message=f"Question answering failed: {str(e)}",
             # Enhanced features for error case

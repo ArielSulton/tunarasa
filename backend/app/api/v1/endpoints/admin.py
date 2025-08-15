@@ -4,7 +4,7 @@ Requires Supabase JWT authentication with admin role
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
 from app.core.database import get_db_session
@@ -52,12 +52,12 @@ async def get_dashboard_stats(
             }
 
         # Add timestamp
-        stats["last_updated"] = datetime.utcnow().isoformat()
+        stats["last_updated"] = datetime.now(timezone.utc).isoformat()
 
         return {
             "success": True,
             "data": stats,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -77,7 +77,7 @@ async def get_dashboard_metrics(
     """Get dashboard metrics for specified time period"""
     try:
         # Calculate date range based on period
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if period == "day":
             start_date = now - timedelta(days=1)
         elif period == "week":
@@ -166,7 +166,7 @@ async def get_dashboard_metrics(
         return {
             "success": True,
             "data": metrics,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -212,7 +212,7 @@ async def get_all_users(
                 "users": users_data,
                 "pagination": {"skip": skip, "limit": limit, "total": len(users_data)},
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -261,7 +261,7 @@ async def get_user_by_id(
         return {
             "success": True,
             "data": user_data,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -310,7 +310,7 @@ async def update_user(
             "success": True,
             "data": user_data,
             "message": "User updated successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -407,7 +407,7 @@ async def get_all_conversations(
         return {
             "success": True,
             "data": conversations_data,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -471,7 +471,7 @@ async def get_conversation_details(
         return {
             "success": True,
             "data": conversation_data,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -502,7 +502,7 @@ async def get_system_health(
 
         system_health = {
             "database": db_health,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "overall_status": (
                 "healthy" if db_health.get("status") == "healthy" else "degraded"
             ),
@@ -511,7 +511,7 @@ async def get_system_health(
         return {
             "success": True,
             "data": system_health,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -535,7 +535,7 @@ async def get_all_roles(db: AsyncSession = Depends(get_db_session)) -> Dict[str,
         return {
             "success": True,
             "data": {"roles": roles_data},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -586,7 +586,7 @@ async def validate_admin_settings(
                 "summary": summary,
                 "settings_validated": settings_dict,
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -629,7 +629,7 @@ async def update_validation_settings(
         # For now, we'll use a simple approach by storing in JSON format
         settings_data = {
             "admin_validation_settings": settings.dict(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             "updated_by": "admin_user",  # In production, get from authenticated user
         }
 
@@ -648,7 +648,7 @@ async def update_validation_settings(
         #     "VALUES ('admin_validation_settings', :settings, :timestamp) "
         #     "ON CONFLICT (setting_key) DO UPDATE SET "
         #     "setting_value = :settings, updated_at = :timestamp",
-        #     {"settings": json.dumps(settings.dict()), "timestamp": datetime.utcnow()}
+        #     {"settings": json.dumps(settings.dict()), "timestamp": datetime.now(timezone.utc)}
         # )
         # await db.commit()
 
@@ -667,7 +667,7 @@ async def update_validation_settings(
                 "summary": summary,
                 "settings": settings.dict(),
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -703,7 +703,7 @@ async def get_validation_status(
             "redis_connected": validation_service.redis_client is not None,
             "validation_cache_size": len(validation_service._validation_cache),
             "blocked_keywords_count": len(validation_service._blocked_keywords),
-            "last_update": datetime.utcnow().isoformat(),
+            "last_update": datetime.now(timezone.utc).isoformat(),
         }
 
         return {
@@ -714,7 +714,7 @@ async def get_validation_status(
                 "system_status": system_status,
                 "validation_results": [r.to_dict() for r in status_results],
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -740,9 +740,9 @@ async def get_blocked_keywords(
             "data": {
                 "blocked_keywords": keywords_list,
                 "count": len(keywords_list),
-                "last_updated": datetime.utcnow().isoformat(),
+                "last_updated": datetime.now(timezone.utc).isoformat(),
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -773,9 +773,9 @@ async def update_blocked_keywords(
             "data": {
                 "message": "Blocked keywords updated successfully",
                 "keywords_count": len(validation_service._blocked_keywords),
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -805,7 +805,7 @@ async def get_llm_quality_metrics(
         # Format metrics for Grafana/Prometheus
         metrics = {
             "period": period,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "overall_metrics": {
                 "total_evaluations": summary.get("total_evaluations", 0),
                 "average_score": summary.get("overall_average_score", 0.0),
@@ -852,7 +852,7 @@ async def get_llm_quality_metrics(
         return {
             "success": True,
             "data": metrics,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -885,7 +885,7 @@ async def get_conversation_evaluation(
         return {
             "success": True,
             "data": evaluation_data,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -929,9 +929,9 @@ async def evaluate_conversation(
             "data": {
                 "conversation_id": conversation.conversation_id,
                 "evaluation_results": [result.to_dict() for result in results],
-                "evaluated_at": datetime.utcnow().isoformat(),
+                "evaluated_at": datetime.now(timezone.utc).isoformat(),
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -956,7 +956,7 @@ async def get_quality_report(
         return {
             "success": True,
             "data": report,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -1009,7 +1009,7 @@ async def get_prometheus_metrics(
         )
 
         # Add timestamp
-        current_timestamp = int(datetime.utcnow().timestamp() * 1000)
+        current_timestamp = int(datetime.now(timezone.utc).timestamp() * 1000)
         metrics_lines.append(f"tunarasa_last_update_timestamp {current_timestamp}")
 
         prometheus_output = "\n".join(metrics_lines)
@@ -1060,9 +1060,9 @@ async def get_monitoring_health(
             "data": {
                 "overall_status": "healthy" if overall_healthy else "degraded",
                 "components": health_status,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -1094,7 +1094,7 @@ async def get_llm_evaluation_summary(
         return {
             "success": True,
             "data": summary,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -1148,7 +1148,7 @@ async def get_llm_quality_report(
         return {
             "success": True,
             "data": quality_report,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -1200,7 +1200,7 @@ async def analyze_llm_batch(
         return {
             "success": True,
             "data": result,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -1249,7 +1249,7 @@ async def get_recommendation_details(
                     "expected_impact": recommendation.get("expected_improvement", 0.0),
                 },
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:

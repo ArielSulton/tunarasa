@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/components/auth/SupabaseAuthProvider'
 import { Button } from '@/components/ui/button'
@@ -10,11 +10,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, ArrowLeft } from 'lucide-react'
 
-export default function ForgotPasswordPage() {
+// Force dynamic rendering and disable static optimization
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+
+// Component that uses auth hooks - only rendered client-side
+function ForgotPasswordContent() {
+  const [isInternalClient, setIsInternalClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsInternalClient(true)
+  }, [])
+
+  if (!isInternalClient) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <ForgotPasswordInternalContent />
+}
+
+function ForgotPasswordInternalContent() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
   const { resetPassword } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,4 +136,24 @@ export default function ForgotPasswordPage() {
       </Card>
     </div>
   )
+}
+
+export default function ForgotPasswordPage() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent server-side rendering of auth hooks
+  if (!isMounted) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  return <ForgotPasswordContent />
 }

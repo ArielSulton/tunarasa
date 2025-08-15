@@ -92,6 +92,28 @@ const getServiceModeInfo = (serviceMode: string) => {
 }
 
 export function AdminConversationPanel({ isVisible, onVisibilityChange }: AdminConversationPanelProps) {
+  const [isInternalClient, setIsInternalClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsInternalClient(true)
+  }, [])
+
+  if (!isInternalClient) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-gray-600">Memuat panel admin...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <AdminConversationPanelInternal isVisible={isVisible} onVisibilityChange={onVisibilityChange} />
+}
+
+function AdminConversationPanelInternal({ isVisible, onVisibilityChange }: AdminConversationPanelProps) {
   const { role } = useUserRole()
   const { serviceMode } = useServiceMode()
   const { user: adminUser } = useSupabaseUser()

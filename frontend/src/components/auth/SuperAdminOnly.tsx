@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Shield, Crown, AlertTriangle } from 'lucide-react'
 import { useSupabaseUser, useIsAdmin, useIsSuperAdmin } from '@/hooks/use-supabase-auth'
 
@@ -25,8 +26,28 @@ interface SuperAdminOnlyProps {
 
 /**
  * SuperAdmin only wrapper component with automatic role detection
+ * Protected version that handles auth context safely
  */
 export function SuperAdminOnly({ children, fallbackToAdmin = false }: SuperAdminOnlyProps) {
+  const [isClient, setIsClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+      </div>
+    )
+  }
+
+  return <SuperAdminOnlyContent fallbackToAdmin={fallbackToAdmin}>{children}</SuperAdminOnlyContent>
+}
+
+function SuperAdminOnlyContent({ children, fallbackToAdmin = false }: SuperAdminOnlyProps) {
   const { user, supabaseUser, loading } = useSupabaseUser()
   const { isSuperAdmin } = useIsSuperAdmin()
   const { isAdmin } = useIsAdmin()

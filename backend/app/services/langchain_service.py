@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -74,9 +74,9 @@ class ConversationContext:
 
     def __post_init__(self):
         if self.created_at is None:
-            self.created_at = datetime.utcnow()
+            self.created_at = datetime.now(timezone.utc)
         if self.updated_at is None:
-            self.updated_at = datetime.utcnow()
+            self.updated_at = datetime.now(timezone.utc)
 
 
 @dataclass
@@ -122,12 +122,12 @@ class MetricsCallback(BaseCallbackHandler):
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs
     ) -> None:
         """Called when LLM starts running"""
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(timezone.utc)
         logger.debug(f"LLM started processing {len(prompts)} prompts")
 
     def on_llm_end(self, response, **kwargs) -> None:
         """Called when LLM ends running"""
-        self.end_time = datetime.utcnow()
+        self.end_time = datetime.now(timezone.utc)
         if hasattr(response, "llm_output") and response.llm_output:
             self.token_usage = response.llm_output.get("token_usage", {})
         logger.debug(f"LLM completed in {self.get_duration():.2f}s")
@@ -367,7 +367,7 @@ class EnhancedLangChainService:
     ) -> EnhancedResponse:
         """Process question with enhanced RAG pipeline and conversation memory"""
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         conversation_id = (
             f"{conversation_context.session_id}_{int(start_time.timestamp())}"
         )
@@ -377,11 +377,11 @@ class EnhancedLangChainService:
             memory = await self._get_conversation_memory(conversation_context)
 
             # Retrieve relevant documents
-            docs_start = datetime.utcnow()
+            docs_start = datetime.now(timezone.utc)
             relevant_docs = await self._retrieve_documents(
                 question, conversation_context
             )
-            retrieval_time = (datetime.utcnow() - docs_start).total_seconds()
+            retrieval_time = (datetime.now(timezone.utc) - docs_start).total_seconds()
 
             # Build context from retrieved documents
             context = self._build_enhanced_context(relevant_docs, conversation_context)
@@ -393,7 +393,7 @@ class EnhancedLangChainService:
             metrics_callback = MetricsCallback()
 
             # Generate response
-            response_start = datetime.utcnow()
+            response_start = datetime.now(timezone.utc)
             answer, reasoning = await self._generate_enhanced_response(
                 question=question,
                 context=context,
@@ -401,7 +401,9 @@ class EnhancedLangChainService:
                 conversation_context=conversation_context,
                 callback=metrics_callback,
             )
-            response_time = (datetime.utcnow() - response_start).total_seconds()
+            response_time = (
+                datetime.now(timezone.utc) - response_start
+            ).total_seconds()
 
             # Calculate confidence and quality scores
             confidence = self._calculate_confidence(
@@ -425,7 +427,7 @@ class EnhancedLangChainService:
             )
 
             # Calculate total processing time
-            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
 
             # Create enhanced response
             enhanced_response = EnhancedResponse(
@@ -471,7 +473,9 @@ class EnhancedLangChainService:
                 sources=[],
                 conversation_id=conversation_id,
                 session_id=conversation_context.session_id,
-                processing_time=(datetime.utcnow() - start_time).total_seconds(),
+                processing_time=(
+                    datetime.now(timezone.utc) - start_time
+                ).total_seconds(),
                 model_used=settings.LLM_MODEL,
                 retrieval_quality=0.0,
                 context_used="",
@@ -851,7 +855,7 @@ class EnhancedLangChainService:
             await self._cache_memory(context.session_id, memory)
 
             # Update context timestamp
-            context.updated_at = datetime.utcnow()
+            context.updated_at = datetime.now(timezone.utc)
 
         except Exception as e:
             logger.error(f"Failed to update conversation memory: {e}")
@@ -969,7 +973,7 @@ class EnhancedLangChainService:
                 chunk.metadata.update(
                     {
                         "document_id": document_id,
-                        "processed_at": datetime.utcnow().isoformat(),
+                        "processed_at": datetime.now(timezone.utc).isoformat(),
                         "service": "langchain_enhanced",
                     }
                 )
@@ -1011,7 +1015,7 @@ class EnhancedLangChainService:
                         {
                             "user_message": user_msg,
                             "ai_response": ai_msg,
-                            "timestamp": datetime.utcnow().isoformat(),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
                         }
                     )
 
@@ -1049,7 +1053,7 @@ class EnhancedLangChainService:
             if not institution_slug:
                 return "pelayanan publik Indonesia", "Indonesian public services"
 
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 result = await db.execute(
                     select(Institution).where(Institution.slug == institution_slug)
                 )

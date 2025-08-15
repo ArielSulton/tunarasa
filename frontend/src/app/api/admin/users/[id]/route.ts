@@ -4,12 +4,22 @@ import { users, roles, userSyncLog } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
+// Lazy initialize Supabase admin client
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase environment variables are required')
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+}
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,7 +29,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     console.log(`🔍 [Diagnostic] Checking user: ${userId}`)
 
     // 1. Check user in Supabase Auth
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId)
+    const { data: authUser, error: authError } = await getSupabaseAdmin().auth.admin.getUserById(userId)
 
     if (authError) {
       console.error('❌ Supabase Auth error:', authError)
@@ -203,7 +213,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
       case 'force_sync':
         // Get user from Supabase Auth
-        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId)
+        const { data: authUser, error: authError } = await getSupabaseAdmin().auth.admin.getUserById(userId)
 
         if (authError) {
           return NextResponse.json(

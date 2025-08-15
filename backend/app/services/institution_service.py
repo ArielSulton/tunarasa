@@ -7,7 +7,7 @@ Handles institution CRUD operations, file uploads, and RAG processing integratio
 import asyncio
 import logging
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -60,7 +60,7 @@ class InstitutionService:
     ) -> Institution:
         """Create a new institution"""
         try:
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 # Check if slug already exists
                 existing = await db.execute(
                     select(Institution).where(Institution.slug == slug)
@@ -99,7 +99,7 @@ class InstitutionService:
     ) -> List[Dict]:
         """Get all institutions with optional statistics"""
         try:
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 # Base query
                 query = select(Institution).options(selectinload(Institution.rag_files))
 
@@ -150,7 +150,7 @@ class InstitutionService:
     async def get_institution_by_slug(self, slug: str) -> Optional[Institution]:
         """Get institution by slug"""
         try:
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 result = await db.execute(
                     select(Institution)
                     .options(selectinload(Institution.rag_files))
@@ -172,7 +172,7 @@ class InstitutionService:
         """Upload and process a RAG file for an institution"""
         try:
             # Validate institution exists
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 institution_result = await db.execute(
                     select(Institution).where(
                         Institution.institution_id == institution_id
@@ -203,7 +203,7 @@ class InstitutionService:
             file_size = file_path.stat().st_size
 
             # Create RAG file record
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 rag_file = RagFile(
                     institution_id=institution_id,
                     file_name=file.filename,
@@ -238,7 +238,7 @@ class InstitutionService:
     async def _process_rag_file(self, rag_file_id: int):
         """Process RAG file in background"""
         try:
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 # Get RAG file
                 result = await db.execute(
                     select(RagFile)
@@ -270,7 +270,6 @@ class InstitutionService:
                     error_msg = f"File not found: {file_path}"
                     logger.error(error_msg)
                     rag_file.processing_status = "failed"
-                    rag_file.processing_error = error_msg
                     await db.commit()
                     return
 
@@ -296,7 +295,7 @@ class InstitutionService:
 
                     if result["success"]:
                         rag_file.processing_status = "completed"
-                        rag_file.processed_at = datetime.utcnow()
+                        rag_file.processed_at = datetime.now(timezone.utc)
                         rag_file.document_count = result["metadata"].get(
                             "chunk_count", 1
                         )
@@ -315,7 +314,6 @@ class InstitutionService:
                         exc_info=True,
                     )
                     rag_file.processing_status = "failed"
-                    rag_file.processing_error = str(process_error)
 
                 await db.commit()
 
@@ -329,15 +327,12 @@ class InstitutionService:
                 exc_info=True,
             )
 
-        except Exception as e:
-            logger.error(f"Error in RAG file background processing: {e}")
-
     async def get_institution_rag_files(
         self, institution_id: int, active_only: bool = True
     ) -> List[Dict]:
         """Get RAG files for an institution"""
         try:
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 query = select(RagFile).where(RagFile.institution_id == institution_id)
 
                 if active_only:
@@ -359,7 +354,6 @@ class InstitutionService:
                         "pineconeNamespace": rf.pinecone_namespace,
                         "documentCount": rf.document_count,
                         "embeddingModel": rf.embedding_model,
-                        "processingError": rf.processing_error,
                         "isActive": rf.is_active,
                         "processedAt": rf.processed_at,
                         "createdAt": rf.created_at,
@@ -377,7 +371,7 @@ class InstitutionService:
     async def delete_rag_file(self, rag_file_id: int, user_id: int) -> bool:
         """Delete a RAG file and its associated data"""
         try:
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 # Get RAG file
                 result = await db.execute(
                     select(RagFile).where(RagFile.rag_file_id == rag_file_id)
@@ -407,7 +401,7 @@ class InstitutionService:
 
                 # Mark as inactive instead of hard delete
                 rag_file.is_active = False
-                rag_file.updated_at = datetime.utcnow()
+                rag_file.updated_at = datetime.now(timezone.utc)
                 await db.commit()
 
                 logger.info(f"Deleted RAG file: {rag_file.file_name}")
@@ -422,7 +416,7 @@ class InstitutionService:
     async def get_institution_stats(self, institution_id: int) -> Dict:
         """Get comprehensive statistics for an institution"""
         try:
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 # Get institution
                 institution_result = await db.execute(
                     select(Institution).where(

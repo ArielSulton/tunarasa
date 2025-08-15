@@ -46,8 +46,9 @@ import {
 import { useUserRole } from '@/components/auth/SuperAdminOnly'
 import { AdminOnly } from '@/components/auth/AdminOnly'
 
-// Force dynamic rendering to prevent build-time auth evaluation
+// Force dynamic rendering and disable static optimization
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
 interface AdminUser {
   id: string
@@ -165,8 +166,42 @@ interface RagFile {
   updatedAt: string | Date
 }
 
-function DashboardContent() {
+// Component that uses auth hooks - only rendered client-side
+function DashboardAuthContent() {
   const { role: _role, isSuperAdmin, isAdmin } = useUserRole()
+
+  return <DashboardContentInner isSuperAdmin={isSuperAdmin ?? false} isAdmin={isAdmin ?? false} />
+}
+
+interface DashboardContentInnerProps {
+  isSuperAdmin: boolean
+  isAdmin: boolean
+}
+
+function DashboardContent() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent server-side rendering of auth hooks
+  if (!isMounted) {
+    return (
+      <div className="bg-background flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="border-primary mx-auto h-8 w-8 animate-spin rounded-full border-b-2"></div>
+          <p className="text-muted-foreground mt-2">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <DashboardAuthContent />
+}
+
+function DashboardContentInner({ isSuperAdmin, isAdmin }: DashboardContentInnerProps) {
   const [admins, setAdmins] = useState<AdminUser[]>([])
   const [_pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
   const [loading, setLoading] = useState(true)
@@ -202,8 +237,8 @@ function DashboardContent() {
     adminResponses: 0,
   })
   const [qaLogsFilters, setQaLogsFilters] = useState({
-    serviceMode: '',
-    respondedBy: '',
+    serviceMode: 'all',
+    respondedBy: 'all',
     searchQuery: '',
   })
   const [showQaLogs, setShowQaLogs] = useState(false)
@@ -280,8 +315,10 @@ function DashboardContent() {
           limit: '20',
         })
 
-        if (qaLogsFilters.serviceMode) params.append('serviceMode', qaLogsFilters.serviceMode)
-        if (qaLogsFilters.respondedBy) params.append('respondedBy', qaLogsFilters.respondedBy)
+        if (qaLogsFilters.serviceMode && qaLogsFilters.serviceMode !== 'all')
+          params.append('serviceMode', qaLogsFilters.serviceMode)
+        if (qaLogsFilters.respondedBy && qaLogsFilters.respondedBy !== 'all')
+          params.append('respondedBy', qaLogsFilters.respondedBy)
         if (qaLogsFilters.searchQuery) params.append('search', qaLogsFilters.searchQuery)
 
         const response = await fetch(`/api/admin/qa-logs?${params.toString()}`)
@@ -1245,7 +1282,7 @@ function DashboardContent() {
                       <SelectValue placeholder="Semua Mode Layanan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Semua Mode Layanan</SelectItem>
+                      <SelectItem value="all">Semua Mode Layanan</SelectItem>
                       <SelectItem value="full_llm_bot">Full LLM Bot</SelectItem>
                       <SelectItem value="bot_with_admin_validation">Bot + Validasi Admin</SelectItem>
                     </SelectContent>
@@ -1261,7 +1298,7 @@ function DashboardContent() {
                       <SelectValue placeholder="Semua Respons" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Semua Respons</SelectItem>
+                      <SelectItem value="all">Semua Respons</SelectItem>
                       <SelectItem value="llm">Hanya LLM</SelectItem>
                       <SelectItem value="admin">Hanya Admin</SelectItem>
                     </SelectContent>
@@ -1859,6 +1896,25 @@ function DashboardContent() {
 
 // Wrap the dashboard with AdminOnly protection
 export default function AdminDashboard() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent server-side rendering of auth hooks
+  if (!isMounted) {
+    return (
+      <div className="bg-background flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="border-primary mx-auto h-8 w-8 animate-spin rounded-full border-b-2"></div>
+          <p className="text-muted-foreground mt-2">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <AdminOnly>
       <DashboardContent />

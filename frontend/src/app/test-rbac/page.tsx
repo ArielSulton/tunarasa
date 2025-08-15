@@ -1,17 +1,41 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAdminAccess } from '@/components/auth/AdminOnly'
-import { AlertCircle, CheckCircle, XCircle, RefreshCw, Settings, Wrench } from 'lucide-react'
+import { AlertCircle, CheckCircle, XCircle, RefreshCw, Settings, Wrench, Loader2 } from 'lucide-react'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
-export default function TestRBACPage() {
+// Component that uses auth hooks - only rendered client-side
+function TestRBACContent() {
+  const [isInternalClient, setIsInternalClient] = useState(false)
+
+  // Ensure we're on the client side before using auth hooks
+  useEffect(() => {
+    setIsInternalClient(true)
+  }, [])
+
+  if (!isInternalClient) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-gray-600">Memuat...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <TestRBACInternalContent />
+}
+
+function TestRBACInternalContent() {
   const [diagnostics, setDiagnostics] = useState<any>(null)
   const [fixResult, setFixResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -228,4 +252,27 @@ export default function TestRBACPage() {
       </div>
     </div>
   )
+}
+
+export default function TestRBACPage() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent server-side rendering of auth hooks
+  if (!isMounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <TestRBACContent />
 }

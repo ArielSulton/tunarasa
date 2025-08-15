@@ -5,21 +5,21 @@ Endpoints for logging and managing Q&A interactions
 Supports both direct logging and admin validation workflows
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from app.services.qa_logging_service import QALoggingService, get_qa_logging_service
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/api/v1/qa-log", tags=["qa-logging"])
+router = APIRouter(prefix="/qa-log", tags=["qa-logging"])
 
 
 # Request Models
 class QALogRequest(BaseModel):
     """Request model for logging QA interactions"""
 
-    session_id: str = Field(..., description="Session identifier")
+    conversation_id: int = Field(..., description="Required conversation ID")
     question: str = Field(..., description="User question")
     answer: str = Field(..., description="System answer")
     confidence: Optional[int] = Field(None, description="Confidence score (0-100)")
@@ -38,18 +38,16 @@ class QALogRequest(BaseModel):
         default=False, description="LLM recommendation used"
     )
     institution_id: int = Field(default=1, description="Institution ID")
-    conversation_id: Optional[int] = Field(None, description="Related conversation ID")
 
 
 class AdminValidationLogRequest(BaseModel):
     """Request model for admin validation QA logging"""
 
-    session_id: str
+    conversation_id: int
     question: str
     answer: str
     service_mode: str = "bot_with_admin_validation"
     responded_by: str = "llm"
-    conversation_id: Optional[int] = None
     institution_id: int = 1
     llm_recommendation_used: bool = False
     confidence: int = 75
@@ -58,7 +56,7 @@ class AdminValidationLogRequest(BaseModel):
 class GestureLogRequest(BaseModel):
     """Request model for gesture-based QA logging"""
 
-    session_id: str
+    conversation_id: int
     gesture_input: str
     question: str
     answer: str
@@ -89,7 +87,7 @@ async def log_qa_interaction(
     """
     try:
         qa_log_id = await qa_service.log_qa_interaction(
-            session_id=request.session_id,
+            conversation_id=request.conversation_id,
             question=request.question,
             answer=request.answer,
             confidence=request.confidence,
@@ -102,7 +100,6 @@ async def log_qa_interaction(
             admin_id=request.admin_id,
             llm_recommendation_used=request.llm_recommendation_used,
             institution_id=request.institution_id,
-            conversation_id=request.conversation_id,
         )
 
         if qa_log_id:
@@ -133,13 +130,12 @@ async def log_admin_validation_qa(
     """
     try:
         qa_log_id = await qa_service.log_qa_interaction(
-            session_id=request.session_id,
+            conversation_id=request.conversation_id,
             question=request.question,
             answer=request.answer,
             confidence=request.confidence,
             service_mode=request.service_mode,
             responded_by=request.responded_by,
-            conversation_id=request.conversation_id,
             institution_id=request.institution_id,
             llm_recommendation_used=request.llm_recommendation_used,
         )
@@ -173,7 +169,7 @@ async def log_gesture_qa(
     """
     try:
         qa_log_id = await qa_service.log_gesture_interaction(
-            session_id=request.session_id,
+            conversation_id=request.conversation_id,
             gesture_input=request.gesture_input,
             question=request.question,
             answer=request.answer,
@@ -247,7 +243,7 @@ async def qa_log_health_check():
         "success": True,
         "service": "qa-logging",
         "status": "healthy",
-        "timestamp": datetime.utcnow(),
+        "timestamp": datetime.now(timezone.utc),
         "endpoints": [
             "/api/v1/qa-log/log",
             "/api/v1/qa-log/admin-validation",

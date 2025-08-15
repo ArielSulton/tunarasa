@@ -117,7 +117,7 @@ class FAQRecommendationService:
         Returns questions from qa_logs table filtered by institution
         """
         try:
-            async with get_db_session() as db:
+            async for db in get_db_session():
                 # Query to get questions for specific institution
                 # Note: This assumes institution_id column exists in qa_logs
                 query = text(

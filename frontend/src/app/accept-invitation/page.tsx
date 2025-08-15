@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, CheckCircle, AlertCircle, Clock, User, Mail, Shield } from 'lucide-react'
+
+// Force dynamic rendering and disable static optimization
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
 interface InvitationData {
   email: string
@@ -22,7 +26,7 @@ interface InvitationData {
   timeRemainingFormatted: string | null
 }
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
@@ -95,7 +99,6 @@ export default function AcceptInvitationPage() {
     const hasUpperCase = /[A-Z]/.test(formData.password)
     const hasLowerCase = /[a-z]/.test(formData.password)
     const hasNumbers = /\d/.test(formData.password)
-    const _hasNonalphas = /\W/.test(formData.password)
 
     if (formData.password && (!hasUpperCase || !hasLowerCase || !hasNumbers)) {
       errors.password = 'Kata sandi harus mengandung huruf besar, kecil, dan angka'
@@ -400,5 +403,22 @@ export default function AcceptInvitationPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-blue-600" />
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <AcceptInvitationContent />
+    </Suspense>
   )
 }

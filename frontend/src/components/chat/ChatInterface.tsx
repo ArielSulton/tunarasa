@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { GestureRecognition } from '@/components/gesture/gesture-recognition'
 import { SpeechToText } from '@/components/speech/SpeechToText'
+import { ConversationEnhancements } from '@/components/komunikasi/ConversationEnhancements'
 import { useServiceConfig } from '@/hooks/use-service-config'
 import { User, Bot, MessageCircle, Mic, HandMetal, RotateCcw, Clock, Users, AlertCircle } from 'lucide-react'
 import { getRagApiUrl } from '@/lib/utils/backend'
@@ -127,6 +128,8 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
           }
 
           setMessages((prev) => [...prev.slice(0, -1), { ...userMessage, status: 'delivered' }, assistantMessage])
+
+          // Note: QA logging for full_llm_bot mode is handled automatically by the RAG backend endpoint
         } else if (serviceMode === 'bot_with_admin_validation') {
           // Use institution-specific admin validation endpoint
           const response = await fetch('/api/chat/send-message', {
@@ -547,6 +550,15 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
                         )}
                       </div>
                     ))
+                  )}
+
+                  {/* QR Code and Summary - Show as last message in chat when conversation ended */}
+                  {conversationEnded && messages.length > 0 && (
+                    <div className="flex justify-center">
+                      <div className="w-full max-w-[80%]">
+                        <ConversationEnhancements sessionId={sessionId} messages={messages} inline={true} />
+                      </div>
+                    </div>
                   )}
 
                   {isProcessing && (

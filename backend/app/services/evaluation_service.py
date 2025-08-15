@@ -4,7 +4,7 @@ DeepEval integration service for LLM quality assessment
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 try:
@@ -212,7 +212,7 @@ class EvaluationService:
                 "conversation_id": conversation_id,
                 "question": question,
                 "answer": answer,
-                "evaluation_timestamp": datetime.utcnow().isoformat(),
+                "evaluation_timestamp": datetime.now(timezone.utc).isoformat(),
                 "overall_score": overall_score,
                 "metrics": evaluation_results,
                 "recommendations": recommendations,
@@ -245,7 +245,7 @@ class EvaluationService:
         return {
             "question": question,
             "answer": answer,
-            "evaluation_timestamp": datetime.utcnow().isoformat(),
+            "evaluation_timestamp": datetime.now(timezone.utc).isoformat(),
             "overall_score": mock_score,
             "metrics": {
                 "answer_relevancy": {
@@ -280,7 +280,7 @@ class EvaluationService:
         return {
             "question": question,
             "answer": answer,
-            "evaluation_timestamp": datetime.utcnow().isoformat(),
+            "evaluation_timestamp": datetime.now(timezone.utc).isoformat(),
             "overall_score": 0.0,
             "error": error,
             "metrics": {},
@@ -415,7 +415,7 @@ class EvaluationService:
                     "faithfulness": "+7.8%",
                     "contextual_precision": "+2.4%",
                 },
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:

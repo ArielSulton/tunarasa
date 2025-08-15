@@ -20,8 +20,8 @@ COPY ./app ./app
 # Create directories for assets and deepeval
 RUN mkdir -p /app/assets /app/.deepeval
 
-# Create non-root user
-RUN groupadd -r tunarasa && useradd -r -g tunarasa tunarasa
+# Create non-root user with gid=1000 to match frontend group
+RUN groupadd -r tunarasa --gid=1000 && useradd -r -g tunarasa tunarasa --uid=999
 
 # Set ownership for app directory including deepeval
 RUN chown -R tunarasa:tunarasa /app
