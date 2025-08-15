@@ -109,7 +109,8 @@ RUN --mount=type=secret,id=NODE_ENV,env=NODE_ENV \
     --mount=type=secret,id=GRAFANA_ADMIN_USER,env=GRAFANA_ADMIN_USER \
     --mount=type=secret,id=GRAFANA_ADMIN_PASSWORD,env=GRAFANA_ADMIN_PASSWORD \
     --mount=type=secret,id=GRAFANA_DOMAIN,env=GRAFANA_DOMAIN \
-    --mount=type=secret,id=GRAFANA_URL,env=GRAFANA_URL
+    --mount=type=secret,id=GRAFANA_URL,env=GRAFANA_URL \
+    --mount=type=secret,id=NEXT_PUBLIC_GRAFANA_URL,env=NEXT_PUBLIC_GRAFANA_URL
 
 # Build the application
 RUN bun run build

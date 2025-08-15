@@ -107,6 +107,7 @@ services:
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
       - GRAFANA_URL=${GRAFANA_URL}
+      - NEXT_PUBLIC_GRAFANA_URL=${NEXT_PUBLIC_GRAFANA_URL}
     ports:
       - "5000:3000"
     dns:
@@ -212,6 +213,7 @@ services:
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
       - GRAFANA_URL=${GRAFANA_URL}
+      - NEXT_PUBLIC_GRAFANA_URL=${NEXT_PUBLIC_GRAFANA_URL}
     depends_on:
       init-permissions:
         condition: service_completed_successfully

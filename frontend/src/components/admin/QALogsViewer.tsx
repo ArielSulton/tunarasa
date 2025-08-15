@@ -38,7 +38,9 @@ interface QALogsViewerProps {
   grafanaBaseUrl?: string
 }
 
-export function QALogsViewer({ grafanaBaseUrl = 'http://localhost:3000' }: QALogsViewerProps) {
+export function QALogsViewer({
+  grafanaBaseUrl = process.env.NEXT_PUBLIC_GRAFANA_URL ?? 'http://localhost:3030',
+}: QALogsViewerProps) {
   const [conversations, setConversations] = useState<ConversationItem[]>([])
   const [selectedConversation, setSelectedConversation] = useState<ConversationDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)

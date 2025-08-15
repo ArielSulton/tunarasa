@@ -989,7 +989,7 @@ function DashboardContentInner({ isSuperAdmin, isAdmin }: DashboardContentInnerP
                 </div>
                 <Button className="w-full" size="lg" asChild>
                   <a
-                    href="http://localhost:3030"
+                    href={process.env.NEXT_PUBLIC_GRAFANA_URL ?? 'http://localhost:3030'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2"

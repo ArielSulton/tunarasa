@@ -100,6 +100,7 @@ services:
         - GRAFANA_ADMIN_PASSWORD
         - GRAFANA_DOMAIN
         - GRAFANA_URL
+        - NEXT_PUBLIC_GRAFANA_URL
     env_file:
       - .env
     environment:
@@ -179,6 +180,7 @@ services:
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
       - GRAFANA_URL=${GRAFANA_URL}
+      - NEXT_PUBLIC_GRAFANA_URL=${NEXT_PUBLIC_GRAFANA_URL}
     depends_on:
       init-permissions:
         condition: service_completed_successfully
@@ -286,6 +288,7 @@ services:
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
       - GRAFANA_URL=${GRAFANA_URL}
+      - NEXT_PUBLIC_GRAFANA_URL=${NEXT_PUBLIC_GRAFANA_URL}
     depends_on:
       init-permissions:
         condition: service_completed_successfully
@@ -559,3 +562,5 @@ secrets:
     environment: GRAFANA_DOMAIN
   GRAFANA_URL:
     environment: GRAFANA_URL
+  NEXT_PUBLIC_GRAFANA_URL:
+    environment: NEXT_PUBLIC_GRAFANA_URL
