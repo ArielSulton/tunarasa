@@ -136,6 +136,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    env_file:
+      - .env
     environment:
       # Environment Configuration
       - NODE_ENV=development
@@ -301,6 +303,8 @@ services:
   grafana:
     container_name: tunarasa-grafana
     image: grafana/grafana:latest
+    env_file:
+      - .env
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
