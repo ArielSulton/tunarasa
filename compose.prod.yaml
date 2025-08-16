@@ -315,8 +315,8 @@ services:
       - "traefik.http.routers.backend.tls.certResolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
     volumes:
-      - ../files/backend:/app
-      - ../files/assets:/app/assets
+      - ./backend:/app
+      - ./assets:/app/assets
       - shared_uploads:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "${NEXT_PUBLIC_BACKEND_URL}/api/health"]
@@ -361,9 +361,9 @@ services:
     networks:
       - dokploy-network
     volumes:
-      - ../files/prometheus/configs/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
-      - ../files/prometheus/alerting:/etc/prometheus/alerting:ro
-      - ../files/prometheus/recording-rules:/etc/prometheus/recording-rules:ro
+      - ./prometheus/configs/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerting:/etc/prometheus/alerting:ro
+      - ./prometheus/recording-rules:/etc/prometheus/recording-rules:ro
       - prometheus_data_prod:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -417,8 +417,8 @@ services:
       - "traefik.http.services.grafana.loadbalancer.server.port=3030"
     volumes:
       - grafana_data_prod:/var/lib/grafana
-      - ../files/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - ../files/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
       interval: 30s
