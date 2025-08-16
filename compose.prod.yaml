@@ -14,7 +14,7 @@ services:
         ls -la /app/uploads/
       "
     networks:
-      - tunarasa-net
+      - dokploy-network
 
   # Frontend Service (Next.js)
   frontend:
