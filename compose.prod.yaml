@@ -195,15 +195,17 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`tunarasa.my.id`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls.certResolver=letsencrypt"
-      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      - "traefik.http.routers.tunarasa-frontend.rule=Host(`tunarasa.my.id`)"
+      - "traefik.http.routers.tunarasa-frontend.entrypoints=websecure"
+      - "traefik.http.routers.tunarasa-frontend.tls.certResolver=letsencrypt"
+      - "traefik.http.routers.tunarasa-frontend.service=tunarasa-frontend"
+      - "traefik.http.services.tunarasa-frontend.loadbalancer.server.port=3000"
+      - "traefik.docker.network=dokploy-network"
     volumes:
       - shared_uploads:/app/uploads
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "${NEXT_PUBLIC_APP_URL}/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -310,10 +312,12 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`api.tunarasa.my.id`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls.certResolver=letsencrypt"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.tunarasa-backend.rule=Host(`api.tunarasa.my.id`)"
+      - "traefik.http.routers.tunarasa-backend.entrypoints=websecure"
+      - "traefik.http.routers.tunarasa-backend.tls.certResolver=letsencrypt"
+      - "traefik.http.routers.tunarasa-backend.service=tunarasa-backend"
+      - "traefik.http.services.tunarasa-backend.loadbalancer.server.port=8000"
+      - "traefik.docker.network=dokploy-network"
     volumes:
       - ./backend:/app
       - ./assets:/app/assets
@@ -411,10 +415,12 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.tunarasa.my.id`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls.certResolver=letsencrypt"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.tunarasa-grafana.rule=Host(`grafana.tunarasa.my.id`)"
+      - "traefik.http.routers.tunarasa-grafana.entrypoints=websecure"
+      - "traefik.http.routers.tunarasa-grafana.tls.certResolver=letsencrypt"
+      - "traefik.http.routers.tunarasa-grafana.service=tunarasa-grafana"
+      - "traefik.http.services.tunarasa-grafana.loadbalancer.server.port=3000"
+      - "traefik.docker.network=dokploy-network"
     volumes:
       - grafana_data_prod:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro

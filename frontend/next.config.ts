@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
     NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000',
+    NEXT_PUBLIC_GRAFANA_URL: process.env.NEXT_PUBLIC_GRAFANA_URL ?? 'http://localhost:3030',
     // Supabase configuration - explicitly set defaults for client-side
     NEXT_PUBLIC_ENABLE_SUPABASE_AUTH: process.env.NEXT_PUBLIC_ENABLE_SUPABASE_AUTH ?? 'false',
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
@@ -33,6 +34,7 @@ const nextConfig: NextConfig = {
   // Image optimization
   images: {
     remotePatterns: [
+      // Development localhost patterns
       {
         protocol: 'http',
         hostname: 'localhost',
@@ -47,6 +49,19 @@ const nextConfig: NextConfig = {
         protocol: 'http',
         hostname: 'localhost',
         port: '8000',
+      },
+      // Production domain patterns
+      {
+        protocol: 'https',
+        hostname: 'tunarasa.my.id',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.tunarasa.my.id',
+      },
+      {
+        protocol: 'https',
+        hostname: 'grafana.tunarasa.my.id',
       },
     ],
     dangerouslyAllowSVG: true,
@@ -80,7 +95,16 @@ const nextConfig: NextConfig = {
   experimental: {
     // Enable server actions
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'localhost:5000', '127.0.0.1:3000', '127.0.0.1:5000'],
+      allowedOrigins: [
+        // Development origins
+        'localhost:3000',
+        'localhost:5000',
+        '127.0.0.1:3000',
+        '127.0.0.1:5000',
+        // Production origins
+        'tunarasa.my.id',
+        'api.tunarasa.my.id',
+      ],
     },
   },
 
