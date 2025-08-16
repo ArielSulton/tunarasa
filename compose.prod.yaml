@@ -185,7 +185,7 @@ services:
       backend:
         condition: service_started
     ports:
-      - 5000
+      - 3000
     dns:
       - 1.1.1.1
       - 1.0.0.1
@@ -198,7 +198,7 @@ services:
       - "traefik.http.routers.frontend.rule=Host(`tunarasa.my.id`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certResolver=letsencrypt"
-      - "traefik.http.services.frontend.loadbalancer.server.port=5000"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     volumes:
       - shared_uploads:/app/uploads
     restart: unless-stopped
@@ -401,7 +401,7 @@ services:
       prometheus:
         condition: service_healthy
     ports:
-      - 3030
+      - 3000
     dns:
       - 1.1.1.1
       - 1.0.0.1
@@ -414,7 +414,7 @@ services:
       - "traefik.http.routers.grafana.rule=Host(`grafana.tunarasa.my.id`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls.certResolver=letsencrypt"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3030"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     volumes:
       - grafana_data_prod:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
