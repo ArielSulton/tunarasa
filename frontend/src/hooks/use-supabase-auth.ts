@@ -37,6 +37,26 @@ export function useSupabaseUser() {
       return
     }
 
+    // Check if we already have cached user data for this supabase user
+    const cacheKey = `user_data_${user.id}`
+    const cachedData = localStorage.getItem(cacheKey)
+
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData)
+        // Check if cache is recent (within 5 minutes)
+        if (parsed.timestamp && Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+          console.log('✅ [useSupabaseUser] Using cached user data')
+          setUserData(parsed.data)
+          setLoading(false)
+          return
+        }
+      } catch {
+        console.warn('⚠️ [useSupabaseUser] Invalid cached data, removing...')
+        localStorage.removeItem(cacheKey)
+      }
+    }
+
     async function fetchUserData(attempt = 0) {
       try {
         // Use API endpoint instead of direct Supabase client query
@@ -55,7 +75,7 @@ export function useSupabaseUser() {
 
         if (result.success && result.data?.user) {
           const user = result.data.user
-          setUserData({
+          const userData = {
             userId: user.user_id,
             supabaseUserId: user.supabase_user_id,
             email: user.email,
@@ -71,7 +91,20 @@ export function useSupabaseUser() {
                   permissions: user.role.permissions ?? [],
                 }
               : undefined,
-          })
+          }
+
+          setUserData(userData)
+
+          // Cache user data for future loads
+          const cacheKey = `user_data_${user.supabase_user_id}`
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              data: userData,
+              timestamp: Date.now(),
+            }),
+          )
+          console.log('✅ [useSupabaseUser] User data cached successfully')
         } else {
           console.log('🔍 [useSupabaseUser] No user data returned from API')
           setUserData(null)
@@ -101,11 +134,24 @@ export function useSupabaseUser() {
     void fetchUserData(0)
   }, [user, authLoading])
 
+  // Function to clear cache and force refresh
+  const refreshUser = () => {
+    if (user) {
+      const cacheKey = `user_data_${user.id}`
+      localStorage.removeItem(cacheKey)
+      setLoading(true)
+      setUserData(null)
+      // Trigger re-fetch by updating retry count
+      setRetryCount((prev) => prev + 1)
+    }
+  }
+
   return {
     user: userData,
     supabaseUser: user,
     loading,
     isLoaded: !loading,
+    refreshUser,
   }
 }
 
