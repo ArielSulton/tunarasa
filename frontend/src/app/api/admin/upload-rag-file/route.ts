@@ -6,7 +6,15 @@ import { join } from 'path'
 import { isAdminOrSuperAdmin } from '@/lib/auth/supabase-auth'
 
 export const runtime = 'nodejs'
-export const maxDuration = 30
+export const maxDuration = 15
+
+// Timeout helper function
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Operation timeout')), timeoutMs)),
+  ])
+}
 
 // POST /api/admin/upload-rag-file - Upload PDF/TXT file for RAG
 export async function POST(request: NextRequest) {
@@ -28,22 +36,22 @@ export async function POST(request: NextRequest) {
       },
     )
 
-    // Get current user from Supabase auth
+    // Get current user from Supabase auth with timeout
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await withTimeout(supabase.auth.getUser(), 5000)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const isAdmin = await isAdminOrSuperAdmin(user.id)
+    const isAdmin = await withTimeout(isAdminOrSuperAdmin(user.id), 3000)
     if (!isAdmin) {
       return NextResponse.json({ error: 'Access denied. Admin role required.' }, { status: 403 })
     }
 
-    const formData = await request.formData()
+    const formData = await withTimeout(request.formData(), 10000)
     const file = formData.get('file') as File
     const institutionId = formData.get('institutionId') as string
     const description = formData.get('description') as string
@@ -79,10 +87,10 @@ export async function POST(request: NextRequest) {
     const fileName = `${timestamp}_${originalName}`
     const filePath = join(uploadDir, fileName)
 
-    // Save file to disk
-    const bytes = await file.arrayBuffer()
+    // Save file to disk with timeout
+    const bytes = await withTimeout(file.arrayBuffer(), 5000)
     const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
+    await withTimeout(writeFile(filePath, buffer), 5000)
 
     // Determine file type
     const fileType = file.type === 'application/pdf' ? 'pdf' : 'txt'
