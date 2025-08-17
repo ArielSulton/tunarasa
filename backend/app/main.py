@@ -45,12 +45,22 @@ def create_application() -> FastAPI:
     cors_origins = get_cors_origins()
     print(f"🌐 [CORS] Allowed origins: {cors_origins}")
 
+    # Temporary: Allow all origins for debugging
+    if settings.ENVIRONMENT == "production":
+        print("⚠️  [CORS] Using wildcard for debugging - REMOVE IN PRODUCTION!")
+        cors_origins_to_use = ["*"]
+    else:
+        cors_origins_to_use = cors_origins
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
+        allow_origins=cors_origins_to_use,
+        allow_credentials=(
+            False if "*" in cors_origins_to_use else True
+        ),  # Can't use credentials with wildcard
+        allow_methods=["*"],  # Allow all methods
+        allow_headers=["*"],  # Allow all headers
+        expose_headers=["*"],  # Expose all headers
     )
 
     # Security middleware - TrustedHostMiddleware with updated allowed_hosts
