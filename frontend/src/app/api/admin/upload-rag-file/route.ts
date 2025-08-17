@@ -64,10 +64,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid institution ID is required' }, { status: 400 })
     }
 
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'text/plain']
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Invalid file type. Only PDF and TXT files are allowed.' }, { status: 400 })
+    // Validate file type (more permissive for TXT files)
+    const allowedTypes = [
+      'application/pdf',
+      'text/plain',
+      'text/txt',
+      'application/octet-stream', // Some browsers detect .txt as this
+    ]
+
+    // Additional validation: check file extension for .txt files
+    const fileExtension = file.name.toLowerCase().split('.').pop()
+    const isValidTxt = fileExtension === 'txt' || fileExtension === 'text'
+    const isValidPdf = fileExtension === 'pdf'
+
+    if (!allowedTypes.includes(file.type) && !(isValidTxt || isValidPdf)) {
+      console.log(`❌ File type rejected: ${file.type}, extension: ${fileExtension}`)
+      return NextResponse.json(
+        {
+          error: `Invalid file type: ${file.type}. Only PDF and TXT files are allowed.`,
+          details: `File: ${file.name}, Type: ${file.type}, Extension: ${fileExtension}`,
+        },
+        { status: 400 },
+      )
+    }
+
+    // Override file type for proper detection
+    if (isValidTxt && !file.type.startsWith('text/')) {
+      console.log(`🔧 Overriding file type for ${file.name}: ${file.type} -> text/plain`)
     }
 
     // Validate file size (max 10MB)
@@ -94,8 +117,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     await withTimeout(writeFile(filePath, buffer), 5000)
 
-    // Determine file type
-    const fileType = file.type === 'application/pdf' ? 'pdf' : 'txt'
+    // Determine file type based on extension (more reliable)
+    const fileType = isValidPdf ? 'pdf' : 'txt'
 
     return NextResponse.json({
       success: true,
