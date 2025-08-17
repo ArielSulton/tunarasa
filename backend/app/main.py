@@ -4,6 +4,7 @@ Main application entry point for the sign language recognition platform.
 """
 
 import time
+from datetime import datetime
 
 import uvicorn
 from app.api.middleware.auth import AuthMiddleware
@@ -122,10 +123,24 @@ def create_application() -> FastAPI:
     # Metrics endpoint
     @app.get("/metrics")
     async def metrics():
-        metrics_data = generate_latest()
-        return Response(
-            content=metrics_data, media_type="text/plain; version=0.0.4; charset=utf-8"
-        )
+        try:
+            print(f"🔍 [Metrics] Generating metrics at {datetime.now()}")
+            metrics_data = generate_latest()
+            print(f"✅ [Metrics] Generated {len(metrics_data)} bytes of metrics data")
+            return Response(
+                content=metrics_data,
+                media_type="text/plain; version=0.0.4; charset=utf-8",
+            )
+        except Exception as e:
+            print(f"❌ [Metrics] Error generating metrics: {e}")
+            import traceback
+
+            print(f"❌ [Metrics] Traceback: {traceback.format_exc()}")
+            return Response(
+                content=f"Error generating metrics: {str(e)}",
+                status_code=500,
+                media_type="text/plain",
+            )
 
     return app
 
