@@ -9,30 +9,16 @@
  * In local dev: falls back to http://localhost:8000
  */
 export function getBackendUrl(): string {
-  // Priority order for server-side vs client-side:
-  // Server-side: BACKEND_URL (Docker internal) > NEXT_PUBLIC_BACKEND_URL > localhost
-  // Client-side: NEXT_PUBLIC_BACKEND_URL > NEXT_PUBLIC_API_URL > auto-detect
+  // Use internal Next.js API proxy for all backend communication
+  // This avoids CORS issues and uses Docker internal network
 
   if (typeof window === 'undefined') {
-    // Server-side: Use internal Docker network URL first
-    const serverBackendUrl = process.env.BACKEND_URL
-    if (serverBackendUrl) {
-      return serverBackendUrl
-    }
-
-    // Fallback to public URLs or localhost for server-side
-    return process.env.NEXT_PUBLIC_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+    // Server-side: Direct Docker internal network
+    return process.env.BACKEND_URL ?? 'http://backend:8000'
   } else {
-    // Client-side: Use public URLs
-    let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? process.env.NEXT_PUBLIC_API_URL
-
-    // Auto-detect backend URL if environment variables are not set
-    if (!backendUrl) {
-      const currentHost = window.location.hostname
-      backendUrl = `http://${currentHost}:8000`
-    }
-
-    return backendUrl
+    // Client-side: Use Next.js API proxy
+    const currentOrigin = window.location.origin
+    return `${currentOrigin}/api/backend`
   }
 }
 
