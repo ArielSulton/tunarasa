@@ -78,7 +78,9 @@ export async function POST(request: NextRequest) {
 
     // Create directory if it doesn't exist
     // Use shared uploads volume that both frontend and backend can access
-    const uploadDir = join(process.cwd(), 'uploads', 'rag-files')
+    // In Docker: shared_uploads volume is mounted to /app/uploads
+    const uploadDir =
+      process.env.NODE_ENV === 'production' ? '/app/uploads/rag-files' : join(process.cwd(), 'uploads', 'rag-files')
     await mkdir(uploadDir, { recursive: true })
 
     // Generate unique filename
