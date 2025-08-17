@@ -14,8 +14,6 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 10s
     scrape_timeout: 5s
-    headers:
-      Host: api.tunarasa.my.id
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
@@ -51,8 +49,6 @@ scrape_configs:
     scrape_interval: 30s
     scrape_timeout: 10s
     honor_labels: true
-    headers:
-      Host: api.tunarasa.my.id
     metric_relabel_configs:
       - source_labels: [__name__]
         regex: 'tunarasa_deepeval_(.+)'
