@@ -41,6 +41,18 @@ def create_application() -> FastAPI:
         ),
     )
 
+    # CORS middleware FIRST (before security middleware)
+    cors_origins = get_cors_origins()
+    print(f"🌐 [CORS] Allowed origins: {cors_origins}")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
+
     # Security middleware - TrustedHostMiddleware with updated allowed_hosts
     if settings.ENVIRONMENT == "production":
         allowed_hosts = get_allowed_hosts()
@@ -48,15 +60,6 @@ def create_application() -> FastAPI:
             f"🔒 [Security] TrustedHostMiddleware enabled with hosts: {allowed_hosts}"
         )
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
-
-    # CORS middleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=get_cors_origins(),
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
-    )
 
     # Metrics middleware - using real metrics service (BEFORE auth middleware)
     @app.middleware("http")
