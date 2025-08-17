@@ -42,8 +42,15 @@ class Settings(BaseSettings):
     # Authentication & Security
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    NEXT_PUBLIC_ENABLE_SUPABASE_AUTH: Optional[str] = None
     SUPABASE_JWT_SECRET: Optional[str] = None
     SUPABASE_PROJECT_ID: Optional[str] = None
+    NEXT_PUBLIC_SIGN_IN_URL: Optional[str] = None
+    NEXT_PUBLIC_SIGN_UP_URL: Optional[str] = None
+    NEXT_PUBLIC_SIGN_IN_FALLBACK_REDIRECT_URL: Optional[str] = None
+    NEXT_PUBLIC_SIGN_UP_FALLBACK_REDIRECT_URL: Optional[str] = None
+    SUPERADMIN_EMAILS: Optional[str] = None
+    ADMIN_EMAILS: Optional[str] = None
 
     # AI Services Configuration
     GROQ_API_KEY: Optional[str] = None
@@ -83,6 +90,7 @@ class Settings(BaseSettings):
     GRAFANA_ADMIN_PASSWORD: Optional[str] = None
     GRAFANA_DOMAIN: Optional[str] = None
     GRAFANA_URL: Optional[str] = None
+    NEXT_PUBLIC_GRAFANA_URL: Optional[str] = None
 
     # Database Security
     DATABASE_SSL_CERT: Optional[str] = None

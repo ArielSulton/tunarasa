@@ -66,6 +66,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/qa-log/admin-validation",  # Log admin validation QA
         "/api/v1/qa-log/gesture",  # Log gesture-based QA
         "/api/v1/qa-log/health",  # QA logging service health
+        # Monitoring endpoints - allow Prometheus scraping without authentication
+        "/api/v1/monitoring/prometheus-metrics",  # Prometheus metrics endpoint for scraping
+        "/api/v1/monitoring/health",  # Monitoring service health check
     }
 
     # Admin endpoints that require Supabase authentication
