@@ -333,7 +333,6 @@ services:
       - "traefik.http.services.tunarasa-backend.loadbalancer.server.port=8000"
       - "traefik.docker.network=dokploy-network"
     volumes:
-      - ./backend:/app
       - ./assets:/app/assets
       - shared_uploads:/app/uploads
     healthcheck:
