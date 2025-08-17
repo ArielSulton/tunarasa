@@ -6,6 +6,17 @@ import { ragFiles, institutions, users } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { isAdminOrSuperAdmin } from '@/lib/auth/supabase-auth'
 
+export const runtime = 'nodejs'
+export const maxDuration = 20
+
+// Timeout helper function
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Operation timeout')), timeoutMs)),
+  ])
+}
+
 // GET /api/admin/institutions/[id]/rag-files - List RAG files for institution
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
@@ -27,17 +38,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       },
     )
 
-    // Get current user from Supabase auth
+    // Get current user from Supabase auth with timeout
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await withTimeout(supabase.auth.getUser(), 5000)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const isAdmin = await isAdminOrSuperAdmin(user.id)
+    const isAdmin = await withTimeout(isAdminOrSuperAdmin(user.id), 3000)
     if (!isAdmin) {
       return NextResponse.json({ error: 'Access denied. Admin role required.' }, { status: 403 })
     }
@@ -100,17 +111,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     )
 
-    // Get current user from Supabase auth
+    // Get current user from Supabase auth with timeout
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await withTimeout(supabase.auth.getUser(), 5000)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const isAdmin = await isAdminOrSuperAdmin(user.id)
+    const isAdmin = await withTimeout(isAdminOrSuperAdmin(user.id), 3000)
     if (!isAdmin) {
       return NextResponse.json({ error: 'Access denied. Admin role required.' }, { status: 403 })
     }
@@ -172,32 +183,41 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
       .returning()
 
-    // Trigger backend processing for newly created RAG file
+    // Trigger backend processing in background (non-blocking)
     if (newRagFile.processingStatus === 'pending') {
-      try {
-        console.log(`Triggering RAG processing for new file: ${newRagFile.ragFileId}`)
+      // Fire and forget - don't await this
+      setImmediate(() => {
+        void (async () => {
+          try {
+            console.log(`🔄 Triggering RAG processing for new file: ${newRagFile.ragFileId}`)
 
-        const backendUrl = process.env.BACKEND_URL ?? 'http://backend:8000'
-        const processResponse = await fetch(`${backendUrl}/api/v1/rag-processing/process-file`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            rag_file_id: newRagFile.ragFileId,
-            force_reprocess: true,
-          }),
-        })
+            const backendUrl = process.env.BACKEND_URL ?? 'http://backend:8000'
 
-        if (processResponse.ok) {
-          console.log(`RAG processing triggered successfully for new file: ${newRagFile.ragFileId}`)
-        } else {
-          console.warn(`Failed to trigger RAG processing: ${processResponse.status}`)
-        }
-      } catch (error) {
-        console.warn('Failed to trigger backend RAG processing:', error)
-        // Don't fail the entire request if processing trigger fails
-      }
+            // Use timeout for backend call
+            const processResponse = await withTimeout(
+              fetch(`${backendUrl}/api/v1/rag-processing/process-file`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  rag_file_id: newRagFile.ragFileId,
+                  force_reprocess: true,
+                }),
+              }),
+              10000, // 10 second timeout
+            )
+
+            if (processResponse.ok) {
+              console.log(`✅ RAG processing triggered successfully for file: ${newRagFile.ragFileId}`)
+            } else {
+              console.warn(`⚠️ Failed to trigger RAG processing: ${processResponse.status}`)
+            }
+          } catch (error) {
+            console.warn('❌ Failed to trigger backend RAG processing:', error)
+          }
+        })()
+      })
     }
 
     return NextResponse.json(
