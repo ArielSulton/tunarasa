@@ -11,7 +11,6 @@ from app.api.middleware.auth import AuthMiddleware
 from app.api.middleware.rate_limit import RateLimitMiddleware
 from app.api.v1.api import api_router
 from app.core.config import (
-    get_allowed_hosts,
     get_cors_origins,
     settings,
 )
@@ -20,7 +19,6 @@ from app.core.logging import setup_logging
 from app.services.metrics_service import metrics_service
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_client import generate_latest
 
 # Setup logging
@@ -41,9 +39,9 @@ def create_application() -> FastAPI:
         ),
     )
 
-    # Security middleware
-    if settings.ENVIRONMENT == "production":
-        app.add_middleware(TrustedHostMiddleware, allowed_hosts=get_allowed_hosts())
+    # Security middleware - temporarily disabled for Prometheus debugging
+    # if settings.ENVIRONMENT == "production":
+    #     app.add_middleware(TrustedHostMiddleware, allowed_hosts=get_allowed_hosts())
 
     # CORS middleware
     app.add_middleware(
@@ -120,11 +118,14 @@ def create_application() -> FastAPI:
             "database": db_health,
         }
 
-    # Metrics endpoint
+    # Metrics endpoint (before middleware)
     @app.get("/metrics")
-    async def metrics():
+    async def metrics(request: Request):
         try:
-            print(f"🔍 [Metrics] Generating metrics at {datetime.now()}")
+            client_ip = request.client.host if request.client else "unknown"
+            print(f"🔍 [Metrics] Request from {client_ip} at {datetime.now()}")
+            print(f"🔍 [Metrics] Host header: {request.headers.get('host', 'none')}")
+
             metrics_data = generate_latest()
             print(f"✅ [Metrics] Generated {len(metrics_data)} bytes of metrics data")
             return Response(
