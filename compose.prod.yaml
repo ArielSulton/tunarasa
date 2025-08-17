@@ -186,6 +186,7 @@ services:
 
       # Monitoring & Observability
       - PROMETHEUS_PORT=${PROMETHEUS_PORT}
+      - PROMETHEUS_URL=${PROMETHEUS_URL}
       - GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
@@ -303,6 +304,7 @@ services:
 
       # Monitoring & Observability
       - PROMETHEUS_PORT=${PROMETHEUS_PORT}
+      - PROMETHEUS_URL=${PROMETHEUS_URL}
       - GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
@@ -376,6 +378,14 @@ services:
       - 8.8.4.4
     networks:
       - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tunarasa-prometheus.rule=Host(`prom.tunarasa.my.id`)"
+      - "traefik.http.routers.tunarasa-prometheus.tls=true"
+      - "traefik.http.routers.tunarasa-prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.tunarasa-prometheus.service=tunarasa-prometheus"
+      - "traefik.http.services.tunarasa-prometheus.loadbalancer.server.port=9090"
+      - "traefik.docker.network=dokploy-network"
     volumes:
       - ./monitoring/prometheus/configs/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/alerting:/etc/prometheus/alerting:ro

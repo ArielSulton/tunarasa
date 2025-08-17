@@ -86,6 +86,7 @@ class Settings(BaseSettings):
 
     # Monitoring & Observability
     PROMETHEUS_PORT: int
+    PROMETHEUS_URL: Optional[str] = None
     GRAFANA_ADMIN_USER: Optional[str] = None
     GRAFANA_ADMIN_PASSWORD: Optional[str] = None
     GRAFANA_DOMAIN: Optional[str] = None
