@@ -53,11 +53,7 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Custom middleware
-    app.add_middleware(RateLimitMiddleware)
-    app.add_middleware(AuthMiddleware)
-
-    # Metrics middleware - using real metrics service
+    # Metrics middleware - using real metrics service (BEFORE auth middleware)
     @app.middleware("http")
     async def metrics_middleware(request: Request, call_next):
         start_time = time.time()
@@ -77,6 +73,10 @@ def create_application() -> FastAPI:
             print(f"⚠️  [Metrics] Error: {e}")
 
         return response
+
+    # Custom middleware (AFTER metrics middleware)
+    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(AuthMiddleware)
 
     # Include API router
     app.include_router(api_router, prefix="/api/v1")
