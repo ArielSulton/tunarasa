@@ -11,6 +11,7 @@ from app.api.middleware.auth import AuthMiddleware
 from app.api.middleware.rate_limit import RateLimitMiddleware
 from app.api.v1.api import api_router
 from app.core.config import (
+    get_allowed_hosts,
     get_cors_origins,
     settings,
 )
@@ -19,6 +20,7 @@ from app.core.logging import setup_logging
 from app.services.metrics_service import metrics_service
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_client import generate_latest
 
 # Setup logging
@@ -39,9 +41,13 @@ def create_application() -> FastAPI:
         ),
     )
 
-    # Security middleware - temporarily disabled for Prometheus debugging
-    # if settings.ENVIRONMENT == "production":
-    #     app.add_middleware(TrustedHostMiddleware, allowed_hosts=get_allowed_hosts())
+    # Security middleware - TrustedHostMiddleware with updated allowed_hosts
+    if settings.ENVIRONMENT == "production":
+        allowed_hosts = get_allowed_hosts()
+        print(
+            f"🔒 [Security] TrustedHostMiddleware enabled with hosts: {allowed_hosts}"
+        )
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
     # CORS middleware
     app.add_middleware(
