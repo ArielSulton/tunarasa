@@ -1,6 +1,6 @@
 {
   "name": "tunarasa-frontend",
-  "version": "v1.8.0",
+  "version": "v1.9.0",
   "private": true,
   "scripts": {
     "dev": "bun --bun next dev --turbopack",
