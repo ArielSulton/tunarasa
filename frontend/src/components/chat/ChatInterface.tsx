@@ -105,7 +105,11 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
             question: content.trim().substring(0, 50) + '...',
           })
 
-          const response = await fetch(getRagApiUrl(), {
+          const ragUrl = getRagApiUrl()
+          console.log('🔄 [Chat] Sending request to:', ragUrl)
+          console.log('🔄 [Chat] Request body:', requestBody)
+          
+          const response = await fetch(ragUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -114,7 +118,16 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
           })
 
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
+            // Try to get detailed error from backend proxy
+            let errorDetails = `HTTP error! status: ${response.status}`
+            try {
+              const errorData = await response.json()
+              console.error('❌ [Chat] Backend error details:', errorData)
+              errorDetails = errorData.details || errorData.error || errorDetails
+            } catch (e) {
+              console.error('❌ [Chat] Could not parse error response:', e)
+            }
+            throw new Error(errorDetails)
           }
 
           const data = await response.json()
