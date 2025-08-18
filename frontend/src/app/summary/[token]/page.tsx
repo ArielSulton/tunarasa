@@ -26,12 +26,11 @@ export default function SummaryPage() {
       setIsLoading(true)
       console.log('🔍 Fetching summary for token:', token)
 
-      // Fetch summary via frontend proxy
-      const response = await fetch(`/api/backend/api/v1/summary/${token}?format=text`, {
+      // Auto-download PDF and get basic info
+      console.log('📥 Starting auto-download PDF for token:', token)
+
+      const response = await fetch(`/api/backend/api/v1/summary/${token}`, {
         method: 'GET',
-        headers: {
-          Accept: 'text/plain',
-        },
       })
 
       if (!response.ok) {
@@ -47,9 +46,19 @@ export default function SummaryPage() {
         return
       }
 
-      const summaryText = await response.text()
-      setSummary(summaryText)
-      console.log('✅ Summary fetched successfully, length:', summaryText.length)
+      // Handle PDF download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `ringkasan-percakapan-${token.substring(0, 8)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      setSummary('✅ PDF ringkasan percakapan telah berhasil diunduh ke perangkat Anda.')
+      console.log('✅ PDF download completed successfully')
     } catch (error) {
       console.error('❌ Error fetching summary:', error)
       setError(error instanceof Error ? error.message : 'Gagal mengambil ringkasan')
