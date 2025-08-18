@@ -3,7 +3,6 @@ Summary and QR code endpoints for conversation downloads
 """
 
 import logging
-import os
 from typing import Any, Dict, Optional
 
 from app.core.database import get_db_session
@@ -220,15 +219,30 @@ async def download_summary(
             f"Downloading note: {note.note_id}, Title: {title}, Created At: {created_at}, URL Access: {url_access}"
         )
 
-        # Create PDF file
-        filename = f"/app/assets/note_{note.note_id}.pdf"
+        # Create PDF file in temp directory
+        import os
+        import tempfile
+
+        # Create temp directory that's writable
+        temp_dir = tempfile.mkdtemp()
+        filename = os.path.join(temp_dir, f"note_{note.note_id}.pdf")
+
         qr_service.create_note_pdf(
             filename, title, note_content, url_access, created_at
         )
 
-        return FileResponse(
+        # Return file response with cleanup
+        response = FileResponse(
             filename, media_type="application/pdf", filename=os.path.basename(filename)
         )
+
+        # Schedule cleanup of temp file after response
+        import atexit
+        import shutil
+
+        atexit.register(lambda: shutil.rmtree(temp_dir, ignore_errors=True))
+
+        return response
     except Exception as e:
         logger.error(f"Failed to download summary: {e}")
         raise HTTPException(
