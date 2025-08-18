@@ -35,7 +35,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(tunarasa_llm_evaluations_total)",
+          "expr": "sum(tunarasa_llm_evaluations_total) or vector(0)",
           "legendFormat": "Total Evaluations",
           "refId": "C"
         }
@@ -83,7 +83,7 @@
       "type": "bargauge",
       "targets": [
         {
-          "expr": "tunarasa_llm_quality_score{metric=\"average\"}",
+          "expr": "group by (category) (tunarasa_llm_quality_score{metric=\"average\"})",
           "legendFormat": "{{category}}",
           "refId": "A"
         }
@@ -121,7 +121,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "tunarasa_llm_quality_score{metric=\"average\"}",
+          "expr": "avg by (category) (tunarasa_llm_quality_score{metric=\"average\"})",
           "legendFormat": "{{category}} - Average Score",
           "refId": "A"
         }
@@ -170,7 +170,7 @@
       "type": "piechart",
       "targets": [
         {
-          "expr": "tunarasa_llm_quality_score{metric=\"pass_rate\"}",
+          "expr": "avg by (category) (tunarasa_llm_quality_score{metric=\"pass_rate\"})",
           "legendFormat": "{{category}}",
           "refId": "A"
         }
@@ -211,7 +211,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(tunarasa_llm_evaluations_total[5m])",
+          "expr": "sum by (category) (rate(tunarasa_llm_evaluations_total[5m]))",
           "legendFormat": "{{category}} - Evaluations/sec",
           "refId": "A"
         }
@@ -300,7 +300,7 @@
       "type": "table",
       "targets": [
         {
-          "expr": "tunarasa_llm_quality_score",
+          "expr": "group by (category, metric) (tunarasa_llm_quality_score)",
           "legendFormat": "",
           "refId": "A",
           "format": "table",
