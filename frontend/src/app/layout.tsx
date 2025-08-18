@@ -29,11 +29,30 @@ export const metadata: Metadata = {
   keywords: ['komunikasi inklusif', 'aksesibilitas', 'bahasa isyarat', 'SIBI', 'tuna rungu', 'tuna wicara'],
   authors: [{ name: 'Tunarasa Team' }],
   robots: 'index, follow',
+  icons: {
+    icon: '/assets/branding/tunarasa_meta.png',
+    apple: '/assets/branding/tunarasa_meta.png',
+    shortcut: '/assets/branding/tunarasa_meta.png',
+  },
   openGraph: {
     title: 'Tunarasa - Platform Komunikasi Inklusif',
     description: 'Menciptakan kota cerdas dengan komunikasi tanpa batas',
     type: 'website',
     locale: 'id_ID',
+    images: [
+      {
+        url: '/assets/branding/tunarasa_meta.png',
+        width: 512,
+        height: 512,
+        alt: 'Tunarasa Logo - Platform Komunikasi Inklusif',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Tunarasa - Platform Komunikasi Inklusif',
+    description: 'Menciptakan kota cerdas dengan komunikasi tanpa batas',
+    images: ['/assets/branding/tunarasa_meta.png'],
   },
 }
 

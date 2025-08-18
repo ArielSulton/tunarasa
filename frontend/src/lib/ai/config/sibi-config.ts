@@ -6,17 +6,23 @@
 export const SIBI_CONFIG = {
   // HandPose settings
   MAX_NUM_HANDS: 1,
-  MIN_DETECTION_CONFIDENCE: 0.7,
-  SCORE_THRESHOLD: 4.0, // Temporarily lower for testing
+  MIN_DETECTION_CONFIDENCE: 0.75, // Increased for better detection
+  SCORE_THRESHOLD: 7.0, // Increased from 4.0 for higher precision
   FLIP_HORIZONTAL: true, // Mirror camera for natural gestures
 
   // Gesture classification settings
-  CONFIDENCE_THRESHOLD: 0.8, // Increased from 0.7
+  CONFIDENCE_THRESHOLD: 0.85, // Increased from 0.8 for better accuracy
   MAX_ALTERNATIVES: 3,
 
-  // Processing settings
-  SMOOTHING_WINDOW: 5,
-  DEBOUNCE_TIME: 150, // Match reference project interval
+  // Enhanced processing settings
+  SMOOTHING_WINDOW: 7, // Increased from 5 for better smoothing
+  DEBOUNCE_TIME: 300, // Increased from 150ms for better stability
+
+  // New temporal consistency settings
+  MIN_STABLE_FRAMES: 5, // Minimum consecutive stable frames
+  CONFIDENCE_AVERAGING_WINDOW: 10, // Frames for confidence averaging
+  MAX_CONFIDENCE_VARIATION: 0.1, // Maximum allowed confidence variation
+  TEMPORAL_VALIDATION_WINDOW: 1500, // 1.5 second validation window
 
   // SIBI alphabet mapping (Indonesian Sign Language)
   ALPHABET: [

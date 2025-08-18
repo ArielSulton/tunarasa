@@ -44,10 +44,16 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [currentWord, setCurrentWord] = useState<string>('')
   const [detectedLetters, setDetectedLetters] = useState<string[]>([])
-  const [lastStableResult, setLastStableResult] = useState<GestureRecognitionResult | null>(null)
   const [stabilityCount, setStabilityCount] = useState(0)
   const [showCamera, setShowCamera] = useState(true)
   const [confidence, setConfidence] = useState(0)
+
+  // Enhanced temporal consistency state
+  const [confidenceHistory, setConfidenceHistory] = useState<number[]>([])
+  const [letterHistory, setLetterHistory] = useState<string[]>([])
+  const [gestureStartTime, setGestureStartTime] = useState<number | null>(null)
+  const [isValidating, setIsValidating] = useState(false)
+  const [averageConfidence, setAverageConfidence] = useState(0)
 
   // Gesture recognition hook
   const { isInitialized, isRunning, isLoading, error, status, lastResult, start, stop, initialize } =
@@ -86,7 +92,58 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
     }
   }, [isInitialized, initialize])
 
-  // Handle gesture recognition results
+  // Enhanced temporal consistency validation
+  const validateTemporalConsistency = useCallback(
+    (letter: string, confidence: number): boolean => {
+      const now = Date.now()
+
+      // Update confidence history
+      setConfidenceHistory((prev) => {
+        const newHistory = [...prev, confidence].slice(-SIBI_CONFIG.CONFIDENCE_AVERAGING_WINDOW)
+        const avgConfidence = newHistory.reduce((sum, c) => sum + c, 0) / newHistory.length
+        setAverageConfidence(avgConfidence)
+        return newHistory
+      })
+
+      // Update letter history
+      setLetterHistory((prev) => {
+        const newHistory = [...prev, letter].slice(-SIBI_CONFIG.MIN_STABLE_FRAMES)
+        return newHistory
+      })
+
+      // Set gesture start time if this is a new gesture
+      if (!gestureStartTime) {
+        setGestureStartTime(now)
+        return false // Need more frames for validation
+      }
+
+      // Check if we're within validation window
+      if (now - gestureStartTime > SIBI_CONFIG.TEMPORAL_VALIDATION_WINDOW) {
+        // Reset validation for new gesture
+        setGestureStartTime(now)
+        setConfidenceHistory([confidence])
+        setLetterHistory([letter])
+        return false
+      }
+
+      // Validate consistency requirements
+      const recentHistory = letterHistory.slice(-SIBI_CONFIG.MIN_STABLE_FRAMES)
+      const isLetterConsistent =
+        recentHistory.length >= SIBI_CONFIG.MIN_STABLE_FRAMES && recentHistory.every((l) => l === letter)
+
+      const recentConfidences = confidenceHistory.slice(-SIBI_CONFIG.MIN_STABLE_FRAMES)
+      const confidenceVariation =
+        recentConfidences.length > 1 ? Math.max(...recentConfidences) - Math.min(...recentConfidences) : 0
+
+      const isConfidenceStable = confidenceVariation <= SIBI_CONFIG.MAX_CONFIDENCE_VARIATION
+      const hasMinConfidence = averageConfidence >= SIBI_CONFIG.CONFIDENCE_THRESHOLD
+
+      return isLetterConsistent && isConfidenceStable && hasMinConfidence
+    },
+    [confidenceHistory, letterHistory, gestureStartTime, averageConfidence],
+  )
+
+  // Handle gesture recognition results with enhanced validation
   function handleGestureResult(result: GestureRecognitionResult): void {
     setConfidence(result.confidence)
 
@@ -95,24 +152,26 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
       onGestureUpdate(result)
     }
 
-    // Check for stable results
-    if (lastStableResult?.letter === result.letter && result.confidence > 0.8) {
-      setStabilityCount((prev) => prev + 1)
+    // Enhanced temporal consistency validation
+    const isValid = validateTemporalConsistency(result.letter, result.confidence)
+    setIsValidating(!isValid)
 
-      // Add letter to word after stable detection
-      if (stabilityCount >= 3) {
-        addLetterToWord(result.letter)
-        setStabilityCount(0)
-        setLastStableResult(null)
-      }
-    } else {
-      setLastStableResult(result)
-      setStabilityCount(1)
+    if (isValid) {
+      console.log(`✅ Gesture validated: ${result.letter} (avg confidence: ${averageConfidence.toFixed(2)})`)
+
+      // Add letter to word after validation passes
+      addLetterToWord(result.letter)
+
+      // Reset validation state for next gesture
+      setGestureStartTime(null)
+      setConfidenceHistory([])
+      setLetterHistory([])
+      setStabilityCount(0)
     }
 
-    // Call external callback
+    // Call external callback with validation status
     if (onLetterDetected) {
-      onLetterDetected(result.letter, result.confidence)
+      onLetterDetected(result.letter, isValid ? averageConfidence : result.confidence)
     }
   }
 
@@ -136,7 +195,6 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
   const clearWord = useCallback(() => {
     setCurrentWord('')
     setDetectedLetters([])
-    setLastStableResult(null)
     setStabilityCount(0)
   }, [])
 
@@ -286,15 +344,47 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
                 </div>
               </div>
 
-              {/* Current detection - moved below TensorFlow.js status */}
+              {/* Enhanced detection info with validation status */}
               {lastResult && (
-                <div className="rounded-lg bg-blue-600 px-4 py-2 text-white">
+                <div
+                  className={`rounded-lg px-4 py-2 text-white transition-colors ${
+                    isValidating ? 'bg-orange-600' : 'bg-blue-600'
+                  }`}
+                >
                   <div className="flex items-center space-x-2">
                     <span className="text-2xl font-bold">{lastResult.letter}</span>
                     <div className="text-xs">
-                      <div>Confidence:</div>
-                      <div>{Math.round(lastResult.confidence * 100)}%</div>
+                      <div>Current: {Math.round(lastResult.confidence * 100)}%</div>
+                      {averageConfidence > 0 && <div>Avg: {Math.round(averageConfidence * 100)}%</div>}
+                      <div className="mt-1 flex items-center gap-1">
+                        {isValidating ? (
+                          <>
+                            <div className="h-2 w-2 animate-pulse rounded-full bg-yellow-400"></div>
+                            <span className="text-yellow-200">Validating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="h-2 w-2 rounded-full bg-green-400"></div>
+                            <span className="text-green-200">Validated</span>
+                          </>
+                        )}
+                      </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Confidence progress bar */}
+              {isRunning && confidence > 0 && (
+                <div className="rounded-lg bg-black/50 px-3 py-2">
+                  <div className="mb-1 text-xs text-white">Confidence</div>
+                  <Progress
+                    value={averageConfidence > 0 ? averageConfidence * 100 : confidence * 100}
+                    className="h-2 bg-gray-600"
+                  />
+                  <div className="mt-1 flex justify-between text-xs text-gray-300">
+                    <span>Min: {Math.round(SIBI_CONFIG.CONFIDENCE_THRESHOLD * 100)}%</span>
+                    <span>{Math.round((averageConfidence > 0 ? averageConfidence : confidence) * 100)}%</span>
                   </div>
                 </div>
               )}
@@ -384,12 +474,25 @@ export const GestureRecognition: React.FC<GestureRecognitionProps> = ({
                 <canvas ref={canvasRef} width="640" height="480" className="h-full w-full object-cover" />
               </div>
 
-              {/* Current detection overlay */}
+              {/* Enhanced detection overlay */}
               {lastResult && (
-                <div className="absolute top-2 left-2 rounded-md bg-black/70 px-3 py-1 text-white">
+                <div
+                  className={`absolute top-2 left-2 rounded-md px-3 py-2 text-white transition-colors ${
+                    isValidating ? 'bg-orange-600/90' : 'bg-black/70'
+                  }`}
+                >
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold">{lastResult.letter}</span>
-                    <div className={`h-2 w-2 rounded-full ${getConfidenceColor()}`} />
+                    <div className="text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className={`h-2 w-2 rounded-full ${getConfidenceColor()}`} />
+                        <span>{Math.round(lastResult.confidence * 100)}%</span>
+                      </div>
+                      {averageConfidence > 0 && (
+                        <div className="text-gray-300">Avg: {Math.round(averageConfidence * 100)}%</div>
+                      )}
+                      <div className="mt-1 text-xs">{isValidating ? 'Validating...' : 'Validated ✓'}</div>
+                    </div>
                   </div>
                 </div>
               )}

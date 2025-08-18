@@ -38,6 +38,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [currentQuestion, setCurrentQuestion] = useState('')
+  const [correctedQuestion, setCorrectedQuestion] = useState<string | null>(null)
   const [resetKey, setResetKey] = useState(0)
   const [conversationStatus, setConversationStatus] = useState<ConversationStatus>({
     id: '',
@@ -63,14 +64,83 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
     console.log('🗣️ currentQuestion updated to:', text)
   }, [])
 
+  // Function to perform typo correction
+  const correctTypo = useCallback(
+    async (text: string): Promise<string> => {
+      if (!text || text.trim().length === 0) return text
+
+      try {
+        const cleanedSessionId = sessionId.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 255)
+
+        const response = await fetch('/api/backend/api/v1/rag/ask', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question: text.trim(),
+            session_id: cleanedSessionId,
+            language: 'id',
+            conversation_mode: 'casual',
+            // Add typo correction flag to backend
+            typo_correction_only: true,
+          }),
+        })
+
+        if (!response.ok) {
+          console.warn('Typo correction failed:', response.status)
+          return text // Return original text if correction fails
+        }
+
+        const result = await response.json()
+        const correctedText = result.question ?? text // Backend returns corrected question
+
+        // Only return corrected text if it actually changed
+        if (correctedText !== text && correctedText.length > 0) {
+          console.log('✅ Typo corrected:', { original: text, corrected: correctedText })
+          return correctedText
+        }
+
+        return text
+      } catch (error) {
+        console.error('Error in typo correction:', error)
+        return text // Return original text if error occurs
+      }
+    },
+    [sessionId],
+  )
+
+  // Update currentQuestion with typo correction when text changes
+  useEffect(() => {
+    if (currentQuestion && currentQuestion.length > 2) {
+      const timeoutId = setTimeout(() => {
+        void (async () => {
+          const corrected = await correctTypo(currentQuestion)
+          if (corrected !== currentQuestion) {
+            setCorrectedQuestion(corrected)
+          } else {
+            setCorrectedQuestion(null)
+          }
+        })()
+      }, 1000) // Debounce typo correction
+
+      return () => clearTimeout(timeoutId)
+    } else {
+      setCorrectedQuestion(null)
+    }
+  }, [currentQuestion, correctTypo])
+
   const sendMessage = useCallback(
     async (content: string) => {
       if (!content.trim()) return
 
+      // Use corrected text if available, otherwise use original
+      const finalContent = correctedQuestion ?? content.trim()
+
       const userMessage: ChatMessage = {
         id: `temp-${Date.now()}`,
         type: 'user',
-        content: content.trim(),
+        content: finalContent, // Display corrected text in chat
         timestamp: new Date(),
         status: 'sending',
       }
@@ -88,7 +158,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
         if (serviceMode === 'full_llm_bot') {
           // Use institution-specific RAG endpoint
           const requestBody = {
-            question: content.trim(),
+            question: finalContent, // Send corrected text to backend
             session_id: sessionId,
             language: 'id',
             max_sources: 3,
@@ -151,7 +221,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              message: content.trim(),
+              message: finalContent, // Send corrected text to backend
               sessionId,
               serviceMode: 'bot_with_admin_validation',
               inputMethod: mode === 'sibi' ? 'gesture' : 'speech',
@@ -200,7 +270,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
         setIsProcessing(false)
       }
     },
-    [serviceMode, sessionId, mode, conversationStatus.status, institutionId, institutionSlug],
+    [serviceMode, sessionId, mode, conversationStatus.status, institutionId, institutionSlug, correctedQuestion],
   )
 
   const scrollToBottom = useCallback(() => {
@@ -238,6 +308,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
     if (currentQuestion.trim()) {
       void sendMessage(currentQuestion)
       setCurrentQuestion('')
+      setCorrectedQuestion(null)
     }
   }, [currentQuestion, sendMessage])
 
@@ -261,6 +332,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
   const resetDetectedInput = useCallback(() => {
     console.log('🗑️ Reset all detected input states for mode:', mode)
     setCurrentQuestion('')
+    setCorrectedQuestion(null)
 
     // Force component remount to reset internal states
     setResetKey((prev) => prev + 1)
@@ -421,18 +493,36 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
 
               {/* Detected Question Display */}
               {currentQuestion && (
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-sm text-gray-600">Pertanyaan terdeteksi:</p>
-                    <button
-                      onClick={resetDetectedInput}
-                      className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 transition-colors hover:bg-gray-300"
-                      title="Hapus pertanyaan"
-                    >
-                      <RotateCcw className="h-3 w-3 text-gray-600" />
-                    </button>
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm text-gray-600">Pertanyaan terdeteksi:</p>
+                      <button
+                        onClick={resetDetectedInput}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 transition-colors hover:bg-gray-300"
+                        title="Hapus pertanyaan"
+                      >
+                        <RotateCcw className="h-3 w-3 text-gray-600" />
+                      </button>
+                    </div>
+                    <p className="font-medium break-words text-gray-900">{currentQuestion}</p>
                   </div>
-                  <p className="font-medium break-words text-gray-900">{currentQuestion}</p>
+
+                  {/* Typo Correction Display */}
+                  {correctedQuestion && correctedQuestion !== currentQuestion && (
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-600">
+                          <span className="text-xs text-white">✓</span>
+                        </div>
+                        <p className="text-sm font-medium text-green-700">Saran perbaikan teks:</p>
+                      </div>
+                      <p className="font-medium break-words text-green-800">{correctedQuestion}</p>
+                      <p className="mt-2 text-xs text-green-600">
+                        Saat dikirim, teks yang diperbaiki akan digunakan dalam percakapan
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
