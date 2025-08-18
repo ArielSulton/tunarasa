@@ -22,29 +22,55 @@
   "panels": [
     {
       "id": 1,
-      "title": "🎯 System Health Overview",
+      "title": "🎯 Backend Health",
       "type": "stat",
-      "description": "Real-time system health indicators with AI-powered anomaly detection",
+      "description": "Backend service status",
       "targets": [
         {
           "expr": "up{job=\"tunarasa-backend\"}",
-          "legendFormat": "Backend Status",
+          "legendFormat": "Backend",
           "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
+            {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "green", "value": 1}
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
         },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+    },
+    {
+      "id": 2,
+      "title": "📊 Active Sessions",
+      "type": "stat",
+      "description": "Current active user sessions",
+      "targets": [
         {
           "expr": "sum(tunarasa_active_sessions_total) or vector(0)",
-          "legendFormat": "Active Sessions",
-          "refId": "B"
-        },
-        {
-          "expr": "avg(tunarasa_llm_quality_score) or vector(0.8)",
-          "legendFormat": "AI Quality Score",
-          "refId": "C"
-        },
-        {
-          "expr": "sum(rate(tunarasa_http_requests_total[5m])) or vector(0)",
-          "legendFormat": "Request Rate",
-          "refId": "D"
+          "legendFormat": "Sessions",
+          "refId": "A"
         }
       ],
       "fieldConfig": {
@@ -54,40 +80,11 @@
             "mode": "absolute",
             "steps": [
               {"color": "red", "value": 0},
-              {"color": "yellow", "value": 0.8},
-              {"color": "green", "value": 0.95}
-            ]
-          },
-          "mappings": [],
-          "custom": {
-            "displayMode": "basic",
-            "orientation": "auto"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {"id": "byName", "options": "Backend Status"},
-            "properties": [
-              {"id": "mappings", "value": [
-                {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
-                {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
-              ]}
-            ]
-          },
-          {
-            "matcher": {"id": "byName", "options": "AI Quality Score"},
-            "properties": [
-              {"id": "unit", "value": "percentunit"},
-              {"id": "max", "value": 1}
-            ]
-          },
-          {
-            "matcher": {"id": "byName", "options": "Request Rate"},
-            "properties": [
-              {"id": "unit", "value": "reqps"}
+              {"color": "yellow", "value": 1},
+              {"color": "green", "value": 5}
             ]
           }
-        ]
+        }
       },
       "options": {
         "reduceOptions": {
@@ -95,23 +92,92 @@
           "calcs": ["lastNotNull"],
           "fields": ""
         },
-        "orientation": "auto",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "colorMode": "background",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "center"
       },
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
-      "links": [
-        {
-          "title": "View System Details",
-          "url": "/d/tunarasa-system-details",
-          "type": "dashboard"
-        }
-      ]
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
     },
     {
-      "id": 2,
+      "id": 3,
+      "title": "🤖 AI Quality Score",
+      "type": "stat",
+      "description": "Average AI model quality score",
+      "targets": [
+        {
+          "expr": "avg(tunarasa_llm_quality_score) or vector(0.8)",
+          "legendFormat": "Quality",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 0.7},
+              {"color": "green", "value": 0.9}
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+    },
+    {
+      "id": 4,
+      "title": "🚀 Request Rate",
+      "type": "stat",
+      "description": "HTTP requests per second",
+      "targets": [
+        {
+          "expr": "sum(rate(tunarasa_http_requests_total[5m])) or vector(0)",
+          "legendFormat": "Requests",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 0.1},
+              {"color": "green", "value": 1}
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+    },
+    {
+      "id": 5,
       "title": "🚀 Performance Metrics (Real-time)",
       "type": "timeseries",
       "description": "Dynamic performance visualization with threshold-based coloring",
@@ -187,50 +253,10 @@
           "showLegend": true
         }
       },
-      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8}
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 4}
     },
     {
-      "id": 3,
-      "title": "📊 System Status",
-      "type": "stat",
-      "description": "Quick system status overview",
-      "targets": [
-        {
-          "expr": "up{job=\"tunarasa-backend\"}",
-          "legendFormat": "Backend Status",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"color": "red", "value": 0},
-              {"color": "green", "value": 1}
-            ]
-          },
-          "mappings": [
-            {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
-            {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
-          ]
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"],
-          "fields": ""
-        },
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center"
-      },
-      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8}
-    },
-    {
-      "id": 4,
+      "id": 6,
       "title": "🔍 DeepEval Quality Trends",
       "type": "timeseries",
       "description": "LLM quality metrics with anomaly detection and trend analysis",
@@ -301,10 +327,10 @@
           "showLegend": true
         }
       },
-      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 18}
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 4}
     },
     {
-      "id": 5,
+      "id": 7,
       "title": "📱 User Journey Tracking",
       "type": "table",
       "description": "Real-time user session analytics and conversion funnel",
@@ -364,10 +390,10 @@
         "frameIndex": 0,
         "showTypeIcons": false
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28}
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14}
     },
     {
-      "id": 6,
+      "id": 8,
       "title": "⚡ Quick Actions & Navigation",
       "type": "dashlist",
       "description": "Smart dashboard navigation with contextual links",
@@ -388,10 +414,10 @@
         "headings": true,
         "folderId": null
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28}
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14}
     },
     {
-      "id": 7,
+      "id": 9,
       "title": "🎮 Interactive Controls",
       "type": "text",
       "description": "Dynamic dashboard controls and quick filters",
@@ -399,7 +425,7 @@
         "mode": "html",
         "content": "<div style=\"padding: 20px; text-align: center; font-family: Inter, sans-serif;\">\n  <h3 style=\"color: #58A6FF; margin-bottom: 20px;\">🎮 Dashboard Controls</h3>\n  \n  <div style=\"display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px;\">\n    <div style=\"background: rgba(88, 166, 255, 0.1); padding: 15px; border-radius: 8px; min-width: 200px;\">\n      <h4 style=\"color: #F0F6FC; margin: 0 0 10px 0;\">🔍 Filters</h4>\n      <p style=\"color: #8B949E; margin: 0; font-size: 14px;\">Use time range picker above<br/>Filter by service, endpoint, or user</p>\n    </div>\n    \n    <div style=\"background: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 8px; min-width: 200px;\">\n      <h4 style=\"color: #F0F6FC; margin: 0 0 10px 0;\">📊 Export</h4>\n      <p style=\"color: #8B949E; margin: 0; font-size: 14px;\">Share panels & dashboards<br/>Export data as CSV/JSON</p>\n    </div>\n    \n    <div style=\"background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 8px; min-width: 200px;\">\n      <h4 style=\"color: #F0F6FC; margin: 0 0 10px 0;\">🔔 Alerts</h4>\n      <p style=\"color: #8B949E; margin: 0; font-size: 14px;\">Configure thresholds<br/>Set up notifications</p>\n    </div>\n  </div>\n  \n  <div style=\"margin-top: 25px; padding: 15px; background: rgba(139, 148, 158, 0.1); border-radius: 8px;\">\n    <p style=\"color: #8B949E; margin: 0; font-size: 12px;\">💡 <strong>Pro Tip:</strong> Click on any metric value to drill down into detailed views. Use Ctrl+Click to open in new tab.</p>\n  </div>\n</div>"
       },
-      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 36}
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 22}
     }
   ],
   "templating": {
