@@ -108,7 +108,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
           const ragUrl = getRagApiUrl()
           console.log('🔄 [Chat] Sending request to:', ragUrl)
           console.log('🔄 [Chat] Request body:', requestBody)
-          
+
           const response = await fetch(ragUrl, {
             method: 'POST',
             headers: {
@@ -123,7 +123,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
             try {
               const errorData = await response.json()
               console.error('❌ [Chat] Backend error details:', errorData)
-              errorDetails = errorData.details || errorData.error || errorDetails
+              errorDetails = errorData.details ?? errorData.error ?? errorDetails
             } catch (e) {
               console.error('❌ [Chat] Could not parse error response:', e)
             }
