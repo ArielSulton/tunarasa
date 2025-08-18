@@ -38,9 +38,10 @@ async function handleBackendRequest(request: NextRequest, params: { path: string
     const backendPath = params.path.join('/')
 
     // Backend URL via Docker internal network
+    // Try multiple possible service names/URLs
     const backendUrl =
       process.env.NODE_ENV === 'production'
-        ? 'http://backend:8000' // Docker service name
+        ? (process.env.BACKEND_URL ?? 'http://backend:8000') // Use env var or fallback
         : 'http://localhost:8000' // Development
 
     const targetUrl = `${backendUrl}/${backendPath}`
@@ -51,6 +52,9 @@ async function handleBackendRequest(request: NextRequest, params: { path: string
     const finalUrl = searchParams ? `${targetUrl}?${searchParams}` : targetUrl
 
     console.log(`🔄 [Backend Proxy] ${method} ${finalUrl}`)
+    console.log(`🔍 [Backend Proxy] Environment: ${process.env.NODE_ENV}`)
+    console.log(`🔍 [Backend Proxy] BACKEND_URL env: ${process.env.BACKEND_URL}`)
+    console.log(`🔍 [Backend Proxy] Final backend URL: ${backendUrl}`)
 
     // Prepare request options
     const requestOptions: RequestInit = {
@@ -104,11 +108,18 @@ async function handleBackendRequest(request: NextRequest, params: { path: string
     })
   } catch (error) {
     console.error('❌ [Backend Proxy] Error:', error)
+    console.error('❌ [Backend Proxy] Target URL:', finalUrl)
+    console.error('❌ [Backend Proxy] Backend URL:', backendUrl)
+    console.error('❌ [Backend Proxy] Method:', method)
+    console.error('❌ [Backend Proxy] Error Type:', typeof error)
 
     return NextResponse.json(
       {
         error: 'Backend request failed',
         details: error instanceof Error ? error.message : 'Unknown error',
+        targetUrl: finalUrl,
+        backendUrl,
+        method,
         timestamp: new Date().toISOString(),
       },
       { status: 502 },
