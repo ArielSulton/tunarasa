@@ -33,13 +33,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 async function handleBackendRequest(request: NextRequest, params: { path: string[] }, method: string) {
+  // Declare variables outside try-catch for error logging
+  let backendUrl = ''
+  let finalUrl = ''
+  
   try {
     // Get path from URL
     const backendPath = params.path.join('/')
 
     // Backend URL via Docker internal network
     // Try multiple possible service names/URLs
-    const backendUrl =
+    backendUrl =
       process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL ?? 'http://backend:8000') // Use env var or fallback
         : 'http://localhost:8000' // Development
@@ -49,7 +53,7 @@ async function handleBackendRequest(request: NextRequest, params: { path: string
     // Get search params from original request
     const url = new URL(request.url)
     const searchParams = url.searchParams.toString()
-    const finalUrl = searchParams ? `${targetUrl}?${searchParams}` : targetUrl
+    finalUrl = searchParams ? `${targetUrl}?${searchParams}` : targetUrl
 
     console.log(`🔄 [Backend Proxy] ${method} ${finalUrl}`)
     console.log(`🔍 [Backend Proxy] Environment: ${process.env.NODE_ENV}`)
