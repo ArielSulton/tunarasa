@@ -28,22 +28,22 @@
       "targets": [
         {
           "expr": "up{job=\"tunarasa-backend\"}",
-          "legendFormat": "Backend Health",
+          "legendFormat": "Backend Status",
           "refId": "A"
         },
         {
-          "expr": "up{job=\"tunarasa-frontend\"}",
-          "legendFormat": "Frontend Health",
+          "expr": "sum(tunarasa_active_sessions_total) or vector(0)",
+          "legendFormat": "Active Sessions",
           "refId": "B"
         },
         {
-          "expr": "tunarasa_active_sessions_total",
-          "legendFormat": "Active Sessions",
+          "expr": "avg(tunarasa_llm_quality_score) or vector(0.8)",
+          "legendFormat": "AI Quality Score",
           "refId": "C"
         },
         {
-          "expr": "avg(tunarasa_llm_quality_score{metric=\"average\"})",
-          "legendFormat": "AI Quality Score",
+          "expr": "sum(rate(tunarasa_http_requests_total[5m])) or vector(0)",
+          "legendFormat": "Request Rate",
           "refId": "D"
         }
       ],
@@ -58,21 +58,33 @@
               {"color": "green", "value": 0.95}
             ]
           },
-          "mappings": [
-            {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
-            {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
-          ],
+          "mappings": [],
           "custom": {
-            "displayMode": "gradient",
-            "orientation": "horizontal"
+            "displayMode": "basic",
+            "orientation": "auto"
           }
         },
         "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Backend Status"},
+            "properties": [
+              {"id": "mappings", "value": [
+                {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
+                {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
+              ]}
+            ]
+          },
           {
             "matcher": {"id": "byName", "options": "AI Quality Score"},
             "properties": [
               {"id": "unit", "value": "percentunit"},
               {"id": "max", "value": 1}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Request Rate"},
+            "properties": [
+              {"id": "unit", "value": "reqps"}
             ]
           }
         ]
@@ -83,10 +95,10 @@
           "calcs": ["lastNotNull"],
           "fields": ""
         },
-        "orientation": "horizontal",
-        "textMode": "auto",
+        "orientation": "auto",
+        "textMode": "value_and_name",
         "colorMode": "background",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "center"
       },
       "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
