@@ -23,6 +23,7 @@ const coveredByYourGrace = Covered_By_Your_Grace({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
   title: 'Tunarasa - Platform Komunikasi Inklusif',
   description:
     'Menciptakan kota cerdas dengan komunikasi tanpa batas. Platform komunikasi inklusif untuk aksesibilitas layanan publik bagi penyandang disabilitas.',
