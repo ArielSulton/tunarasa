@@ -106,7 +106,7 @@ export function useSessionTracking(options: UseSessionTrackingOptions = {}) {
       if (isTrackingRef.current && sessionIdRef.current) {
         // Use synchronous approach for page unload
         navigator.sendBeacon(
-          `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'}/public-session/end-session/${sessionIdRef.current}`,
+          `/api/backend/api/v1/public-session/end-session/${sessionIdRef.current}`,
           JSON.stringify({}),
         )
       }

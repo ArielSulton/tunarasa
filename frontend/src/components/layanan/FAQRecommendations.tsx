@@ -51,9 +51,8 @@ export function FAQRecommendations({ institutionId, institutionName }: FAQRecomm
   const fetchRecommendations = useCallback(
     async (forceRefresh = false) => {
       try {
-        // Direct backend URL
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000'
-        const endpoint = `${backendUrl}/api/v1/faq/recommendations/${institutionId}${forceRefresh ? '?force_refresh=true' : ''}`
+        // Use internal proxy to avoid CORS issues
+        const endpoint = `/api/backend/api/v1/faq/recommendations/${institutionId}${forceRefresh ? '?force_refresh=true' : ''}`
 
         const response = await fetch(endpoint, {
           method: 'GET',
