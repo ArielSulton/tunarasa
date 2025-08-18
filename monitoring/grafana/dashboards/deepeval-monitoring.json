@@ -83,9 +83,10 @@
       "type": "bargauge",
       "targets": [
         {
-          "expr": "group by (category) (tunarasa_llm_quality_score{metric=\"average\"})",
+          "expr": "max by (category) (tunarasa_llm_quality_score{metric=\"average\"})",
           "legendFormat": "{{category}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true
         }
       ],
       "fieldConfig": {
@@ -121,8 +122,8 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "avg by (category) (tunarasa_llm_quality_score{metric=\"average\"})",
-          "legendFormat": "{{category}} - Average Score",
+          "expr": "max by (category) (tunarasa_llm_quality_score{metric=\"average\"})",
+          "legendFormat": "{{category}} - Quality Score",
           "refId": "A"
         }
       ],
@@ -170,7 +171,7 @@
       "type": "piechart",
       "targets": [
         {
-          "expr": "avg by (category) (tunarasa_llm_quality_score{metric=\"pass_rate\"})",
+          "expr": "max by (category) (tunarasa_llm_quality_score{metric=\"pass_rate\"})",
           "legendFormat": "{{category}}",
           "refId": "A"
         }
@@ -212,7 +213,7 @@
       "targets": [
         {
           "expr": "sum by (category) (rate(tunarasa_llm_evaluations_total[5m]))",
-          "legendFormat": "{{category}} - Evaluations/sec",
+          "legendFormat": "{{category}}",
           "refId": "A"
         }
       ],

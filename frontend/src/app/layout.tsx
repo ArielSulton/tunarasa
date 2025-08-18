@@ -30,9 +30,9 @@ export const metadata: Metadata = {
   authors: [{ name: 'Tunarasa Team' }],
   robots: 'index, follow',
   icons: {
-    icon: '/assets/branding/tunarasa_meta.png',
-    apple: '/assets/branding/tunarasa_meta.png',
-    shortcut: '/assets/branding/tunarasa_meta.png',
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
+    shortcut: '/favicon.ico',
   },
   openGraph: {
     title: 'Tunarasa - Platform Komunikasi Inklusif',
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     locale: 'id_ID',
     images: [
       {
-        url: '/assets/branding/tunarasa_meta.png',
+        url: '/favicon.ico',
         width: 512,
         height: 512,
         alt: 'Tunarasa Logo - Platform Komunikasi Inklusif',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Tunarasa - Platform Komunikasi Inklusif',
     description: 'Menciptakan kota cerdas dengan komunikasi tanpa batas',
-    images: ['/assets/branding/tunarasa_meta.png'],
+    images: ['/favicon.ico'],
   },
 }
 
