@@ -36,7 +36,7 @@ async function handleBackendRequest(request: NextRequest, params: { path: string
   // Declare variables outside try-catch for error logging
   let backendUrl = ''
   let finalUrl = ''
-  
+
   try {
     // Get path from URL
     const backendPath = params.path.join('/')
