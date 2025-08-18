@@ -1180,14 +1180,64 @@ class EnhancedLangChainService:
 
             # Call the LLM for generating summary and title
             response = await asyncio.to_thread(self.llm.invoke, prompt)
-            return (
+            raw_title = (
                 response.content.strip()
                 if hasattr(response, "content")
                 else str(response).strip()
             )
+
+            # Clean up the title in case LLM returns JSON array or malformed response
+            cleaned_title = self._clean_llm_title_response(raw_title)
+            return cleaned_title
         except Exception as e:
             logger.error(f"Failed to generate summary: {e}")
             return "Gagal menghasilkan ringkasan percakapan"
+
+    def _clean_llm_title_response(self, raw_title: str) -> str:
+        """
+        Clean LLM response to extract proper title text from malformed responses
+        """
+        try:
+            # Remove common prefixes and suffixes
+            cleaned = raw_title.strip()
+
+            # Remove "JUDUL:" prefix if present
+            if cleaned.upper().startswith("JUDUL:"):
+                cleaned = cleaned[6:].strip()
+
+            # Check if response looks like JSON array string representation
+            if cleaned.startswith("[") and "," in cleaned and cleaned.endswith("]"):
+                try:
+                    # Try to parse as JSON array and join characters
+                    import json
+
+                    char_array = json.loads(cleaned)
+                    if isinstance(char_array, list):
+                        # Join characters to form the actual title
+                        cleaned = "".join(str(char) for char in char_array)
+                except (json.JSONDecodeError, TypeError):
+                    # If JSON parsing fails, try to extract text manually
+                    # Remove brackets and quotes, split by comma, join characters
+                    cleaned = cleaned.strip("[]")
+                    cleaned = cleaned.replace("'", "").replace('"', "")
+                    if "," in cleaned:
+                        chars = [char.strip() for char in cleaned.split(",")]
+                        cleaned = "".join(chars)
+
+            # Remove extra quotes and whitespace
+            cleaned = cleaned.strip("\"'")
+
+            # Fallback if still looks malformed
+            if len(cleaned) < 5 or any(
+                char in cleaned for char in ["[", "]", "{", "}"]
+            ):
+                return "Ringkasan Percakapan Tunarasa"
+
+            return cleaned
+
+        except Exception as e:
+            logger.error(f"Failed to clean title response: {e}")
+            return "Ringkasan Percakapan Tunarasa"
 
 
 # Global service instance

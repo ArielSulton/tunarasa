@@ -84,6 +84,14 @@ async def generate_conversation_summary(
         summary_text = await langchain_service.generate_summary(conversation_text)
         title = await langchain_service.generate_title_of_summary(summary_text)
 
+        # Log the raw title for debugging
+        logger.info(f"Generated title: {repr(title)}")
+
+        # Additional cleanup for title in case LLM returns malformed response
+        if not title or len(title.strip()) < 5:
+            title = "Ringkasan Percakapan Tunarasa"
+            logger.warning(f"Title was too short or empty, using fallback: {title}")
+
         # Create summary document
         summary_content = qr_service.create_summary_document(
             title, summary_text, conversation_data, messages, request.format_type
