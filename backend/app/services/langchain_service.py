@@ -1216,21 +1216,31 @@ class EnhancedLangChainService:
                         # Join characters to form the actual title
                         cleaned = "".join(str(char) for char in char_array)
                 except (json.JSONDecodeError, TypeError):
-                    # If JSON parsing fails, try to extract text manually
-                    # Remove brackets and quotes, split by comma, join characters
-                    cleaned = cleaned.strip("[]")
-                    cleaned = cleaned.replace("'", "").replace('"', "")
-                    if "," in cleaned:
-                        chars = [char.strip() for char in cleaned.split(",")]
-                        cleaned = "".join(chars)
+                    # Try to fix the JSON by replacing single quotes with double quotes
+                    try:
+                        fixed_json = cleaned.replace("'", '"')
+                        char_array = json.loads(fixed_json)
+                        if isinstance(char_array, list):
+                            cleaned = "".join(str(char) for char in char_array)
+                    except (json.JSONDecodeError, TypeError):
+                        # Manual parsing fallback
+                        cleaned = cleaned.strip("[]")
+                        cleaned = cleaned.replace("'", "").replace('"', "")
+                        if "," in cleaned:
+                            chars = [char.strip() for char in cleaned.split(",")]
+                            cleaned = "".join(chars)
 
             # Remove extra quotes and whitespace
             cleaned = cleaned.strip("\"'")
 
-            # Fallback if still looks malformed
-            if len(cleaned) < 5 or any(
-                char in cleaned for char in ["[", "]", "{", "}"]
-            ):
+            # Remove remaining JSON artifacts like { and }
+            cleaned = cleaned.replace("{", "").replace("}", "")
+
+            # Add spaces around colon for better readability
+            cleaned = cleaned.replace(":", ": ")
+
+            # Fallback if still looks malformed or too short
+            if len(cleaned) < 5:
                 return "Ringkasan Percakapan Tunarasa"
 
             return cleaned

@@ -2,6 +2,7 @@
 Summary and QR code endpoints for conversation downloads
 """
 
+import json
 import logging
 from typing import Any, Dict, Optional
 
@@ -16,6 +17,61 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _clean_title_from_database(raw_title: str) -> str:
+    """
+    Clean title from database that might contain malformed JSON array responses
+    """
+    try:
+        # Remove common prefixes and suffixes
+        cleaned = raw_title.strip()
+
+        # Remove "JUDUL:" prefix if present
+        if cleaned.upper().startswith("JUDUL:"):
+            cleaned = cleaned[6:].strip()
+
+        # Check if response looks like JSON array string representation
+        if cleaned.startswith("[") and "," in cleaned and cleaned.endswith("]"):
+            try:
+                # Try to parse as JSON array and join characters
+                char_array = json.loads(cleaned)
+                if isinstance(char_array, list):
+                    # Join characters to form the actual title
+                    cleaned = "".join(str(char) for char in char_array)
+            except (json.JSONDecodeError, TypeError):
+                # Try to fix the JSON by replacing single quotes with double quotes
+                try:
+                    fixed_json = cleaned.replace("'", '"')
+                    char_array = json.loads(fixed_json)
+                    if isinstance(char_array, list):
+                        cleaned = "".join(str(char) for char in char_array)
+                except (json.JSONDecodeError, TypeError):
+                    # Manual parsing fallback
+                    cleaned = cleaned.strip("[]")
+                    cleaned = cleaned.replace("'", "").replace('"', "")
+                    if "," in cleaned:
+                        chars = [char.strip() for char in cleaned.split(",")]
+                        cleaned = "".join(chars)
+
+        # Remove extra quotes and whitespace
+        cleaned = cleaned.strip("\"'")
+
+        # Remove remaining JSON artifacts like { and }
+        cleaned = cleaned.replace("{", "").replace("}", "")
+
+        # Add spaces around colon for better readability
+        cleaned = cleaned.replace(":", ": ")
+
+        # Fallback if still looks malformed or too short
+        if len(cleaned) < 5:
+            return "Ringkasan Percakapan Tunarasa"
+
+        return cleaned
+
+    except Exception as e:
+        logger.error(f"Failed to clean title from database: {e}")
+        return "Ringkasan Percakapan Tunarasa"
 
 
 class QRCodeResponse(BaseModel):
@@ -213,12 +269,15 @@ async def download_summary(
         note = notes[0]  # Get first note (or adjust if you want multi)
         print(f"Using note ID: {note.note_id}")
 
-        # Prepare data
-        title = (
+        # Prepare data with title cleaning
+        raw_title = (
             note.title
             if isinstance(note.title, str)
             else (str(note.title) if note.title else "Ringkasan Percakapan Tunarasa")
         )
+
+        # Clean the title to handle malformed JSON array responses
+        title = _clean_title_from_database(raw_title)
         note_content = note.note_content
         url_access = note.url_access
         created_at = note.created_at.strftime("%Y-%m-%d %H:%M")
