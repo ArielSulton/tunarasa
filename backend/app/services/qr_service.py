@@ -27,8 +27,9 @@ class QRCodeService:
     def __init__(self):
         from app.core.config import settings
 
-        # Use settings for base URL, fallback to localhost for development
-        self.base_url = settings.NEXT_PUBLIC_BACKEND_URL or "http://localhost:8000"
+        # Use frontend URL for QR codes, not backend URL
+        # QR codes should redirect to frontend which will proxy to backend
+        self.base_url = settings.NEXT_PUBLIC_APP_URL or "http://localhost:3000"
 
     def generate_conversation_summary_qr(
         self, conversation_id: int, user_id: int, summary_data: Dict[str, Any]
@@ -48,8 +49,8 @@ class QRCodeService:
             # Generate unique access token for this summary
             access_token = str(uuid.uuid4())
 
-            # Create summary URL
-            summary_url = f"{self.base_url}/api/v1/summary/{access_token}"
+            # Create summary URL pointing to frontend route
+            summary_url = f"{self.base_url}/summary/{access_token}"
 
             # Create QR code data
             qr_data = {
@@ -104,8 +105,8 @@ class QRCodeService:
             # Generate unique access token
             access_token = str(uuid.uuid4())
 
-            # Create note access URL
-            note_url = f"{self.base_url}/api/v1/note/{access_token}"
+            # Create note access URL pointing to frontend route
+            note_url = f"{self.base_url}/note/{access_token}"
 
             # Create QR code data
             qr_data = {
