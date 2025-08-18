@@ -186,34 +186,59 @@
         {
           "expr": "histogram_quantile(0.95, sum(rate(tunarasa_ai_request_duration_seconds_bucket[5m])) by (le, model))",
           "legendFormat": "{{model}} Response Time",
-          "refId": "A"
+          "refId": "A",
+          "format": "heatmap",
+          "intervalFactor": 1,
+          "step": 60,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "hideFrom": {"legend": false, "tooltip": false, "vis": false},
-            "scaleDistribution": {"type": "linear"}
+            "hideFrom": {
+              "legend": false, 
+              "tooltip": false, 
+              "vis": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {"color": "green", "value": null},
-              {"color": "yellow", "value": 1},
-              {"color": "red", "value": 3}
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow", 
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
             ]
           },
-          "color": {"mode": "spectrum"},
-          "unit": "s"
-        }
+          "color": {
+            "mode": "spectrum"
+          },
+          "unit": "s",
+          "min": 0,
+          "max": 5
+        },
+        "overrides": []
       },
       "options": {
         "calculate": false,
         "cellGap": 2,
-        "cellValues": {
-          "unit": "s"
-        },
+        "cellValues": {},
         "color": {
           "exponent": 0.5,
           "fill": "dark-orange",
@@ -704,7 +729,7 @@
       "title": "Monitoring Documentation",
       "tooltip": "View monitoring setup and configuration guide",
       "type": "link",
-      "url": "https://github.com/your-org/tunarasa/docs/monitoring"
+      "url": "https://github.com/ArielSulton/tunarasa/README.md"
     }
   ]
 }

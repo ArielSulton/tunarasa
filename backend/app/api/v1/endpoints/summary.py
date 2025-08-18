@@ -209,7 +209,7 @@ async def download_summary(
         title = (
             note.title
             if isinstance(note.title, str)
-            else (note.title[0] if note.title else "")
+            else (str(note.title) if note.title else "Ringkasan Percakapan Tunarasa")
         )
         note_content = note.note_content
         url_access = note.url_access

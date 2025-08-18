@@ -395,26 +395,39 @@ https://tunarasa.my.id
         # Current Y position (starting from top)
         y_position = height - 2 * cm
 
-        # Header section with metadata
+        # Main header - Tunarasa branding
+        c.setFont("Helvetica-Bold", 18)
+        c.setFillColor(colors.black)
+        c.drawCentredString(width / 2, y_position, "RINGKASAN PERCAKAPAN TUNARASA")
+        y_position -= 0.8 * cm
+
+        # Subtitle separator
+        c.setStrokeColor(colors.blue)
+        c.setLineWidth(2)
+        c.line(margin + 4 * cm, y_position, width - margin - 4 * cm, y_position)
+        y_position -= 1 * cm
+
+        # Metadata section (right aligned)
         c.setFont("Helvetica", 9)
         c.setFillColor(colors.grey)
         c.drawRightString(width - margin, y_position, f"ID: {url_access}")
         y_position -= 0.4 * cm
-        c.drawRightString(width - margin, y_position, f"Created: {created_at}")
+        c.drawRightString(width - margin, y_position, f"Dibuat: {created_at}")
 
-        # Move down for title
+        # Move down for content title
         y_position -= 1.5 * cm
 
-        # Title (centered, bold, with some styling)
-        c.setFont("Helvetica-Bold", 16)
-        c.setFillColor(colors.black)
-        # Wrap title if too long
-        title_wrapped = textwrap.fill(title, width=60)
-        title_lines = title_wrapped.split("\n")
+        # Content title (if different from main title)
+        if title and title != "Ringkasan Percakapan Tunarasa":
+            c.setFont("Helvetica-Bold", 14)
+            c.setFillColor(colors.black)
+            # Wrap title if too long
+            title_wrapped = textwrap.fill(str(title), width=60)
+            title_lines = title_wrapped.split("\n")
 
-        for line in title_lines:
-            c.drawCentredString(width / 2, y_position, line)
-            y_position -= 0.6 * cm
+            for line in title_lines:
+                c.drawCentredString(width / 2, y_position, line)
+                y_position -= 0.6 * cm
 
         # Add separator line
         y_position -= 0.5 * cm
