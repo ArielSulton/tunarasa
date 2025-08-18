@@ -14,14 +14,6 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 10s
     scrape_timeout: 5s
-
-  # Tunarasa Metrics (New endpoint)
-  - job_name: 'tunarasa-metrics'
-    static_configs:
-      - targets: ['backend:8000']
-    metrics_path: '/api/v1/metrics'
-    scrape_interval: 15s
-    scrape_timeout: 8s
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance

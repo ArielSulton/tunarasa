@@ -11,7 +11,6 @@ from app.api.v1.endpoints import (
     gesture,
     health,
     institutions,
-    metrics,
     monitoring,
     public_session,
     qa_log,
@@ -72,6 +71,3 @@ api_router.include_router(qa_log.router, tags=["qa-logging"])
 api_router.include_router(
     institutions.router, prefix="/institutions", tags=["institutions"]
 )
-
-# Prometheus metrics endpoint for Grafana
-api_router.include_router(metrics.router, tags=["metrics"])

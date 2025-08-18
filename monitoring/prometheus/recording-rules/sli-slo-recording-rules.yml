@@ -1,84 +1,4 @@
 groups:
-  - name: tunarasa_sli_recording_rules
-    interval: 30s
-    rules:
-      # Availability SLI - percentage of successful requests
-      - record: tunarasa:sli:availability:rate5m
-        expr: |
-          (
-            sum(rate(tunarasa_request_success_total[5m])) /
-            (sum(rate(tunarasa_request_success_total[5m])) + sum(rate(tunarasa_request_error_total[5m])))
-          ) * 100
-
-      # Error Rate SLI - percentage of failed requests
-      - record: tunarasa:sli:error_rate:rate5m
-        expr: |
-          (
-            sum(rate(tunarasa_request_error_total[5m])) /
-            (sum(rate(tunarasa_request_success_total[5m])) + sum(rate(tunarasa_request_error_total[5m])))
-          ) * 100
-
-      # Latency SLI - 95th percentile latency
-      - record: tunarasa:sli:latency:p95
-        expr: |
-          histogram_quantile(0.95, 
-            sum(rate(tunarasa_sli_latency_seconds_bucket[5m])) by (le)
-          )
-
-      # Throughput SLI - requests per second
-      - record: tunarasa:sli:throughput:rate5m
-        expr: |
-          sum(rate(tunarasa_request_success_total[5m])) + sum(rate(tunarasa_request_error_total[5m]))
-
-      # Fallback SLI metrics using existing HTTP metrics when specific SLI metrics are not available
-      - record: tunarasa:sli:availability:fallback:rate5m
-        expr: |
-          (
-            sum(rate(tunarasa_http_requests_total{status_code!~"5.."}[5m])) /
-            sum(rate(tunarasa_http_requests_total[5m]))
-          ) * 100
-
-      - record: tunarasa:sli:error_rate:fallback:rate5m
-        expr: |
-          (
-            sum(rate(tunarasa_http_requests_total{status_code=~"5.."}[5m])) /
-            sum(rate(tunarasa_http_requests_total[5m]))
-          ) * 100
-
-  - name: tunarasa_business_intelligence_rules
-    interval: 60s
-    rules:
-      # Daily Active Users calculation
-      - record: tunarasa:bi:dau
-        expr: |
-          count(count by (session_id) (tunarasa_gesture_requests_total[24h]))
-
-      # Average session duration
-      - record: tunarasa:bi:avg_session_duration
-        expr: |
-          avg(tunarasa_session_duration_seconds)
-
-      # Questions per session percentiles
-      - record: tunarasa:bi:questions_per_session:p50
-        expr: |
-          histogram_quantile(0.50, sum(rate(tunarasa_questions_per_session_bucket[5m])) by (le))
-
-      - record: tunarasa:bi:questions_per_session:p90
-        expr: |
-          histogram_quantile(0.90, sum(rate(tunarasa_questions_per_session_bucket[5m])) by (le))
-
-      - record: tunarasa:bi:questions_per_session:p95
-        expr: |
-          histogram_quantile(0.95, sum(rate(tunarasa_questions_per_session_bucket[5m])) by (le))
-
-      # Success rate by language
-      - record: tunarasa:bi:success_rate_by_language
-        expr: |
-          (
-            sum by (language) (tunarasa_gesture_requests_total{success="true"}[24h]) /
-            sum by (language) (tunarasa_gesture_requests_total[24h])
-          ) * 100
-
   - name: tunarasa_infrastructure_rules
     interval: 30s
     rules:
@@ -92,12 +12,7 @@ groups:
         expr: |
           (tunarasa_redis_memory_used_bytes / tunarasa_redis_memory_max_bytes) * 100
 
-      # System health composite score
+      # System health composite score (simplified)
       - record: tunarasa:infra:health_score
         expr: |
-          (
-            (tunarasa:sli:availability:rate5m + 
-             (100 - tunarasa:sli:error_rate:rate5m) + 
-             (avg(tunarasa_ai_quality_score) * 100)
-            ) / 3
-          )
+          avg(tunarasa_ai_quality_score) * 100

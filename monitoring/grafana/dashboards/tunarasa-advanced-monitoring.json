@@ -175,262 +175,50 @@
           "showLegend": true
         }
       },
-      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8}
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8}
     },
     {
       "id": 3,
-      "title": "🤖 AI Service Performance Heatmap",
-      "type": "heatmap",
-      "description": "AI request response times and confidence distribution",
+      "title": "📊 System Status",
+      "type": "stat",
+      "description": "Quick system status overview",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(tunarasa_ai_request_duration_seconds_bucket[5m])) by (le, model))",
-          "legendFormat": "{{model}} Response Time",
-          "refId": "A",
-          "format": "heatmap",
-          "intervalFactor": 1,
-          "step": 60,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          }
+          "expr": "up{job=\"tunarasa-backend\"}",
+          "legendFormat": "Backend Status",
+          "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "hideFrom": {
-              "legend": false, 
-              "tooltip": false, 
-              "vis": false
-            },
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          },
-          "mappings": [],
+          "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow", 
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 3
-              }
+              {"color": "red", "value": 0},
+              {"color": "green", "value": 1}
             ]
           },
-          "color": {
-            "mode": "spectrum"
-          },
-          "unit": "s",
-          "min": 0,
-          "max": 5
-        },
-        "overrides": []
+          "mappings": [
+            {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
+            {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
+          ]
+        }
       },
       "options": {
-        "calculate": false,
-        "cellGap": 2,
-        "cellValues": {},
-        "color": {
-          "exponent": 0.5,
-          "fill": "dark-orange",
-          "min": 0,
-          "max": 5,
-          "mode": "spectrum",
-          "reverse": false,
-          "scale": "exponential",
-          "scheme": "Spectral",
-          "steps": 128
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
         },
-        "exemplars": {
-          "color": "rgba(255,0,255,0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "rowsFrame": {
-          "layout": "auto"
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "axisPlacement": "left",
-          "reverse": false,
-          "unit": "s"
-        }
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
       },
-      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8},
-      "links": [
-        {
-          "title": "View AI Service Details",
-          "url": "/d/tunarasa-ai-details?var-model=${__field.labels.model}",
-          "type": "dashboard"
-        }
-      ]
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8}
     },
     {
       "id": 4,
-      "title": "👁️ Gesture Recognition Analytics",
-      "type": "piechart",
-      "description": "Real-time gesture recognition accuracy and distribution",
-      "targets": [
-        {
-          "expr": "sum by (gesture_type) (rate(tunarasa_gesture_recognitions_total[5m]))",
-          "legendFormat": "{{gesture_type}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "hideFrom": {"legend": false, "tooltip": false, "vis": false}
-          },
-          "mappings": [],
-          "unit": "short",
-          "color": {"mode": "palette-classic"}
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"],
-          "fields": ""
-        },
-        "pieType": "donut",
-        "tooltip": {"mode": "single", "sort": "desc"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "values": ["percent", "value"]
-        },
-        "displayLabels": ["name", "percent"]
-      },
-      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 18}
-    },
-    {
-      "id": 5,
-      "title": "📊 Error Rate Analysis",
-      "type": "bargauge",
-      "description": "Error distribution across service endpoints",
-      "targets": [
-        {
-          "expr": "sum by (endpoint) (rate(tunarasa_http_requests_total{status_code=~\"5..\"}[5m])) / sum by (endpoint) (rate(tunarasa_http_requests_total[5m]))",
-          "legendFormat": "{{endpoint}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"color": "green", "value": null},
-              {"color": "yellow", "value": 0.01},
-              {"color": "red", "value": 0.05}
-            ]
-          },
-          "custom": {
-            "orientation": "horizontal",
-            "displayMode": "gradient"
-          }
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"],
-          "fields": ""
-        },
-        "orientation": "horizontal",
-        "displayMode": "gradient",
-        "showUnfilled": true,
-        "minVizWidth": 0,
-        "minVizHeight": 10
-      },
-      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 18}
-    },
-    {
-      "id": 6,
-      "title": "💾 Resource Utilization",
-      "type": "timeseries",
-      "description": "System resource consumption with predictive trends",
-      "targets": [
-        {
-          "expr": "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-          "legendFormat": "CPU Usage %",
-          "refId": "A"
-        },
-        {
-          "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
-          "legendFormat": "Memory Usage %",
-          "refId": "B"
-        },
-        {
-          "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{mountpoint=\"/\"})",
-          "legendFormat": "Disk Usage %",
-          "refId": "C"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "spanNulls": false,
-            "insertNulls": false,
-            "showPoints": "never",
-            "pointSize": 5,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto",
-            "axisLabel": "Usage %",
-            "scaleDistribution": {"type": "linear"},
-            "hideFrom": {"legend": false, "tooltip": false, "vis": false},
-            "thresholdsStyle": {"mode": "line"}
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"color": "green", "value": null},
-              {"color": "yellow", "value": 70},
-              {"color": "red", "value": 90}
-            ]
-          }
-        }
-      },
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "desc"},
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
-      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 18}
-    },
-    {
-      "id": 7,
       "title": "🔍 DeepEval Quality Trends",
       "type": "timeseries",
       "description": "LLM quality metrics with anomaly detection and trend analysis",
@@ -501,10 +289,10 @@
           "showLegend": true
         }
       },
-      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 26}
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 18}
     },
     {
-      "id": 8,
+      "id": 5,
       "title": "📱 User Journey Tracking",
       "type": "table",
       "description": "Real-time user session analytics and conversion funnel",
@@ -564,10 +352,10 @@
         "frameIndex": 0,
         "showTypeIcons": false
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36}
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28}
     },
     {
-      "id": 9,
+      "id": 6,
       "title": "⚡ Quick Actions & Navigation",
       "type": "dashlist",
       "description": "Smart dashboard navigation with contextual links",
@@ -588,10 +376,10 @@
         "headings": true,
         "folderId": null
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36}
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28}
     },
     {
-      "id": 10,
+      "id": 7,
       "title": "🎮 Interactive Controls",
       "type": "text",
       "description": "Dynamic dashboard controls and quick filters",
@@ -599,7 +387,7 @@
         "mode": "html",
         "content": "<div style=\"padding: 20px; text-align: center; font-family: Inter, sans-serif;\">\n  <h3 style=\"color: #58A6FF; margin-bottom: 20px;\">🎮 Dashboard Controls</h3>\n  \n  <div style=\"display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px;\">\n    <div style=\"background: rgba(88, 166, 255, 0.1); padding: 15px; border-radius: 8px; min-width: 200px;\">\n      <h4 style=\"color: #F0F6FC; margin: 0 0 10px 0;\">🔍 Filters</h4>\n      <p style=\"color: #8B949E; margin: 0; font-size: 14px;\">Use time range picker above<br/>Filter by service, endpoint, or user</p>\n    </div>\n    \n    <div style=\"background: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 8px; min-width: 200px;\">\n      <h4 style=\"color: #F0F6FC; margin: 0 0 10px 0;\">📊 Export</h4>\n      <p style=\"color: #8B949E; margin: 0; font-size: 14px;\">Share panels & dashboards<br/>Export data as CSV/JSON</p>\n    </div>\n    \n    <div style=\"background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 8px; min-width: 200px;\">\n      <h4 style=\"color: #F0F6FC; margin: 0 0 10px 0;\">🔔 Alerts</h4>\n      <p style=\"color: #8B949E; margin: 0; font-size: 14px;\">Configure thresholds<br/>Set up notifications</p>\n    </div>\n  </div>\n  \n  <div style=\"margin-top: 25px; padding: 15px; background: rgba(139, 148, 158, 0.1); border-radius: 8px;\">\n    <p style=\"color: #8B949E; margin: 0; font-size: 12px;\">💡 <strong>Pro Tip:</strong> Click on any metric value to drill down into detailed views. Use Ctrl+Click to open in new tab.</p>\n  </div>\n</div>"
       },
-      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 44}
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 36}
     }
   ],
   "templating": {
