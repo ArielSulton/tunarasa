@@ -1239,6 +1239,9 @@ class EnhancedLangChainService:
             # Add spaces around colon for better readability
             cleaned = cleaned.replace(":", ": ")
 
+            # Fix concatenated words by adding proper spacing
+            cleaned = self._add_proper_spacing(cleaned)
+
             # Fallback if still looks malformed or too short
             if len(cleaned) < 5:
                 return "Ringkasan Percakapan Tunarasa"
@@ -1248,6 +1251,83 @@ class EnhancedLangChainService:
         except Exception as e:
             logger.error(f"Failed to clean title response: {e}")
             return "Ringkasan Percakapan Tunarasa"
+
+    def _add_proper_spacing(self, text: str) -> str:
+        """
+        Add proper spacing between concatenated words using AI-powered approach
+        """
+        try:
+            # If text already has proper spacing, return as is
+            if " " in text and not self._has_concatenated_words(text):
+                return text
+
+            # Use LLM to fix spacing intelligently
+            spacing_prompt = f"""
+            Perbaiki spasi pada teks berikut. Tambahkan spasi yang tepat antar kata tanpa mengubah makna atau struktur kalimat.
+            Jangan mengubah atau menghilangkan singkatan yang benar seperti KTP, SIM, dll.
+
+            Teks asli: {text}
+
+            Berikan hanya hasil perbaikan tanpa penjelasan:
+            """
+
+            # Use a quick LLM call for spacing correction
+            response = self.llm.invoke(spacing_prompt)
+            result = (
+                response.content.strip()
+                if hasattr(response, "content")
+                else str(response).strip()
+            )
+
+            # Fallback to simple pattern matching if LLM fails
+            if not result or len(result) < len(text) * 0.8:
+                result = self._apply_basic_spacing_patterns(text)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to add proper spacing: {e}")
+            # Fallback to basic pattern matching
+            return self._apply_basic_spacing_patterns(text)
+
+    def _has_concatenated_words(self, text: str) -> bool:
+        """
+        Check if text has concatenated words (camelCase or multiple capitals)
+        """
+        import re
+
+        # Check for camelCase pattern or multiple consecutive capitals
+        return bool(re.search(r"[a-z][A-Z]|[A-Z]{2,}[a-z]", text))
+
+    def _apply_basic_spacing_patterns(self, text: str) -> str:
+        """
+        Apply basic spacing patterns as fallback
+        """
+        import re
+
+        # Handle specific Indonesian connectors first
+        result = re.sub(r"([a-z])dan([A-Z])", r"\1 dan \2", text)
+
+        # Generic pattern: lowercase followed by uppercase
+        result = re.sub(r"([a-z])([A-Z])", r"\1 \2", result)
+
+        # Handle remaining "dan" patterns after generic split
+        result = re.sub(r"(?<!\w)dan([A-Z])", r"dan \1", result)
+        result = re.sub(r"([a-z])dan(?!\w)", r"\1 dan", result)
+
+        # Handle common abbreviations that got split incorrectly
+        result = re.sub(r"SIM ([A-Z])", r"SIM\1", result)  # Keep SIMBaru as SIMBaru
+        result = re.sub(
+            r"([A-Z]{2,}) ([A-Z][a-z])", r"\1\2", result
+        )  # Keep abbreviations together
+
+        # Space before parentheses
+        result = re.sub(r"([a-z])\(", r"\1 (", result)
+
+        # Clean up multiple spaces
+        result = re.sub(r"\s+", " ", result)
+
+        return result.strip()
 
 
 # Global service instance

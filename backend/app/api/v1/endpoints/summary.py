@@ -63,6 +63,9 @@ def _clean_title_from_database(raw_title: str) -> str:
         # Add spaces around colon for better readability
         cleaned = cleaned.replace(":", ": ")
 
+        # Fix concatenated words by adding proper spacing
+        cleaned = _add_proper_spacing(cleaned)
+
         # Fallback if still looks malformed or too short
         if len(cleaned) < 5:
             return "Ringkasan Percakapan Tunarasa"
@@ -72,6 +75,65 @@ def _clean_title_from_database(raw_title: str) -> str:
     except Exception as e:
         logger.error(f"Failed to clean title from database: {e}")
         return "Ringkasan Percakapan Tunarasa"
+
+
+def _add_proper_spacing(text: str) -> str:
+    """
+    Add proper spacing between concatenated words using pattern-based approach
+    """
+
+    try:
+        # If text already has proper spacing, return as is
+        if " " in text and not _has_concatenated_words(text):
+            return text
+
+        # Apply basic spacing patterns
+        return _apply_basic_spacing_patterns(text)
+
+    except Exception as e:
+        logger.error(f"Failed to add proper spacing: {e}")
+        return text
+
+
+def _has_concatenated_words(text: str) -> bool:
+    """
+    Check if text has concatenated words (camelCase or multiple capitals)
+    """
+    import re
+
+    # Check for camelCase pattern or multiple consecutive capitals
+    return bool(re.search(r"[a-z][A-Z]|[A-Z]{2,}[a-z]", text))
+
+
+def _apply_basic_spacing_patterns(text: str) -> str:
+    """
+    Apply basic spacing patterns for common cases
+    """
+    import re
+
+    # Handle specific Indonesian connectors first
+    result = re.sub(r"([a-z])dan([A-Z])", r"\1 dan \2", text)
+
+    # Generic pattern: lowercase followed by uppercase
+    result = re.sub(r"([a-z])([A-Z])", r"\1 \2", result)
+
+    # Handle remaining "dan" patterns after generic split
+    result = re.sub(r"(?<!\w)dan([A-Z])", r"dan \1", result)
+    result = re.sub(r"([a-z])dan(?!\w)", r"\1 dan", result)
+
+    # Handle common abbreviations that got split incorrectly
+    result = re.sub(r"SIM ([A-Z])", r"SIM\1", result)  # Keep SIMBaru as SIMBaru
+    result = re.sub(
+        r"([A-Z]{2,}) ([A-Z][a-z])", r"\1\2", result
+    )  # Keep abbreviations together
+
+    # Space before parentheses
+    result = re.sub(r"([a-z])\(", r"\1 (", result)
+
+    # Clean up multiple spaces
+    result = re.sub(r"\s+", " ", result)
+
+    return result.strip()
 
 
 class QRCodeResponse(BaseModel):
@@ -239,13 +301,16 @@ async def generate_conversation_summary(
 
 @router.get("/{access_token}")
 async def download_summary(
-    access_token: str, format: str = "text", db: AsyncSession = Depends(get_db_session)
+    access_token: str,
+    format_type: str = "text",
+    db: AsyncSession = Depends(get_db_session),
 ):
     """
     Download conversation summary using QR code access token
     """
     try:
         print(f"Looking for access token: {access_token}")
+        print(f"Requested format: {format_type}")  # Use format_type parameter
         # Validate access_token from database and get note
         notes = await NoteCRUD.get_by_url_access(db, access_token)
         print(f"Found {len(notes) if notes else 0} notes with access token")
