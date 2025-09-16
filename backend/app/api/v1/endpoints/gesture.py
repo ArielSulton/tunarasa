@@ -15,6 +15,7 @@ from app.middleware.response_middleware import ResponseFactory, create_response_
 from app.models.api_response import ApiResponse, HealthCheckData
 from app.services.deepeval_monitoring import evaluate_llm_response
 from app.services.document_manager import get_document_manager
+from app.services.gesture_validation_service import validate_gesture_prediction
 from app.services.langchain_service import process_question_simple
 from app.services.metrics_service import metrics_service
 from fastapi import APIRouter, Depends, status
@@ -328,12 +329,22 @@ async def process_gesture_text(
             or f"gesture_session_{int(datetime.now(timezone.utc).timestamp())}"
         )
 
-        # Record gesture recognition metrics
+        # Validate gesture prediction with ground truth and record real accuracy
         if gesture_request.gesture_confidence is not None:
-            metrics_service.record_gesture_recognition(
+            # Use validation service for real accuracy calculation
+            validation_result = validate_gesture_prediction(
+                predicted_text=gesture_request.text,
+                gesture_confidence=gesture_request.gesture_confidence,
                 gesture_type="text_conversion",
-                confidence=gesture_request.gesture_confidence,
-                accuracy=gesture_request.gesture_confidence,  # Use confidence as accuracy proxy
+                session_id=session_id,
+            )
+
+            # Log validation results for monitoring
+            logger.info(
+                f"Gesture validation - Text: '{gesture_request.text[:50]}...', "
+                f"Confidence: {gesture_request.gesture_confidence:.3f}, "
+                f"Accuracy: {validation_result.get('accuracy_score', 0):.3f}, "
+                f"Ground Truth Match: {validation_result.get('is_correct', False)}"
             )
             # Record REAL business intelligence data from actual user interaction
             metrics_service.record_gesture_request(

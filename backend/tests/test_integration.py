@@ -31,7 +31,7 @@ else:
             "SECRET_KEY": "test_secret_key_for_validation_testing_minimum_32_chars",
             "ACCESS_TOKEN_EXPIRE_MINUTES": "60",
             "GROQ_API_KEY": "test_groq_api_key_for_testing_only",
-            "LLM_MODEL": "llama3-70b-8192",
+            "LLM_MODEL": "llama-3.3-70b-versatile",
             "LLM_TEMPERATURE": "0.7",
             "LLM_MAX_TOKENS": "1000",
             "PINECONE_API_KEY": "test_pinecone_api_key_for_testing_only",
@@ -137,14 +137,14 @@ class TestDeepEvalMonitoring:
             llm_response="Sign language is a visual communication method.",
             context_documents=["Document 1"],
             response_time=1.5,
-            model_used="llama3-70b-8192",
+            model_used="llama-3.3-70b-versatile",
             confidence_score=0.85,
         )
 
         assert conversation.conversation_id == "test_001"
         assert conversation.user_question == "What is sign language?"
         assert conversation.response_time == 1.5
-        assert conversation.model_used == "llama3-70b-8192"
+        assert conversation.model_used == "llama-3.3-70b-versatile"
         assert conversation.confidence_score == 0.85
 
 

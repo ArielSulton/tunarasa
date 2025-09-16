@@ -99,20 +99,51 @@ class LLMConversation:
 
 
 class CustomDeepEvalLLM(DeepEvalBaseLLM):
-    """Custom DeepEval LLM wrapper for ChatGroq"""
+    """Custom DeepEval LLM wrapper for ChatGroq with real integration"""
 
     def __init__(self, model_name: str = settings.LLM_MODEL):
         self.model_name = model_name
+        self.client = None
+        self._initialize_client()
+
+    def _initialize_client(self):
+        """Initialize Groq client"""
+        try:
+            from groq import Groq
+
+            self.client = Groq(api_key=settings.GROQ_API_KEY)
+            logger.info(
+                f"Groq client initialized for DeepEval with model: {self.model_name}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize Groq client for DeepEval: {e}")
+            self.client = None
 
     def load_model(self):
-        """Load the model (ChatGroq is loaded elsewhere)"""
-        return self
+        """Load the model (Groq client is already initialized)"""
+        return self.client
 
     def generate(self, prompt: str) -> str:
-        """Generate response using ChatGroq"""
-        # This is a simplified implementation
-        # In practice, you'd use the actual ChatGroq service
-        return f"Response to: {prompt[:100]}..."
+        """Generate response using real ChatGroq API"""
+        if not self.client:
+            logger.warning("Groq client not available, using fallback response")
+            return f"Fallback response for: {prompt[:50]}..."
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,  # Low temperature for evaluation consistency
+                max_tokens=1000,
+                timeout=30,  # 30 second timeout for evaluation
+            )
+
+            return response.choices[0].message.content.strip()
+
+        except Exception as e:
+            logger.error(f"Error generating response with Groq for DeepEval: {e}")
+            # Return a fallback response to prevent evaluation failure
+            return f"Error in evaluation generation: {str(e)}"
 
     async def a_generate(self, prompt: str) -> str:
         """Async generate response"""

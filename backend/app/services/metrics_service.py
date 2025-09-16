@@ -842,21 +842,48 @@ class MetricsService:
             logger.error(f"Failed to cleanup expired sessions: {e}")
 
     def get_system_metrics(self) -> Dict[str, Any]:
-        """Get current system metrics summary"""
+        """Get current system metrics summary with safe metric access"""
         try:
             uptime = time.time() - self.start_time
 
+            # Safe access to metric values with defaults
+            def safe_get_metric_value(metric, default=0.0):
+                try:
+                    if hasattr(metric, "_value") and hasattr(metric._value, "_value"):
+                        return float(metric._value._value)
+                    return default
+                except (AttributeError, ValueError, TypeError):
+                    return default
+
             return {
                 "uptime_seconds": uptime,
-                "active_sessions": tunarasa_active_sessions_total._value._value,
-                "gesture_accuracy": tunarasa_gesture_recognition_accuracy._value._value,
-                "ai_confidence": tunarasa_ai_response_confidence_avg._value._value,
-                "database_connections": tunarasa_database_connections_active._value._value,
+                "active_sessions": safe_get_metric_value(
+                    tunarasa_active_sessions_total, 0
+                ),
+                "gesture_accuracy": safe_get_metric_value(
+                    tunarasa_gesture_recognition_accuracy, 0.0
+                ),
+                "ai_confidence": safe_get_metric_value(
+                    tunarasa_ai_response_confidence_avg, 0.0
+                ),
+                "database_connections": safe_get_metric_value(
+                    tunarasa_database_connections_active, 0
+                ),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                "metrics_status": "healthy",
             }
         except Exception as e:
             logger.error(f"Failed to get system metrics: {e}")
-            return {"error": str(e)}
+            return {
+                "uptime_seconds": 0,
+                "active_sessions": 0,
+                "gesture_accuracy": 0.0,
+                "ai_confidence": 0.0,
+                "database_connections": 0,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "metrics_status": "error",
+                "error": str(e),
+            }
 
     # SLI/SLO monitoring methods
     def record_request_success(self, endpoint: str, method: str):

@@ -18,10 +18,14 @@ import {
 
 interface FAQRecommendation {
   cluster_id: number
-  cluster_name: string
-  questions: string[]
+  cluster_title: string
   representative_question: string
+  representative_answer: string
+  sample_qa_pairs: { question: string; answer: string }[]
   question_count: number
+  confidence_score: number
+  keywords: string[]
+  data_source: 'database' | 'fallback'
 }
 
 interface FAQRecommendationResponse {
@@ -288,7 +292,7 @@ export function FAQRecommendations({ institutionId, institutionName }: FAQRecomm
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    {recommendation.cluster_name}
+                    {recommendation.cluster_title}
                     {index === 0 && <Badge className="bg-blue-600 text-xs text-white">Paling Populer</Badge>}
                   </CardTitle>
                   <CardDescription className="mt-1">
@@ -302,34 +306,83 @@ export function FAQRecommendations({ institutionId, institutionName }: FAQRecomm
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {/* Representative Question */}
-              <div className="rounded-lg bg-gray-50 p-3">
-                <p className="mb-1 font-medium text-gray-900">📌 Pertanyaan Representatif:</p>
-                <p className="text-gray-700 italic">&ldquo;{recommendation.representative_question}&rdquo;</p>
+              {/* Representative Q&A */}
+              <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
+                <div className="space-y-3">
+                  <div>
+                    <p className="mb-2 flex items-center gap-2 font-semibold text-blue-900">
+                      <HelpCircle className="h-4 w-4" />
+                      Pertanyaan Representatif:
+                    </p>
+                    <p className="rounded bg-white/50 p-2 text-blue-800 italic">
+                      &ldquo;{recommendation.representative_question}&rdquo;
+                    </p>
+                  </div>
+                  <div>
+                    <p className="mb-2 flex items-center gap-2 font-semibold text-green-900">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Jawaban:
+                    </p>
+                    <p className="rounded bg-white/50 p-2 leading-relaxed text-green-800">
+                      {recommendation.representative_answer}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              {/* Sample Questions */}
+              {/* Keywords */}
+              {recommendation.keywords && recommendation.keywords.length > 0 && (
+                <div>
+                  <p className="mb-2 font-medium text-gray-900">🏷️ Kata Kunci:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {recommendation.keywords.map((keyword, kIndex) => (
+                      <Badge key={kIndex} variant="secondary" className="text-xs">
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sample Q&A Pairs */}
               <div>
-                <p className="mb-3 font-medium text-gray-900">Contoh pertanyaan dalam kategori ini:</p>
-                <div className="space-y-2">
-                  {(recommendation.questions || []).slice(0, 3).map((question, qIndex) => (
-                    <div
-                      key={qIndex}
-                      className="flex cursor-pointer items-start gap-2 rounded-md border bg-white p-2 transition-colors hover:bg-gray-50"
-                    >
-                      <span className="mt-1 text-sm text-gray-400">{qIndex + 1}.</span>
-                      <span className="text-sm leading-relaxed text-gray-700">{question}</span>
+                <p className="mb-3 font-medium text-gray-900">💡 Contoh Q&A dalam kategori ini:</p>
+                <div className="space-y-3">
+                  {(recommendation.sample_qa_pairs ?? []).slice(0, 2).map((qaPair, qIndex) => (
+                    <div key={qIndex} className="rounded-md border bg-white p-3 transition-colors hover:bg-gray-50">
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600">
+                            T
+                          </span>
+                          <span className="text-sm leading-relaxed font-medium text-gray-700">{qaPair.question}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-medium text-green-600">
+                            J
+                          </span>
+                          <span className="text-sm leading-relaxed text-gray-600">{qaPair.answer}</span>
+                        </div>
+                      </div>
                     </div>
                   ))}
 
-                  {(recommendation.questions || []).length > 3 && (
+                  {(recommendation.sample_qa_pairs ?? []).length > 2 && (
                     <div className="pt-2 text-center">
                       <Badge variant="secondary" className="text-xs">
-                        +{recommendation.questions.length - 3} pertanyaan lainnya
+                        +{recommendation.sample_qa_pairs.length - 2} Q&A lainnya
                       </Badge>
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Confidence Score */}
+              <div className="flex items-center justify-between border-t pt-2 text-sm text-gray-500">
+                <span>Tingkat Kepercayaan: {(recommendation.confidence_score * 100).toFixed(1)}%</span>
+                <Badge variant="outline" className="text-xs">
+                  {getDataSourceText(recommendation.data_source)}
+                </Badge>
               </div>
             </CardContent>
           </Card>
