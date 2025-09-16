@@ -21,7 +21,6 @@ interface BackendMessage {
   content: string
   timestamp: string
   adminName?: string
-  confidence?: number
 }
 
 type CommunicationMode = 'sibi' | 'speech'
@@ -207,7 +206,6 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
             type: 'assistant',
             content: data.answer ?? 'Maaf, saya tidak dapat memproses pertanyaan Anda saat ini.',
             timestamp: new Date(),
-            confidence: data.confidence,
           }
 
           setMessages((prev) => [...prev.slice(0, -1), { ...userMessage, status: 'delivered' }, assistantMessage])
@@ -375,7 +373,6 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
                   content: msg.content,
                   timestamp: new Date(msg.timestamp),
                   adminName: msg.adminName,
-                  confidence: msg.confidence,
                 }))
               setMessages((prev) => [...prev, ...formattedMessages])
             }
@@ -389,7 +386,6 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
                   content: msg.content,
                   timestamp: new Date(msg.timestamp),
                   adminName: msg.adminName,
-                  confidence: msg.confidence,
                 }))
               setMessages(formattedMessages)
             }
@@ -640,9 +636,6 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
                                   {message.adminName && <span className="italic">- {message.adminName}</span>}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  {message.confidence && (
-                                    <span>{Math.round(message.confidence * 100)}% confidence</span>
-                                  )}
                                   {message.status && message.type === 'user' && (
                                     <span className="capitalize">{message.status}</span>
                                   )}

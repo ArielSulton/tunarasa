@@ -199,7 +199,7 @@ export default function KomunikasiChat() {
                         placeholder="Ketik pertanyaan Anda di sini..."
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && sendTypedMessage()}
+                        onKeyDown={(e) => e.key === 'Enter' && sendTypedMessage()}
                         className="flex-1"
                       />
                       <Button
