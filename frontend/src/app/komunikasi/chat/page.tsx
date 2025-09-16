@@ -13,7 +13,6 @@ interface ChatMessage {
   type: 'user' | 'assistant'
   content: string
   timestamp: Date
-  confidence?: number
 }
 
 export default function KomunikasiChat() {
@@ -62,7 +61,6 @@ export default function KomunikasiChat() {
         type: 'assistant',
         content: data.answer ?? 'Maaf, saya tidak dapat memproses pertanyaan Anda saat ini.',
         timestamp: new Date(),
-        confidence: data.confidence,
       }
 
       setMessages((prev) => [...prev, assistantMessage])
@@ -162,11 +160,8 @@ export default function KomunikasiChat() {
                                 }`}
                               >
                                 <p className="text-sm">{message.content}</p>
-                                <div className="mt-1 flex items-center justify-between text-xs opacity-70">
+                                <div className="mt-1 text-xs opacity-70">
                                   <span>{message.timestamp.toLocaleTimeString()}</span>
-                                  {message.confidence && (
-                                    <span className="ml-2">{Math.round(message.confidence * 100)}% confidence</span>
-                                  )}
                                 </div>
                               </div>
                             </div>
