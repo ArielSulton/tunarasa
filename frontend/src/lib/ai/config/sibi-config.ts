@@ -18,11 +18,11 @@ export const SIBI_CONFIG = {
   SMOOTHING_WINDOW: 4, // Increased for better smoothing
   DEBOUNCE_TIME: 150, // Increased to prevent spam detection
 
-  // Temporal consistency settings - Balanced for accuracy and speed
-  MIN_STABLE_FRAMES: 4, // Increased slightly to prevent spam
-  CONFIDENCE_AVERAGING_WINDOW: 6, // Increased for better stability
+  // Temporal consistency settings - Fine-tuned for optimal balance
+  MIN_STABLE_FRAMES: 5, // Slightly increased for better accuracy
+  CONFIDENCE_AVERAGING_WINDOW: 7, // Enhanced for better stability
   MAX_CONFIDENCE_VARIATION: 0.12, // Tightened for better accuracy
-  TEMPORAL_VALIDATION_WINDOW: 1000, // Increased to 1 second for better validation
+  TEMPORAL_VALIDATION_WINDOW: 1200, // Optimized to 1.2 seconds for balanced validation
 
   // SIBI alphabet mapping (Indonesian Sign Language)
   ALPHABET: [

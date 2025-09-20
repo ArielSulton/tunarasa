@@ -351,8 +351,8 @@ export class GestureRecognitionService {
       this.smoothingBuffer.shift()
     }
 
-    // Need minimum samples for smoothing - balanced for accuracy
-    if (this.smoothingBuffer.length < 3) {
+    // Need minimum samples for smoothing - enhanced for better accuracy
+    if (this.smoothingBuffer.length < 4) {
       return null
     }
 
