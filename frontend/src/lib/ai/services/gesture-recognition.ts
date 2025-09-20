@@ -57,7 +57,7 @@ export class GestureRecognitionService {
     processingOptions: {
       enableSmoothing: true,
       smoothingWindow: SIBI_CONFIG.SMOOTHING_WINDOW,
-      debounceTime: 150, // Increased from 100ms to 150ms for better performance
+      debounceTime: 150, // Balanced to prevent spam while maintaining responsiveness
       autoStart: false,
     },
   }
@@ -214,7 +214,7 @@ export class GestureRecognitionService {
       }
 
       try {
-        // Apply debouncing - increased for performance
+        // Apply debouncing - balanced for accuracy and performance
         const now = Date.now()
         const debounceTime = this.config.processingOptions?.debounceTime ?? 150
         if (now - this.lastProcessingTime < debounceTime) {
@@ -226,10 +226,10 @@ export class GestureRecognitionService {
         // Use setTimeout to prevent blocking the main thread
         await new Promise((resolve) => setTimeout(resolve, 0))
 
-        // Detect hands with timeout to prevent freeze
+        // Detect hands with reduced timeout for better performance
         const handDetections = await Promise.race([
           this.handPose.detectHands(this.videoElement),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Hand detection timeout')), 2000)),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Hand detection timeout')), 1000)),
         ])
 
         if (handDetections.length > 0) {
@@ -241,10 +241,10 @@ export class GestureRecognitionService {
           // Use setTimeout to prevent blocking during gesture recognition
           await new Promise((resolve) => setTimeout(resolve, 0))
 
-          // Recognize gesture using fingerpose with timeout
+          // Recognize gesture using fingerpose with reduced timeout
           const gestureResult = await Promise.race([
             this.handPose.recognizeGesture(bestResult.landmarks),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gesture recognition timeout')), 1000)),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gesture recognition timeout')), 500)),
           ])
 
           // Create recognition result
@@ -288,12 +288,12 @@ export class GestureRecognitionService {
         // Don't propagate error, continue processing
       }
 
-      // Schedule next frame with reduced frequency
+      // Schedule next frame with optimized frequency
       if (this.isRunning) {
-        // Use setTimeout instead of requestAnimationFrame for less aggressive processing
+        // Use setTimeout for controlled processing rate
         setTimeout(() => {
           this.animationFrameId = requestAnimationFrame(() => void processFrame())
-        }, 50) // 20 FPS instead of 60 FPS
+        }, 33) // ~30 FPS for better balance between performance and responsiveness
       }
     }
 
@@ -351,7 +351,7 @@ export class GestureRecognitionService {
       this.smoothingBuffer.shift()
     }
 
-    // Need minimum samples for smoothing
+    // Need minimum samples for smoothing - balanced for accuracy
     if (this.smoothingBuffer.length < 3) {
       return null
     }

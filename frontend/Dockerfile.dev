@@ -18,9 +18,8 @@ COPY . .
 # Install dependencies
 RUN bun install
 
-# Create uploads directory with proper permissions for nextjs user
+# Create uploads directory with proper permissions
 RUN mkdir -p /app/uploads/rag-files && \
-    chown -R nextjs:bun /app/uploads && \
     chmod -R 755 /app/uploads
 
 # Next.js collects completely anonymous telemetry data about general usage. Learn more here: https://nextjs.org/telemetry
