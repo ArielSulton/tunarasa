@@ -1105,7 +1105,7 @@ class EnhancedLangChainService:
             )
             return dynamic_patterns[question_lower]
 
-        # 3. GESTURE RECOGNITION PATTERNS (proven fallback)
+        # 3. GESTURE RECOGNITION PATTERNS (minimal proven fallback only)
         gesture_corrections = {
             "ktphjlaoh": "KTP HILANG",
             "kktpbakv": "KTP BARU",
@@ -1135,42 +1135,72 @@ class EnhancedLangChainService:
             )
             return semantic_correction
 
-        # 5. PATTERN-BASED CORRECTIONS (gesture fallback)
-        import re
-
-        if re.search(r"k+tp.*h.*l.*[aon].*h", question_lower):
-            return "KTP HILANG"
-        elif re.search(r"k+tp.*b.*[aru].*[vk]?", question_lower):
-            return "KTP BARU"
-        elif re.search(r"k+ap|k+tp$", question_lower):
-            return "KTP"
-        elif re.search(r"s+im.*h.*l.*ng", question_lower):
-            return "SIM HILANG"
-        elif re.search(r"skc+.*rus.*", question_lower):
-            return "SKCK RUSAK"
-
-        # 6. LLM FALLBACK for complex cases
-        institution_context, institution_context_en = (
-            await self._get_institution_context(institution_slug)
+        # 5. INTELLIGENT PATTERN RECOGNITION (dynamic analysis)
+        # Use intelligent pattern recognition instead of hardcoded regex
+        logger.info(f"🔍 Checking intelligent pattern analysis for: '{question_lower}'")
+        intelligent_correction = self._intelligent_pattern_analysis(question_lower)
+        logger.info(
+            f"🧠 Intelligent pattern result: '{question}' -> '{intelligent_correction}'"
         )
+        if intelligent_correction:
+            logger.info(
+                f"✅ Intelligent pattern SUCCESS: '{question}' -> '{intelligent_correction}'"
+            )
+            return intelligent_correction
+        else:
+            logger.info(
+                f"❌ Intelligent pattern FAILED: '{question}' -> None, proceeding to LLM fallback"
+            )
+
+        # 6. LLM FALLBACK with RAG context
+        # Get relevant RAG documents for context-aware correction
+        rag_documents = await self._retrieve_documents(
+            question,
+            ConversationContext(
+                language=language,
+                institution_slug=institution_slug,
+                conversation_mode="qa",
+                response_quality="balanced",
+                session_id="typo_correction",
+            ),
+        )
+
+        # Extract services/keywords from RAG documents
+        rag_context = ""
+        if rag_documents:
+            rag_context = " ".join(
+                [doc.page_content[:200] for doc in rag_documents[:3]]
+            )
 
         if language == "id":
             prompt = (
-                "Perbaiki hanya kesalahan ketik (typo) pada pertanyaan berikut, tanpa mengubah struktur kalimat atau memperbaiki tata bahasa. "
-                f"Fokus pada konteks {institution_context}. "
-                "PENTING: Jangan mengubah singkatan yang benar seperti SIM (Surat Izin Mengemudi), KTP (Kartu Tanda Penduduk), SKCK, dll. "
-                "Pastikan tidak ada tanda baca yang salah. "
-                "Kembalikan hanya pertanyaan yang telah diperbaiki tanpa penjelasan apapun.\n"
-                f"PERTANYAAN: {question}"
+                "Anda adalah sistem koreksi typo yang fokus pada layanan dalam dokumen referensi.\n\n"
+                f"DOKUMEN REFERENSI:\n{rag_context}\n\n"
+                "TUGAS: Koreksi HANYA kesalahan ketik pada input berikut:\n"
+                f"INPUT: {question}\n\n"
+                "ATURAN KETAT:\n"
+                "1. Analisis karakter yang mirip dengan layanan dalam dokumen referensi\n"
+                "2. Koreksi berdasarkan konteks layanan yang tersedia\n"
+                "3. Jika tidak ada layanan yang cocok, kembalikan input asli\n"
+                "4. DILARANG menambah kata atau penjelasan\n"
+                "5. DILARANG mengubah struktur kalimat\n"
+                "6. OUTPUT: Hanya hasil koreksi, tidak ada kata tambahan lain\n\n"
+                "HASIL:"
             )
         else:
             prompt = (
-                "Correct only the typos in the following question, without changing the sentence structure or grammar. "
-                f"Focus on the context of {institution_context_en}. "
-                "IMPORTANT: Do not change correct abbreviations like SIM (driver's license), KTP (ID card), SKCK, etc. "
-                "Ensure there are no incorrect punctuation marks. "
-                "Return only the corrected question, without any explanation.\n"
-                f"QUESTION: {question}"
+                "You are a typo correction system focused on services in reference documents.\n\n"
+                f"REFERENCE DOCUMENTS:\n{rag_context}\n\n"
+                "TASK: Correct ONLY typos in the following input:\n"
+                f"INPUT: {question}\n\n"
+                "STRICT RULES:\n"
+                "1. Analyze characters similar to services in reference documents\n"
+                "2. Correct based on available service context\n"
+                "3. If no matching service, return original input\n"
+                "4. FORBIDDEN to add words or explanations\n"
+                "5. FORBIDDEN to change sentence structure\n"
+                "6. OUTPUT: Only correction result, no other addon words\n\n"
+                "RESULT:"
             )
 
         response = await asyncio.to_thread(self.llm.invoke, prompt)
@@ -1496,7 +1526,7 @@ class EnhancedLangChainService:
                 ):
                     patterns[typo.lower().strip()] = correction.upper().strip()
 
-            # Pattern 3: Common gesture patterns (auto-detect)
+            # Pattern 3: Smart gesture pattern detection
             gesture_keywords = [
                 "ktp",
                 "sim",
@@ -1507,26 +1537,33 @@ class EnhancedLangChainService:
                 "baru",
                 "rusak",
             ]
-            lines = content.lower().split("\n")
 
-            for line in lines:
-                # Look for lines containing multiple gesture keywords
-                if sum(1 for keyword in gesture_keywords if keyword in line) >= 2:
-                    # Try to extract meaningful patterns
-                    words = line.split()
-                    for i, word in enumerate(words):
-                        if len(word) > 5 and any(k in word for k in gesture_keywords):
-                            # Look for potential correction in same line
-                            for j in range(i + 1, min(i + 5, len(words))):
-                                potential_correction = " ".join(
-                                    words[j : j + 2]
-                                ).upper()
-                                if any(
-                                    k.upper() in potential_correction
-                                    for k in gesture_keywords
-                                ):
-                                    patterns[word] = potential_correction
-                                    break
+            # Enhanced pattern detection for gesture-like strings
+            words = content.lower().split()
+            for word in words:
+                if len(word) >= 3:
+                    # Check for KTP-like patterns (k+[letters]+t/th/p patterns)
+                    if re.match(r"^k+[a-z]*[th]+[a-z]*$", word) and len(word) <= 6:
+                        if "h" in word:
+                            patterns[word] = "KTP HILANG"
+                        else:
+                            patterns[word] = "KTP"
+
+                    # Check for similarity to known gesture keywords
+                    for keyword in gesture_keywords:
+                        if len(word) >= len(keyword) - 1:
+                            # Simple character overlap check
+                            overlap = len(set(word) & set(keyword))
+                            if (
+                                overlap >= len(keyword) * 0.7
+                            ):  # 70% character similarity
+                                # Try to infer the correction based on context
+                                if "h" in word or "hilang" in content.lower():
+                                    patterns[word] = f"{keyword.upper()} HILANG"
+                                elif "b" in word or "baru" in content.lower():
+                                    patterns[word] = f"{keyword.upper()} BARU"
+                                else:
+                                    patterns[word] = keyword.upper()
 
             return patterns
 
@@ -1623,13 +1660,25 @@ class EnhancedLangChainService:
         return best_match
 
     def _calculate_similarity(self, s1: str, s2: str) -> float:
-        """Calculate simple character-based similarity between two strings"""
+        """Calculate enhanced similarity between two strings with gesture pattern awareness"""
         if not s1 or not s2:
             return 0.0
 
         # Remove spaces for comparison
-        s1_clean = s1.replace(" ", "")
-        s2_clean = s2.replace(" ", "")
+        s1_clean = s1.replace(" ", "").lower()
+        s2_clean = s2.replace(" ", "").lower()
+
+        # Special case for KTP-like patterns
+        if self._is_ktp_like_pattern(s1_clean):
+            if "ktp" in s2_clean:
+                base_score = 0.6  # High base score for KTP matches
+                # Bonus for specific type matches
+                if "h" in s1_clean and "hilang" in s2_clean:
+                    return base_score + 0.3
+                elif "b" in s1_clean and "baru" in s2_clean:
+                    return base_score + 0.3
+                else:
+                    return base_score
 
         # Check character overlap
         common_chars = set(s1_clean) & set(s2_clean)
@@ -1640,12 +1689,78 @@ class EnhancedLangChainService:
 
         char_similarity = len(common_chars) / len(total_chars)
 
-        # Check sequence similarity
+        # Enhanced sequence similarity with position awareness
         max_len = max(len(s1_clean), len(s2_clean))
         min_len = min(len(s1_clean), len(s2_clean))
         length_penalty = min_len / max_len if max_len > 0 else 0
 
-        return char_similarity * length_penalty
+        # Position-based scoring for similar sequences
+        position_score = 0.0
+        if min_len >= 2:
+            for i in range(min_len):
+                if i < len(s1_clean) and i < len(s2_clean):
+                    if s1_clean[i] == s2_clean[i]:
+                        position_score += 1.0 / min_len
+
+        # Combine scores with weights
+        final_score = (
+            (char_similarity * 0.5) + (length_penalty * 0.3) + (position_score * 0.2)
+        )
+        return min(final_score, 1.0)
+
+    def _is_ktp_like_pattern(self, text: str) -> bool:
+        """Check if text looks like a KTP gesture pattern"""
+        import re
+
+        # Match patterns like: kkth, ktph, ktp, kkap, etc.
+        return bool(re.match(r"^k+[a-z]*[tp]*[h]*[a-z]*$", text) and len(text) <= 8)
+
+    def _intelligent_pattern_analysis(self, text: str) -> Optional[str]:
+        """Intelligent pattern analysis for gesture-like strings"""
+        if len(text) < 3 or len(text) > 12:
+            return None
+
+        # Service keywords for pattern matching
+        service_patterns = {
+            "ktp": ["KTP", "KTP HILANG", "KTP BARU", "KTP RUSAK"],
+            "sim": ["SIM", "SIM HILANG", "SIM BARU", "PERPANJANG SIM"],
+            "akta": ["AKTA KELAHIRAN", "AKTA KEMATIAN", "AKTA NIKAH"],
+            "skck": ["SKCK", "SKCK BARU", "SKCK RUSAK"],
+            "paspor": ["PASPOR", "PASPOR BARU", "PASPOR HILANG"],
+        }
+
+        # Character similarity analysis
+        best_match = None
+        best_score = 0.0
+
+        for service, _ in service_patterns.items():
+            # Check if text contains key characters from service
+            service_chars = set(service)
+            text_chars = set(text)
+            overlap = len(service_chars & text_chars)
+
+            if overlap >= len(service) * 0.6:  # 60% character overlap
+                # Determine specific variation based on additional characters
+                if "h" in text or any(h in text for h in ["hlg", "hilang"]):
+                    candidate = f"{service.upper()} HILANG"
+                elif "b" in text or any(b in text for b in ["br", "baru"]):
+                    candidate = f"{service.upper()} BARU"
+                elif "r" in text and "s" in text:
+                    candidate = f"{service.upper()} RUSAK"
+                elif service == "sim" and ("p" in text or "pjg" in text):
+                    candidate = f"PERPANJANG {service.upper()}"
+                else:
+                    candidate = service.upper()
+
+                # Calculate similarity score
+                similarity = self._calculate_similarity(
+                    text, candidate.lower().replace(" ", "")
+                )
+                if similarity > best_score and similarity > 0.4:
+                    best_score = similarity
+                    best_match = candidate
+
+        return best_match if best_score > 0.4 else None
 
     def _clean_llm_response(self, text: str) -> str:
         """Clean LLM response from unnecessary markdown formatting and artifacts"""
