@@ -659,6 +659,7 @@ class EnhancedLangChainService:
             )
 
             answer = response.content if hasattr(response, "content") else str(response)
+            answer = self._clean_llm_response(answer)  # Clean markdown formatting
 
             # Generate reasoning if requested
             reasoning = await self._generate_reasoning(
@@ -696,11 +697,12 @@ class EnhancedLangChainService:
                 self.llm.invoke, reasoning_prompt
             )
 
-            return (
+            reasoning_text = (
                 reasoning_response.content
                 if hasattr(reasoning_response, "content")
                 else str(reasoning_response)
             )
+            return self._clean_llm_response(reasoning_text)  # Clean markdown formatting
 
         except Exception as e:
             logger.error(f"Reasoning generation failed: {e}")
@@ -1088,9 +1090,66 @@ class EnhancedLangChainService:
         language: str = "id",
         institution_slug: Optional[str] = None,
     ) -> str:
-        """Correct typos in the question using LLM, focusing only on spelling/typo, not grammar or structure. Context-aware based on institution."""
+        """Dynamic typo correction: RAG-powered patterns + gesture fallback + LLM"""
 
-        # Get dynamic institution context from database
+        # 1. DYNAMIC PATTERN LEARNING FROM RAG DOCUMENTS
+        dynamic_patterns = await self._learn_patterns_from_rag(
+            institution_slug, language
+        )
+
+        # 2. CHECK DYNAMIC PATTERNS FIRST (institution-specific)
+        question_lower = question.lower().strip()
+        if dynamic_patterns and question_lower in dynamic_patterns:
+            logger.info(
+                f"🎯 RAG pattern matched: '{question}' -> '{dynamic_patterns[question_lower]}' (institution: {institution_slug})"
+            )
+            return dynamic_patterns[question_lower]
+
+        # 3. GESTURE RECOGNITION PATTERNS (proven fallback)
+        gesture_corrections = {
+            "ktphjlaoh": "KTP HILANG",
+            "kktpbakv": "KTP BARU",
+            "kkap": "KTP",
+            "simhilang": "SIM HILANG",
+            "ssimhilang": "SIM HILANG",
+            "pasporbaru": "PASPOR BARU",
+            "skcckrusak": "SKCK RUSAK",
+            "aktakelahiran": "AKTA KELAHIRAN",
+            "perpanjangsim": "PERPANJANG SIM",
+        }
+
+        # Direct gesture pattern match
+        if question_lower in gesture_corrections:
+            logger.info(
+                f"📋 Gesture pattern matched: '{question}' -> '{gesture_corrections[question_lower]}'"
+            )
+            return gesture_corrections[question_lower]
+
+        # 4. SEMANTIC SEARCH IN RAG DOCUMENTS
+        semantic_correction = await self._search_rag_for_correction(
+            question, institution_slug, language
+        )
+        if semantic_correction:
+            logger.info(
+                f"🔍 RAG semantic match: '{question}' -> '{semantic_correction}' (institution: {institution_slug})"
+            )
+            return semantic_correction
+
+        # 5. PATTERN-BASED CORRECTIONS (gesture fallback)
+        import re
+
+        if re.search(r"k+tp.*h.*l.*[aon].*h", question_lower):
+            return "KTP HILANG"
+        elif re.search(r"k+tp.*b.*[aru].*[vk]?", question_lower):
+            return "KTP BARU"
+        elif re.search(r"k+ap|k+tp$", question_lower):
+            return "KTP"
+        elif re.search(r"s+im.*h.*l.*ng", question_lower):
+            return "SIM HILANG"
+        elif re.search(r"skc+.*rus.*", question_lower):
+            return "SKCK RUSAK"
+
+        # 6. LLM FALLBACK for complex cases
         institution_context, institution_context_en = (
             await self._get_institution_context(institution_slug)
         )
@@ -1113,12 +1172,19 @@ class EnhancedLangChainService:
                 "Return only the corrected question, without any explanation.\n"
                 f"QUESTION: {question}"
             )
+
         response = await asyncio.to_thread(self.llm.invoke, prompt)
-        return (
+        result = (
             response.content.strip()
             if hasattr(response, "content")
             else str(response).strip()
         )
+
+        # Clean markdown formatting from LLM response
+        result = self._clean_llm_response(result)
+
+        logger.info(f"LLM fallback used: '{question}' -> '{result}'")
+        return result
 
     async def generate_summary(self, conversation_text: str) -> str:
         """
@@ -1150,11 +1216,12 @@ class EnhancedLangChainService:
 
             # Call the LLM for generating summary and title
             response = await asyncio.to_thread(self.llm.invoke, prompt)
-            return (
+            summary_text = (
                 response.content.strip()
                 if hasattr(response, "content")
                 else str(response).strip()
             )
+            return self._clean_llm_response(summary_text)
         except Exception as e:
             logger.error(f"Failed to generate summary: {e}")
             return "Gagal menghasilkan ringkasan percakapan"
@@ -1185,6 +1252,9 @@ class EnhancedLangChainService:
                 if hasattr(response, "content")
                 else str(response).strip()
             )
+
+            # Clean markdown formatting first
+            raw_title = self._clean_llm_response(raw_title)
 
             # Clean up the title in case LLM returns JSON array or malformed response
             cleaned_title = self._clean_llm_title_response(raw_title)
@@ -1278,6 +1348,7 @@ class EnhancedLangChainService:
                 if hasattr(response, "content")
                 else str(response).strip()
             )
+            result = self._clean_llm_response(result)
 
             # Fallback to simple pattern matching if LLM fails
             if not result or len(result) < len(text) * 0.8:
@@ -1328,6 +1399,288 @@ class EnhancedLangChainService:
         result = re.sub(r"\s+", " ", result)
 
         return result.strip()
+
+    async def _learn_patterns_from_rag(
+        self, institution_slug: Optional[str], language: str = "id"
+    ) -> Dict[str, str]:
+        """Learn typo correction patterns from RAG documents dynamically"""
+        try:
+            if not institution_slug:
+                return {}
+
+            # Import document manager for RAG access
+            from app.services.document_manager import get_document_manager
+
+            document_manager = get_document_manager()
+
+            # Search for typo/correction patterns in RAG documents
+            search_queries = [
+                "typo correction patterns",
+                "gesture recognition",
+                "kesalahan ketik",
+                "koreksi tulisan",
+                "perbaikan teks",
+                "pattern koreksi",
+            ]
+
+            all_patterns = {}
+
+            for query in search_queries:
+                try:
+                    # Search institution-specific documents
+                    search_result = await document_manager.search_documents(
+                        query=query,
+                        language=language,
+                        max_results=3,
+                        similarity_threshold=0.6,
+                        institution_slug=institution_slug,
+                    )
+
+                    if search_result.get("success") and search_result.get("results"):
+                        for result in search_result["results"]:
+                            content = result.get("content", "")
+                            # Extract patterns from content using smart parsing
+                            extracted_patterns = self._extract_patterns_from_content(
+                                content
+                            )
+                            all_patterns.update(extracted_patterns)
+
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to search patterns for query '{query}': {e}"
+                    )
+                    continue
+
+            if all_patterns:
+                logger.info(
+                    f"🎯 [RAG Dynamic] Learned {len(all_patterns)} patterns from {institution_slug} documents"
+                )
+                return all_patterns
+            else:
+                logger.debug(
+                    f"🎯 [RAG Dynamic] No patterns found in {institution_slug} documents"
+                )
+                return {}
+
+        except Exception as e:
+            logger.error(f"❌ [RAG Dynamic] Pattern learning failed: {e}")
+            return {}
+
+    def _extract_patterns_from_content(self, content: str) -> Dict[str, str]:
+        """Extract typo-correction patterns from RAG document content"""
+        patterns = {}
+
+        try:
+            import re
+
+            # Pattern formats to look for:
+            # 1. "pattern -> correction" or "pattern → correction"
+            # 2. "pattern: correction"
+            # 3. JSON-like format: {"pattern": "correction"}
+            # 4. Table format: |pattern|correction|
+            # Pattern 1: Arrow format
+            arrow_matches = re.findall(
+                r"(\w+)\s*(?:->|→)\s*([A-Z\s]+)", content, re.IGNORECASE
+            )
+            for typo, correction in arrow_matches:
+                if len(typo) > 2 and len(correction) > 2:
+                    patterns[typo.lower().strip()] = correction.upper().strip()
+
+            # Pattern 2: Colon format
+            colon_matches = re.findall(r"(\w+)\s*:\s*([A-Z\s]+)", content)
+            for typo, correction in colon_matches:
+                if (
+                    len(typo) > 2
+                    and len(correction) > 2
+                    and any(c.isupper() for c in correction)
+                ):
+                    patterns[typo.lower().strip()] = correction.upper().strip()
+
+            # Pattern 3: Common gesture patterns (auto-detect)
+            gesture_keywords = [
+                "ktp",
+                "sim",
+                "akta",
+                "skck",
+                "paspor",
+                "hilang",
+                "baru",
+                "rusak",
+            ]
+            lines = content.lower().split("\n")
+
+            for line in lines:
+                # Look for lines containing multiple gesture keywords
+                if sum(1 for keyword in gesture_keywords if keyword in line) >= 2:
+                    # Try to extract meaningful patterns
+                    words = line.split()
+                    for i, word in enumerate(words):
+                        if len(word) > 5 and any(k in word for k in gesture_keywords):
+                            # Look for potential correction in same line
+                            for j in range(i + 1, min(i + 5, len(words))):
+                                potential_correction = " ".join(
+                                    words[j : j + 2]
+                                ).upper()
+                                if any(
+                                    k.upper() in potential_correction
+                                    for k in gesture_keywords
+                                ):
+                                    patterns[word] = potential_correction
+                                    break
+
+            return patterns
+
+        except Exception as e:
+            logger.error(f"❌ [Pattern Extract] Failed to extract patterns: {e}")
+            return {}
+
+    async def _search_rag_for_correction(
+        self, question: str, institution_slug: Optional[str], language: str = "id"
+    ) -> Optional[str]:
+        """Search RAG documents for semantic correction of the question"""
+        try:
+            if not institution_slug:
+                return None
+
+            from app.services.document_manager import get_document_manager
+
+            document_manager = get_document_manager()
+
+            # Use the question itself as search query to find similar content
+            search_result = await document_manager.search_documents(
+                query=question,
+                language=language,
+                max_results=2,
+                similarity_threshold=0.8,  # High threshold for typo correction
+                institution_slug=institution_slug,
+            )
+
+            if search_result.get("success") and search_result.get("results"):
+                for result in search_result["results"]:
+                    content = result.get("content", "").lower()
+
+                    # Extract common service terms from content
+                    service_terms = self._extract_service_terms(content)
+
+                    # Find best match for the typo
+                    best_match = self._find_best_semantic_match(
+                        question.lower(), service_terms
+                    )
+                    if best_match:
+                        logger.info(
+                            f"🔍 [RAG Semantic] Found correction: '{question}' -> '{best_match}'"
+                        )
+                        return best_match
+
+            return None
+
+        except Exception as e:
+            logger.error(f"❌ [RAG Semantic] Search failed: {e}")
+            return None
+
+    def _extract_service_terms(self, content: str) -> List[str]:
+        """Extract common government service terms from content"""
+        import re
+
+        # Look for common administrative terms
+        patterns = [
+            r"(KTP\s+(?:HILANG|BARU|RUSAK))",
+            r"(SIM\s+(?:HILANG|BARU|PERPANJANG))",
+            r"(AKTA\s+(?:KELAHIRAN|KEMATIAN))",
+            r"(SKCK\s+(?:BARU|RUSAK))",
+            r"(PASPOR\s+(?:BARU|HILANG))",
+            r"(KARTU\s+KELUARGA)",
+            r"(SURAT\s+NIKAH)",
+            r"(SURAT\s+CERAI)",
+        ]
+
+        terms = []
+        for pattern in patterns:
+            matches = re.findall(pattern, content.upper())
+            terms.extend(matches)
+
+        return list(set(terms))  # Remove duplicates
+
+    def _find_best_semantic_match(
+        self, typo: str, candidates: List[str]
+    ) -> Optional[str]:
+        """Find best semantic match using simple similarity"""
+        if not candidates:
+            return None
+
+        # Simple character-based similarity
+        best_score = 0
+        best_match = None
+
+        for candidate in candidates:
+            candidate_lower = candidate.lower()
+            score = self._calculate_similarity(typo, candidate_lower)
+
+            if score > best_score and score > 0.4:  # Minimum similarity threshold
+                best_score = score
+                best_match = candidate
+
+        return best_match
+
+    def _calculate_similarity(self, s1: str, s2: str) -> float:
+        """Calculate simple character-based similarity between two strings"""
+        if not s1 or not s2:
+            return 0.0
+
+        # Remove spaces for comparison
+        s1_clean = s1.replace(" ", "")
+        s2_clean = s2.replace(" ", "")
+
+        # Check character overlap
+        common_chars = set(s1_clean) & set(s2_clean)
+        total_chars = set(s1_clean) | set(s2_clean)
+
+        if not total_chars:
+            return 0.0
+
+        char_similarity = len(common_chars) / len(total_chars)
+
+        # Check sequence similarity
+        max_len = max(len(s1_clean), len(s2_clean))
+        min_len = min(len(s1_clean), len(s2_clean))
+        length_penalty = min_len / max_len if max_len > 0 else 0
+
+        return char_similarity * length_penalty
+
+    def _clean_llm_response(self, text: str) -> str:
+        """Clean LLM response from unnecessary markdown formatting and artifacts"""
+        if not text:
+            return text
+
+        import re
+
+        # Remove markdown bold formatting: **text** -> text (non-greedy)
+        text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+
+        # Remove markdown italic formatting: *text* -> text (but avoid conflicting with bold)
+        text = re.sub(r"(?<!\*)\*([^*]+?)\*(?!\*)", r"\1", text)
+
+        # Remove markdown headers: ### text -> text
+        text = re.sub(r"^#+\s*", "", text, flags=re.MULTILINE)
+
+        # Remove markdown list markers: - text -> text (anywhere in line)
+        text = re.sub(r"\s*[-*]\s+", " ", text)
+
+        # Remove numbered list markers: 1. text -> text, 2. text -> text, etc.
+        text = re.sub(r"\s*\d+\.\s+", " ", text)
+
+        # Remove backticks for inline code: `text` -> text
+        text = re.sub(r"`([^`]+)`", r"\1", text)
+
+        # Remove blockquote markers: > text -> text
+        text = re.sub(r"^\s*>\s*", "", text, flags=re.MULTILINE)
+
+        # Clean up extra whitespace
+        text = re.sub(r"\n\s*\n", "\n\n", text)  # Multiple newlines to double
+        text = re.sub(r"\s+", " ", text)  # Multiple spaces to single
+        text = text.strip()
+
+        return text
 
 
 # Global service instance
