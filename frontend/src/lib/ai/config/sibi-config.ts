@@ -6,23 +6,23 @@
 export const SIBI_CONFIG = {
   // HandPose settings - Optimized for performance
   MAX_NUM_HANDS: 1,
-  MIN_DETECTION_CONFIDENCE: 0.65, // Reduced for faster detection
+  MIN_DETECTION_CONFIDENCE: 0.7, // Reduced for faster detection
   SCORE_THRESHOLD: 5.0, // Reduced for better performance
   FLIP_HORIZONTAL: true, // Mirror camera for natural gestures
 
   // Gesture classification settings - Balanced accuracy/speed
-  CONFIDENCE_THRESHOLD: 0.7, // Reduced for faster validation
-  MAX_ALTERNATIVES: 2, // Reduced to save processing
+  CONFIDENCE_THRESHOLD: 0.75, // Reduced for faster validation
+  MAX_ALTERNATIVES: 3, // Reduced to save processing
 
   // Enhanced processing settings - Balanced for accuracy and performance
-  SMOOTHING_WINDOW: 4, // Increased for better smoothing
+  SMOOTHING_WINDOW: 5, // Increased for better smoothing
   DEBOUNCE_TIME: 150, // Increased to prevent spam detection
 
   // Temporal consistency settings - Fine-tuned for optimal balance
-  MIN_STABLE_FRAMES: 5, // Slightly increased for better accuracy
-  CONFIDENCE_AVERAGING_WINDOW: 7, // Enhanced for better stability
+  MIN_STABLE_FRAMES: 6, // Slightly increased for better accuracy
+  CONFIDENCE_AVERAGING_WINDOW: 8, // Enhanced for better stability
   MAX_CONFIDENCE_VARIATION: 0.12, // Tightened for better accuracy
-  TEMPORAL_VALIDATION_WINDOW: 1200, // Optimized to 1.2 seconds for balanced validation
+  TEMPORAL_VALIDATION_WINDOW: 1500, // Optimized to 1.2 seconds for balanced validation
 
   // SIBI alphabet mapping (Indonesian Sign Language)
   ALPHABET: [
