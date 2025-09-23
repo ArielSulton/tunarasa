@@ -45,6 +45,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
   })
   const [sessionId] = useState(() => `chat-session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
   const [conversationEnded, setConversationEnded] = useState(false)
+  const [inputSource, setInputSource] = useState<'text' | 'gesture' | 'speech'>('text')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatScrollAreaRef = useRef<HTMLDivElement>(null)
 
@@ -54,12 +55,14 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
 
   const handleWordFormed = useCallback((word: string) => {
     setCurrentQuestion(word)
+    setInputSource('gesture')
     console.log('Word formed:', word)
   }, [])
 
   const handleSpeechResult = useCallback((text: string) => {
     console.log('🗣️ handleSpeechResult called with:', text)
     setCurrentQuestion(text)
+    setInputSource('speech')
     console.log('🗣️ currentQuestion updated to:', text)
   }, [])
 
@@ -83,6 +86,8 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
             conversation_mode: 'casual',
             // Add typo correction flag to backend
             typo_correction_only: true,
+            // Use the tracked input source
+            input_source: inputSource,
           }),
         })
 
@@ -106,7 +111,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
         return text // Return original text if error occurs
       }
     },
-    [sessionId],
+    [sessionId, inputSource],
   )
 
   // Update currentQuestion with typo correction when text changes
@@ -165,6 +170,8 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
             // Pass institution information for RAG namespace filtering
             institution_id: institutionId,
             institution_slug: institutionSlug,
+            // Use the tracked input source
+            input_source: inputSource,
           }
 
           console.log('🏢 [ChatInterface] Sending RAG request:', {
@@ -268,7 +275,16 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
         setIsProcessing(false)
       }
     },
-    [serviceMode, sessionId, mode, conversationStatus.status, institutionId, institutionSlug, correctedQuestion],
+    [
+      serviceMode,
+      sessionId,
+      mode,
+      conversationStatus.status,
+      institutionId,
+      institutionSlug,
+      correctedQuestion,
+      inputSource,
+    ],
   )
 
   const scrollToBottom = useCallback(() => {
@@ -307,6 +323,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
       void sendMessage(currentQuestion)
       setCurrentQuestion('')
       setCorrectedQuestion(null)
+      setInputSource('text') // Reset to default after sending
     }
   }, [currentQuestion, sendMessage])
 
@@ -325,12 +342,14 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
     setCurrentQuestion('')
     setConversationEnded(false)
     setConversationStatus({ id: '', status: 'active' })
+    setInputSource('text')
   }, [])
 
   const resetDetectedInput = useCallback(() => {
     console.log('🗑️ Reset all detected input states for mode:', mode)
     setCurrentQuestion('')
     setCorrectedQuestion(null)
+    setInputSource('text')
 
     // Force component remount to reset internal states
     setResetKey((prev) => prev + 1)
@@ -470,7 +489,10 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
                       key={`gesture-${resetKey}`}
                       onLetterDetected={handleLetterDetected}
                       onWordFormed={handleWordFormed}
-                      onSendText={(text: string) => setCurrentQuestion(text)}
+                      onSendText={(text: string) => {
+                        setCurrentQuestion(text)
+                        setInputSource('gesture')
+                      }}
                       showAlternatives={true}
                       enableWordFormation={true}
                       maxWordLength={50}

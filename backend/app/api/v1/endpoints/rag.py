@@ -128,6 +128,10 @@ class QuestionAnswerRequest(BaseModel):
     institution_slug: Optional[str] = Field(
         default=None, description="Institution slug for namespace selection"
     )
+    input_source: str = Field(
+        default="text",
+        description="Input source: 'text' (normal typing), 'gesture' (computer vision), 'speech' (voice recognition)",
+    )
 
 
 class QuestionAnswerResponse(BaseModel):
@@ -147,6 +151,9 @@ class QuestionAnswerResponse(BaseModel):
     timestamp: Optional[datetime] = None
     qr_code: Optional[Dict[str, str]] = None
     evaluation: Optional[Dict[str, Any]] = None
+    # Typo correction info
+    original_question: Optional[str] = None
+    typo_corrected: bool = False
 
 
 class KnowledgeBaseStatsResponse(BaseModel):
@@ -517,13 +524,28 @@ async def ask_question_with_rag(
         # Generate conversation ID
         conversation_id = f"{request.session_id}_{int(start_time.timestamp())}"
 
-        # Step 1: Correct typos in the question with institution context
+        # Step 1: Correct typos ONLY for gesture/speech input (not normal text)
         langchain_service = get_langchain_service()
-        corrected_question = await langchain_service.correct_typo_question(
-            request.question,
-            language=request.language,
-            institution_slug=request.institution_slug,
-        )
+
+        if request.input_source in ["gesture", "speech"]:
+            logger.info(
+                f"🔧 [Typo Correction] Processing {request.input_source} input: '{request.question}'"
+            )
+            corrected_question = await langchain_service.correct_typo_question(
+                request.question,
+                language=request.language,
+                institution_slug=request.institution_slug,
+            )
+            if corrected_question != request.question:
+                logger.info(
+                    f"✅ [Typo Correction] '{request.question}' → '{corrected_question}'"
+                )
+        else:
+            # Normal text input - no typo correction needed
+            logger.info(
+                f"📝 [Text Input] Skipping typo correction for normal text: '{request.question}'"
+            )
+            corrected_question = request.question
 
         # Step 2: Process RAG with corrected question
         # Log institution information for debugging
@@ -710,6 +732,11 @@ async def ask_question_with_rag(
             timestamp=start_time,
             qr_code=qr_code_data,
             evaluation=evaluation_data,
+            # Typo correction metadata
+            original_question=(
+                request.question if corrected_question != request.question else None
+            ),
+            typo_corrected=corrected_question != request.question,
         )
 
     except Exception as e:
@@ -729,6 +756,9 @@ async def ask_question_with_rag(
             timestamp=start_time,
             qr_code=None,
             evaluation=None,
+            # Typo correction metadata for error case
+            original_question=None,
+            typo_corrected=False,
         )
 
 

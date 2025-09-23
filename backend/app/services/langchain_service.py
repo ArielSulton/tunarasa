@@ -1126,14 +1126,14 @@ class EnhancedLangChainService:
             return gesture_corrections[question_lower]
 
         # 4. SEMANTIC SEARCH IN RAG DOCUMENTS
-        semantic_correction = await self._search_rag_for_correction(
-            question, institution_slug, language
-        )
-        if semantic_correction:
-            logger.info(
-                f"🔍 RAG semantic match: '{question}' -> '{semantic_correction}' (institution: {institution_slug})"
-            )
-            return semantic_correction
+        # semantic_correction = await self._search_rag_for_correction(
+        #     question, institution_slug, language
+        # )
+        # if semantic_correction:
+        #     logger.info(
+        #         f"🔍 RAG semantic match: '{question}' -> '{semantic_correction}' (institution: {institution_slug})"
+        #     )
+        #     return semantic_correction
 
         # 5. INTELLIGENT PATTERN RECOGNITION (dynamic analysis)
         # Use intelligent pattern recognition instead of hardcoded regex
