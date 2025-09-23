@@ -524,6 +524,11 @@ async def ask_question_with_rag(
         # Generate conversation ID
         conversation_id = f"{request.session_id}_{int(start_time.timestamp())}"
 
+        # DEBUG: Log the input_source parameter received
+        logger.info(
+            f"🔍 [DEBUG] Received input_source: '{request.input_source}' for question: '{request.question}'"
+        )
+
         # Step 1: Correct typos ONLY for gesture/speech input (not normal text)
         langchain_service = get_langchain_service()
 

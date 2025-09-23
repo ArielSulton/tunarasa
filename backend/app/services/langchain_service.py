@@ -1158,7 +1158,6 @@ class EnhancedLangChainService:
             question,
             ConversationContext(
                 language=language,
-                institution_slug=institution_slug,
                 conversation_mode="qa",
                 response_quality="balanced",
                 session_id="typo_correction",

@@ -179,6 +179,7 @@ export function ChatInterface({ institutionId, institutionName, institutionSlug 
             institution_slug: institutionSlug,
             endpoint: getRagApiUrl(),
             question: content.trim().substring(0, 50) + '...',
+            input_source: inputSource,
           })
 
           const ragUrl = getRagApiUrl()
