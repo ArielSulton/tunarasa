@@ -1799,8 +1799,9 @@ class EnhancedLangChainService:
         # Remove markdown list markers: - text -> text (anywhere in line)
         text = re.sub(r"\s*[-*]\s+", " ", text)
 
-        # Remove numbered list markers: 1. text -> text, 2. text -> text, etc.
-        text = re.sub(r"\s*\d+\.\s+", " ", text)
+        # Remove numbered list markers only at start of lines: 1. text -> text
+        text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.MULTILINE)
+        text = re.sub(r"\n\s*\d+\.\s+", "\n", text)  # Remove mid-text list markers
 
         # Remove backticks for inline code: `text` -> text
         text = re.sub(r"`([^`]+)`", r"\1", text)
