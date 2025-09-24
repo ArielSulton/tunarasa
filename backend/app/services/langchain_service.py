@@ -1670,14 +1670,17 @@ class EnhancedLangChainService:
         # Special case for KTP-like patterns
         if self._is_ktp_like_pattern(s1_clean):
             if "ktp" in s2_clean:
-                base_score = 0.6  # High base score for KTP matches
+                base_score = 0.8  # Very high base score for KTP matches
                 # Bonus for specific type matches
                 if "h" in s1_clean and "hilang" in s2_clean:
-                    return base_score + 0.3
+                    return base_score + 0.2  # 1.0 total for perfect match
                 elif "b" in s1_clean and "baru" in s2_clean:
-                    return base_score + 0.3
+                    return base_score + 0.2
                 else:
                     return base_score
+            # Penalty for non-KTP matches when input is KTP-like
+            elif "akta" in s2_clean or "sim" in s2_clean:
+                return 0.3  # Low score for wrong service type
 
         # Check character overlap
         common_chars = set(s1_clean) & set(s2_clean)
@@ -1709,10 +1712,13 @@ class EnhancedLangChainService:
 
     def _is_ktp_like_pattern(self, text: str) -> bool:
         """Check if text looks like a KTP gesture pattern"""
-        import re
-
-        # Match patterns like: kkth, ktph, ktp, kkap, etc.
-        return bool(re.match(r"^k+[a-z]*[tp]*[h]*[a-z]*$", text) and len(text) <= 8)
+        # Match patterns like: kkth, ktph, ktp, kkap, ktcphjlaohk, etc.
+        # Check if it starts with k and contains key KTP chars
+        if text.startswith("k") and len(text) <= 12:
+            # Must contain at least 2 of: t, p to be considered KTP-like
+            key_chars = [c for c in text if c in "tp"]
+            return len(key_chars) >= 2
+        return False
 
     def _intelligent_pattern_analysis(self, text: str) -> Optional[str]:
         """Intelligent pattern analysis for gesture-like strings"""
@@ -1732,7 +1738,17 @@ class EnhancedLangChainService:
         best_match = None
         best_score = 0.0
 
-        for service, _ in service_patterns.items():
+        # Prioritize KTP patterns for KTP-like inputs
+        service_order = (
+            ["ktp", "sim", "akta", "skck", "paspor"]
+            if self._is_ktp_like_pattern(text)
+            else ["ktp", "sim", "akta", "skck", "paspor"]
+        )
+
+        for service in service_order:
+            if service not in service_patterns:
+                continue
+
             # Check if text contains key characters from service
             service_chars = set(service)
             text_chars = set(text)
@@ -1754,6 +1770,9 @@ class EnhancedLangChainService:
                 # Calculate similarity score
                 similarity = self._calculate_similarity(
                     text, candidate.lower().replace(" ", "")
+                )
+                logger.debug(
+                    f"🧠 [Pattern] {service} -> {candidate}: similarity = {similarity:.3f}"
                 )
                 if similarity > best_score and similarity > 0.4:
                     best_score = similarity
