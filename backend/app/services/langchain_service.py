@@ -1808,9 +1808,30 @@ class EnhancedLangChainService:
         # Remove blockquote markers: > text -> text
         text = re.sub(r"^\s*>\s*", "", text, flags=re.MULTILINE)
 
+        # Remove excessive disclaimers for official government documents
+        disclaimer_patterns = [
+            # Full disclaimer sentences
+            r"[.,\s]*[Nn]amun,?\s*perlu diingat bahwa informasi ini hanya berdasarkan pada konteks dokumen yang tersedia dan mungkin tidak lengkap atau up-to-date[.,\s]*",
+            r"[.,\s]*[Oo]leh karena itu,?\s*disarankan untuk memeriksa dokumen asli atau menghubungi instansi terkait[.,\s]*",
+            r"[.,\s]*untuk memastikan informasi yang lebih akurat dan terkini[.,\s]*",
+            # Generic disclaimer patterns
+            r"[.,\s]*informasi ini berdasarkan dokumen yang tersedia dan mungkin tidak lengkap[.,\s]*",
+            r"[.,\s]*disarankan untuk memverifikasi informasi dengan sumber resmi[.,\s]*",
+            r"[.,\s]*untuk informasi terbaru dan akurat,?\s*hubungi langsung[.,\s]*instansi terkait[.,\s]*",
+            # Fragment cleanup
+            r"[.,\s]*[Nn]amun\.\s*untuk memastikan[^.]*\.[.,\s]*",
+            r"[.,\s]*[Nn]amun\.$",
+        ]
+
+        for pattern in disclaimer_patterns:
+            text = re.sub(pattern, ". ", text, flags=re.IGNORECASE)
+
         # Clean up extra whitespace
         text = re.sub(r"\n\s*\n", "\n\n", text)  # Multiple newlines to double
         text = re.sub(r"\s+", " ", text)  # Multiple spaces to single
+        text = re.sub(
+            r"\.\s*\.\s*", ". ", text
+        )  # Remove double periods from disclaimer removal
         text = text.strip()
 
         return text
