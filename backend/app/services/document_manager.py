@@ -655,12 +655,17 @@ Instruksi:
                             f"✅ [DEBUG] LLM response received: {len(response.content) if hasattr(response, 'content') else 'No content'} chars"
                         )
 
+                        answer_text = (
+                            response.content
+                            if hasattr(response, "content")
+                            else str(response)
+                        )
+                        # Clean markdown formatting from LLM response
+                        clean_answer = self.langchain_service._clean_llm_response(
+                            answer_text
+                        )
                         qa_response = {
-                            "answer": (
-                                response.content
-                                if hasattr(response, "content")
-                                else str(response)
-                            ),
+                            "answer": clean_answer,
                             "confidence": 0.8,
                             "processing_time": 0.5,
                             "follow_up_suggestions": [
@@ -836,11 +841,13 @@ Instruksi:
 
                     # Use the Groq LLM directly
                     response = await self.langchain_service.llm.ainvoke(prompt)
-                    answer = (
+                    answer_text = (
                         response.content
                         if hasattr(response, "content")
                         else str(response)
                     )
+                    # Clean markdown formatting from LLM response
+                    answer = self.langchain_service._clean_llm_response(answer_text)
 
                     return {
                         "success": True,
